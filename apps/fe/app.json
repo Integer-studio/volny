@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "FreeTime",
+    "slug": "semfre",
+    "version": "1.0.0",
+    "scheme": "semfre",
+    "orientation": "portrait",
+    "icon": "./assets/images/volny.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zaporaci.volny"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/volny.png",
+        "backgroundColor": "#EE6C4D"
+      },
+      "package": "com.zaporaci.volny",
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/images/volny.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#EE6C4D",
+          "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "buildArchs": ["arm64-v8a"],
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enablePngCrunchInReleaseBuilds": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1c95939e-bff1-4a04-99bc-3ce25f8ee1a9"
+      }
+    },
+    "owner": "limit6s-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1c95939e-bff1-4a04-99bc-3ce25f8ee1a9"
+    }
+  }
+}

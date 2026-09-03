@@ -1,0 +1,70 @@
+identity:
+  type: SystemAssigned
+kind: containerapps
+location: Germany West Central
+name: volny-be
+properties:
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      additionalPortMappings: []
+      allowInsecure: false
+      clientCertificateMode: null
+      corsPolicy: null
+      customDomains: null
+      exposedPort: 0
+      external: true
+      ipSecurityRestrictions: null
+      stickySessions:
+        affinity: none
+      targetPort: 0
+      traffic:
+      - latestRevision: true
+        weight: 100
+      transport: Auto
+    maxInactiveRevisions: 100
+    registries:
+    - identity: system
+      passwordSecretRef: ''
+      server: caa99a28db26acr.azurecr.io
+      username: ''
+    secrets:
+    - name: jwt-key
+    service: null
+  environmentId: /subscriptions/3ba9e01c-75da-430d-af18-5af5e78b71ad/resourceGroups/volny/providers/Microsoft.App/managedEnvironments/managedEnvironment-volny-abc2
+  template:
+    containers:
+    - args: []
+      command: []
+      image: caa99a28db26acr.azurecr.io/volny-be:cli-containerapp-20260901065747977117
+      name: volny-be
+      env:
+      - name: ConnectionStrings__SqliteConnection
+        value: Data Source=/data/SemFre.db
+      - name: Jwt__Key
+        secretRef: jwt-key
+      resources:
+        cpu: 0.25
+        ephemeralStorage: 1Gi
+        memory: 0.5Gi
+      volumeMounts:
+      - volumeName: volny-data-volume
+        mountPath: /data
+    initContainers: null
+    revisionSuffix: ''
+    scale:
+      cooldownPeriod: 300
+      maxReplicas: 1
+      minReplicas: 0
+      pollingInterval: 30
+      rules: null
+    serviceBinds: null
+    terminationGracePeriodSeconds: null
+    volumes:
+    - name: volny-data-volume
+      storageType: AzureFile
+      storageName: volnydata
+      mountOptions: dir_mode=0777,file_mode=0777,uid=0,gid=0,mfsymlinks,nobrl
+  workloadProfileName: Consumption
+resourceGroup: volny
+type: Microsoft.App/containerApps

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "666486389110",
+    "project_id": "volny-zaporatstvo",
+    "storage_bucket": "volny-zaporatstvo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:666486389110:android:7bd27d4a1a6a6ef7826257",
+        "android_client_info": {
+          "package_name": "com.zaporaci.volny"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCIxBjwpPgAJQMBu-68eB9FifsSnJSP53A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

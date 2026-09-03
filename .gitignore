@@ -1,0 +1,33 @@
+# OS
+.DS_Store
+
+# --- apps/fe (Expo/React Native) ---
+apps/fe/node_modules/
+apps/fe/.expo/
+apps/fe/dist/
+apps/fe/web-build/
+apps/fe/expo-env.d.ts
+apps/fe/*.orig
+apps/fe/*.orig.*
+apps/fe/*.jks
+apps/fe/*.p8
+apps/fe/*.p12
+apps/fe/*.key
+apps/fe/*.mobileprovision
+apps/fe/google-service-account*.json
+apps/fe/*-firebase-adminsdk-*.json
+apps/fe/.metro-health-check*
+apps/fe/npm-debug.*
+apps/fe/yarn-debug.*
+apps/fe/yarn-error.*
+apps/fe/*.pem
+apps/fe/.env*.local
+apps/fe/*.tsbuildinfo
+apps/fe/app-example
+
+# --- apps/be (.NET) ---
+apps/be/**/bin/
+apps/be/**/obj/
+apps/be/**/*.db
+apps/be/**/*.user
+apps/be/**/.vs/

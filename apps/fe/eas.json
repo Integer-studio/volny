@@ -1,0 +1,39 @@
+{
+  "cli": {
+    "version": ">= 7.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "node": "20.20.2",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:5135/api"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "preview",
+      "node": "20.20.2",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://volny-be.ashysky-0141c791.germanywestcentral.azurecontainerapps.io/api"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production",
+      "node": "20.20.2",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://volny-be.ashysky-0141c791.germanywestcentral.azurecontainerapps.io/api"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

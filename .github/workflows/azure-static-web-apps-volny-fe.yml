@@ -1,0 +1,48 @@
+name: Deploy volny-fe to Azure Static Web Apps
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/fe/**'
+      - '.github/workflows/azure-static-web-apps-volny-fe.yml'
+  workflow_dispatch:
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy
+    defaults:
+      run:
+        working-directory: apps/fe
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/fe/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web bundle
+        run: npx expo export -p web
+        env:
+          EXPO_NO_TELEMETRY: '1'
+          EXPO_PUBLIC_API_URL: https://volny-be.ashysky-0141c791.germanywestcentral.azurecontainerapps.io/api
+
+      - name: Copy SWA config into build output
+        run: cp staticwebapp.config.json dist/staticwebapp.config.json
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: apps/fe/dist
+          output_location: ""
+          skip_app_build: true

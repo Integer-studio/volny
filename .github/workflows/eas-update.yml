@@ -1,0 +1,40 @@
+name: EAS Update
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/fe/**'
+      - '.github/workflows/eas-update.yml'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/fe
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/fe/package-lock.json
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish update
+        env:
+          EXPO_PUBLIC_API_URL: https://volny-be.ashysky-0141c791.germanywestcentral.azurecontainerapps.io/api
+        run: eas update --channel preview --message "${{ github.event.head_commit.message }}" --non-interactive
