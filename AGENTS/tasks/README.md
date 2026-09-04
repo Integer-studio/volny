@@ -30,4 +30,6 @@ vzít a dopracovat.
 
 | ID | Název | Stav | Soubor |
 |----|-------|------|--------|
-| — | (zatím žádné úkoly) | — | — |
+| 0001 | Realtime aktualizace (volní lidé, friend requesty) | todo | [0001-realtime-aktualizace.md](./0001-realtime-aktualizace.md) |
+| 0002 | Zjistit a definovat stav oznámení (mobil i web) | todo | [0002-stav-oznameni.md](./0002-stav-oznameni.md) |
+| 0003 | Zmenšit velikost APK | todo | [0003-velikost-apk.md](./0003-velikost-apk.md) |
