@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "../lib/auth-context";
 import { ToastProvider } from "../components/Toast";
 import BootSplash from "../components/BootSplash";
 import OfflineBanner from "../components/OfflineBanner";
+import NotificationPermissionBanner from "../components/NotificationPermissionBanner";
 import PushGate from "../components/PushGate";
 import PendingInviteGate from "../components/PendingInviteGate";
 import PendingFriendInviteGate from "../components/PendingFriendInviteGate";
@@ -48,6 +49,7 @@ function Navigation() {
       {status === 'signedIn' && <PendingInviteGate />}
       {status === 'signedIn' && <PendingFriendInviteGate />}
       {status === 'signedIn' && <OfflineBanner />}
+      {status === 'signedIn' && <NotificationPermissionBanner />}
       <Stack screenOptions={{ animation: 'slide_from_right', animationDuration: 220 }}>
         {/*
           Guard is "not signedOut", not "signedIn": while status is 'loading'

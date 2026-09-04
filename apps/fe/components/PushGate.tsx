@@ -1,7 +1,14 @@
 import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { api } from '../lib/api';
-import { isPushSupported, isWebPushSupported, routeForPushPayload, type PushPayload } from '../lib/push';
+import {
+  isPushSupported,
+  isWebPushSupported,
+  listenForForegroundFcmMessages,
+  needsWebNotificationPrompt,
+  routeForPushPayload,
+  type PushPayload,
+} from '../lib/push';
 
 /**
  * Mounted once, only while the user is authenticated.
@@ -67,9 +74,13 @@ function PushGateNative() {
 }
 
 function PushGateWeb() {
-  // Same registration lifecycle as PushGateNative - api.registerPushToken()
-  // branches internally on isWebPushSupported and calls getFcmWebTokenAsync.
+  // Only refresh the token here if permission was already granted in an
+  // earlier visit - getting it for the first time is NotificationPermissionBanner's
+  // job, because that first ask must run inside a click handler (see its
+  // docstring). Calling requestPermission() again when already 'granted'
+  // resolves immediately with no dialog, so this is not gesture-gated.
   useEffect(() => {
+    if (needsWebNotificationPrompt()) return;
     let cancelled = false;
     api.registerPushToken().then(token => {
       if (!cancelled && token) {
@@ -78,6 +89,10 @@ function PushGateWeb() {
     });
     return () => { cancelled = true; };
   }, []);
+
+  // Messages delivered while this tab is focused go to the foreground
+  // handler, not the service worker - see listenForForegroundFcmMessages.
+  useEffect(() => listenForForegroundFcmMessages(), []);
 
   // Web notification taps happen in the service worker (it runs independently
   // of the page), which relays them here via postMessage - see the

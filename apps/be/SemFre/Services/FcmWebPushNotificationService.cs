@@ -65,16 +65,29 @@ public class FcmWebPushNotificationService : INotificationService
 
     private async Task SendChunkAsync(List<string> chunk, NotificationMessage message, PushSendResult result, CancellationToken ct)
     {
-        var messages = chunk.Select(token => new Message
+        // Data-only (no top-level Notification/Webpush.Notification): a `notification`
+        // payload is handled inconsistently depending on whether the tab is focused -
+        // sometimes auto-displayed by the browser, sometimes routed to the page's
+        // onMessage, sometimes to the service worker's onBackgroundMessage. Data-only
+        // always reaches our own JS on both sides (lib/push.ts's
+        // listenForForegroundFcmMessages / firebase-messaging-sw.js's
+        // onBackgroundMessage), which explicitly decide to show a notification instead.
+        var messages = chunk.Select(token =>
         {
-            Token = token,
-            Notification = new Notification { Title = message.Title, Body = message.Body },
-            Data = message.Data,
-            Webpush = new WebpushConfig
+            var data = new Dictionary<string, string>(message.Data ?? new Dictionary<string, string>())
             {
-                Headers = new Dictionary<string, string> { ["Urgency"] = "high" },
-                Notification = new WebpushNotification { Title = message.Title, Body = message.Body }
-            }
+                ["title"] = message.Title,
+                ["body"] = message.Body
+            };
+            return new Message
+            {
+                Token = token,
+                Data = data,
+                Webpush = new WebpushConfig
+                {
+                    Headers = new Dictionary<string, string> { ["Urgency"] = "high" }
+                }
+            };
         }).ToList();
 
         BatchResponse response;

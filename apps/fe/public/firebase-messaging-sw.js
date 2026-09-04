@@ -27,13 +27,18 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // Fires when a push arrives while no tab has focus (or none is open at all) -
-// the case a plain browser tab can never handle on its own.
+// the case a plain browser tab can never handle on its own. The backend
+// sends data-only messages (title/body live inside `data`, not a top-level
+// `notification` field, kept in sync with lib/push.ts's
+// listenForForegroundFcmMessages) so this and the foreground handler behave
+// identically instead of depending on ambiguous browser-vs-SDK auto-display
+// rules for `notification` payloads.
 messaging.onBackgroundMessage(payload => {
-  const { title, body } = payload.notification || {};
-  self.registration.showNotification(title || 'Volný', {
-    body: body || '',
+  const data = payload.data || {};
+  self.registration.showNotification(data.title || 'Volný', {
+    body: data.body || '',
     icon: '/assets/images/volny.png',
-    data: payload.data || {},
+    data,
   });
 });
 
