@@ -37,4 +37,5 @@ jobs:
       - name: Publish update
         env:
           EXPO_PUBLIC_API_URL: https://volny-be.ashysky-0141c791.germanywestcentral.azurecontainerapps.io/api
-        run: eas update --channel preview --message "${{ github.event.head_commit.message }}" --non-interactive
+          EAS_UPDATE_MESSAGE: ${{ github.event.head_commit.message }}
+        run: eas update --channel preview --message "$EAS_UPDATE_MESSAGE" --non-interactive
