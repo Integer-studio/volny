@@ -36,6 +36,8 @@ import ProfileSheet from "../components/ProfileSheet";
 import { useToast } from "../components/Toast";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
+import { useDeferredPending } from "../hooks/useDeferredPending";
+import { useSlowActionNotice } from "../hooks/useSlowActionNotice";
 import { errorMessage } from "../lib/errors";
 
 export default function Index() {
@@ -145,19 +147,28 @@ export default function Index() {
     }, []),
   );
 
+  // No spinner/disabled state for the first ~1s (useDeferredPending below) -
+  // the circle already shows the result the moment you tap it, so a loading
+  // state on top of that would just contradict what's on screen for a
+  // normal, fast request. But past 1s of continuous pending, showLoading
+  // flips true and FreeButton disables further taps and shows its overlay,
+  // and past 4s useSlowActionNotice puts up the shared cold-start toast - a
+  // cold container no longer leaves the button looking "done" with no
+  // indication the write hasn't actually landed yet. Rollback still happens
+  // on failure, but only for the most recent tap: runId makes an older
+  // (possibly slower) response's rollback/success/pending-clear a no-op once
+  // a newer one has already landed.
+  const [statusPending, setStatusPending] = useState(false);
+  const showLoading = useDeferredPending(statusPending, 1000);
+  useSlowActionNotice(statusPending);
+
   const applyStatus = (nextFree: boolean, until: Date | null) => {
-    // Optimistic flip, fire-and-forget - the circle already shows the
-    // result the moment you tap it, so a loading state on top of that would
-    // just contradict what's on screen (and on a cold container it left the
-    // button greyed out and unresponsive for up to ~15s). Rollback still
-    // happens on failure, but only for the most recent tap: runId makes an
-    // older (possibly slower) response's rollback or success a no-op once a
-    // newer one has already landed.
     const prevFree = isFree;
     const prevUntil = freeUntil;
     const runId = ++statusRunId.current;
     setIsFree(nextFree);
     setFreeUntil(until);
+    setStatusPending(true);
     (async () => {
       try {
         await api.setMyStatus(nextFree, until ?? undefined);
@@ -167,6 +178,8 @@ export default function Index() {
         setIsFree(prevFree);
         setFreeUntil(prevUntil);
         show(errorMessage(e, "Nepodařilo se uložit stav."), "error");
+      } finally {
+        if (statusRunId.current === runId) setStatusPending(false);
       }
     })();
   };
@@ -249,7 +262,12 @@ export default function Index() {
           connectionsSettled={connections.settled}
         />
 
-        <FreeButton isFree={isFree} onPress={toggleFree} fade={fade} />
+        <FreeButton
+          isFree={isFree}
+          onPress={toggleFree}
+          fade={fade}
+          pending={showLoading}
+        />
 
         <Reveal
           visible={!isFree}
@@ -260,7 +278,9 @@ export default function Index() {
             <Pressable
               key={i}
               onPress={() => handleQuickSet([1, 2, 3, 5][i])}
+              disabled={showLoading}
               className="flex-1 bg-white items-center p-3 rounded-xl active:bg-gray-50 mx-1 border border-gray-200"
+              style={showLoading ? { opacity: 0.5 } : undefined}
             >
               <Text className="text-gray-800 font-semibold text-sm">
                 {formatTime(target)}
