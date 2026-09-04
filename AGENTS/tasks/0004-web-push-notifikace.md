@@ -17,9 +17,8 @@ projektu, který už drží `google-services.json` pro Android.
 
 ## Kritéria splnění
 
-- [ ] Ve Firebase projektu přidaná Web app a vygenerovaný VAPID klíč
-      (Cloud Messaging → Web configuration). **Manuální krok, neprovedeno —
-      viz Poznámky.**
+- [x] Ve Firebase projektu přidaná Web app a vygenerovaný VAPID klíč
+      (Cloud Messaging → Web configuration).
 - [x] FE (web): `firebase-messaging-sw.js` service worker + získání FCM
       web tokenu přes Firebase JS SDK, registrace tokenu na BE.
 - [x] BE: `UserDevice` rozlišuje typ tokenu (`expo` vs. `fcm_web`);
@@ -27,7 +26,8 @@ projektu, který už drží `google-services.json` pro Android.
       HTTP v1 API (Expo tokeny beze změny přes `ExpoPushNotificationService`).
 - [ ] Funkční end-to-end test pro alespoň jeden typ oznámení (např.
       `friend_request`) na webu — od vzniku události po zobrazení
-      systémové notifikace v prohlížeči. **Blokováno na prvním bodu výše.**
+      systémové notifikace v prohlížeči. **Blokováno na BE service account
+      JSON, viz Poznámky.**
 - [x] Opravená zastaralá dokumentace (`apps/be/SemFre/FE_PUSH_INSTRUCTIONS.md`,
       sekce "Push notifikace" v `API_DOCS.md`), ať odpovídá skutečné
       implementaci.
@@ -39,33 +39,28 @@ Zdrojová analýza a rozhodnutí o architektuře jsou zapsané v
 
 ### Stav implementace (2026-09-04)
 
-Kód je hotový na BE i FE, ale task zůstává `in progress` — dva kroky nejde
-dokončit bez zásahu člověka:
+Kód je hotový na BE i FE a ověřený reálným buildem (`dotnet build`,
+`dotnet ef database update` na testovací SQLite DB, `tsc --noEmit`,
+`npx expo export -p web` — service worker se skutečně kopíruje do
+`dist/`). `apps/fe/lib/firebaseWebConfig.ts` a
+`apps/fe/public/firebase-messaging-sw.js` mají doplněné reálné hodnoty
+(Web app config + VAPID klíč z Firebase Console, projekt
+`volny-zaporatstvo`).
 
-1. **Firebase Console** (mimo repo, musí provést člověk s přístupem k
-   projektu `volny-zaporatstvo`): Project settings → přidat Web app →
-   zkopírovat config (`apiKey`, `messagingSenderId`, `appId`), Cloud
-   Messaging → Web configuration → vygenerovat VAPID klíč, Project settings
-   → Service accounts → vygenerovat nový privátní klíč (JSON) pro FCM HTTP v1.
-2. **Doplnění hodnot do kódu/configu** po kroku 1:
-   - `apps/fe/lib/firebaseWebConfig.ts` — nahradit `REPLACE_WITH_*`
-     placeholdery reálnými hodnotami.
-   - `apps/fe/public/firebase-messaging-sw.js` — nahradit stejné
-     placeholdery (service worker se nesbaluje přes Metro, config je tam
-     duplikovaný natvrdo — musí zůstat v souladu s `firebaseWebConfig.ts`).
-   - BE `Fcm:ServiceAccountJson` (env proměnná/Container App secret) —
-     celý obsah service account JSON.
-3. Po doplnění hodnot provést end-to-end ověření podle plánu (dva prohlížeče,
-   friend_request, systémová notifikace, tap routing) a zaškrtnout zbylá
-   kritéria.
+Zbývá jediný krok, mimo repo:
+
+- **BE `Fcm:ServiceAccountJson`** — Firebase Console → Project settings →
+  Service accounts → Generate new private key → celý obsah JSON nastavit
+  jako env proměnnou/Container App secret (`Fcm__ServiceAccountJson`).
+  Bez toho běží FCM web kanál jako No-op (loguje, neodesílá) — Android/Expo
+  tím není ovlivněný.
+
+Po nastavení service account JSON proveď end-to-end ověření (dva
+prohlížeče, friend_request, systémová notifikace, tap routing) a zaškrtni
+poslední kritérium.
 
 Implementační detaily: BE nový `FcmWebPushNotificationService` (FirebaseAdmin
 SDK) + `NotificationServiceDispatcher` (routing podle formátu tokenu, beze
 změny `NotificationBackgroundService`), `UserDevice.TokenType` sloupec +
 migrace. FE `PushGateWeb` (`components/PushGate.tsx`), `getFcmWebTokenAsync`
 + `routeForPushPayload` (`lib/push.ts`, sdílené s native tap routingem).
-
-**Ověření nebylo možné dokončit v tomto sandboxu** — chybí zde .NET SDK
-(nelze spustit `dotnet build`/`dotnet ef`) a `firebase` balíček nebyl
-nainstalován (offline `npm install`), takže BE build a FE web export je
-potřeba ověřit v CI/lokálně před mergem.

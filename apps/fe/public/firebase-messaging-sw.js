@@ -16,12 +16,12 @@ importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-messaging-comp
 
 // Keep in sync with apps/fe/lib/firebaseWebConfig.ts (FIREBASE_WEB_CONFIG).
 firebase.initializeApp({
-  apiKey: 'REPLACE_WITH_FIREBASE_WEB_API_KEY',
+  apiKey: 'AIzaSyDBvD9cyXEmXs12HVhuQb5U9esHr7pOyWM',
   authDomain: 'volny-zaporatstvo.firebaseapp.com',
   projectId: 'volny-zaporatstvo',
-  storageBucket: 'volny-zaporatstvo.appspot.com',
-  messagingSenderId: 'REPLACE_WITH_FIREBASE_SENDER_ID',
-  appId: 'REPLACE_WITH_FIREBASE_WEB_APP_ID',
+  storageBucket: 'volny-zaporatstvo.firebasestorage.app',
+  messagingSenderId: '666486389110',
+  appId: '1:666486389110:web:273a8cb61e7ff99a826257',
 });
 
 const messaging = firebase.messaging();
