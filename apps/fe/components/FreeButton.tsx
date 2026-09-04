@@ -1,5 +1,11 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, Easing, Image, Pressable } from "react-native";
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Image,
+  Pressable,
+} from "react-native";
 import { tapFeedback } from "../lib/haptics";
 import { useReduceMotion } from "../hooks/useReduceMotion";
 
@@ -9,6 +15,10 @@ type Props = {
   /** Shared with StatusHeadline so the circle and the status text crossfade
    * in lockstep instead of drifting apart. */
   fade: Animated.Value;
+  /** True once the in-flight status write has been pending for a while
+   * (see app/index.tsx's useDeferredPending) - disables the button and
+   * shows a loading overlay so a slow request can't be mistaken for done. */
+  pending: boolean;
 };
 
 /**
@@ -20,7 +30,7 @@ type Props = {
  * whose opacity crossfades via `fade`. Everything here (opacity, transform)
  * stays on the native driver.
  */
-export default function FreeButton({ isFree, onPress, fade }: Props) {
+export default function FreeButton({ isFree, onPress, fade, pending }: Props) {
   // Spring "pop" on a real state change - dip then overshoot then settle.
   const stateScale = useRef(new Animated.Value(1)).current;
   // Independent press squish, so it can run concurrently with a state pop
@@ -116,6 +126,7 @@ export default function FreeButton({ isFree, onPress, fade }: Props) {
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        disabled={pending}
         className="w-64 h-64 rounded-full justify-center items-center overflow-hidden bg-gray-100"
       >
         <Animated.View
@@ -133,6 +144,21 @@ export default function FreeButton({ isFree, onPress, fade }: Props) {
             resizeMode="cover"
           />
         </Animated.View>
+        {pending && (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              width: "100%",
+              height: "100%",
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "rgba(0,0,0,0.35)",
+            }}
+          >
+            <ActivityIndicator color="#fff" size="large" />
+          </Animated.View>
+        )}
       </Pressable>
     </Animated.View>
   );

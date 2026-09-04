@@ -29,11 +29,10 @@ Deploy on all platforms with Expo Application Services (EAS).
 - [x] detail profilu pri kliknuti (popup) - bude obsahovat kontakt a friend add/remove - moznost rozkliknuti pouze ze skupiny nebo listu volnych lidi
 - [x] qr ve skupine
 - [x] citelne slugs pro invite do skupiny
-- [ ] linky a qr pro pridavani lidi jako friends
-- [ ] implementovat sockety (volni lide, friend requests)
-- [ ] zjistit stav oznameni, i na webu
+- [x] linky a qr pro pridavani lidi jako friends
 - [x] APK prihlaseni fail
-- [ ] Moc velke apk
+
+Otevřené úkoly jsou nově vedené v [task trackeru](../../AGENTS/tasks/README.md).
 
 ## Konfigurace API URL
 
