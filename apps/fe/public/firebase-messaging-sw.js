@@ -11,8 +11,15 @@
  * worker - no bundler runs over this file, so there's no import resolution
  * for the modular SDK here.
  */
-importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/11.10.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/11.10.0/firebase-messaging-compat.js');
+
+// Take over immediately on every deploy instead of waiting for every tab
+// running the previous version to close first - across repeated redeploys
+// during testing, a stale SW left running for a while is exactly the kind of
+// bug that looks like "works for a bit, then stops".
+self.skipWaiting();
+self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 
 // Keep in sync with apps/fe/lib/firebaseWebConfig.ts (FIREBASE_WEB_CONFIG).
 firebase.initializeApp({

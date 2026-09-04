@@ -87,3 +87,41 @@ dvěma účty ve Firefoxu odhalil dva samostatné bugy:
 Ověřeno `dotnet build`, `tsc --noEmit`, `npx expo export -p web` (service
 worker v `dist/` identický se zdrojem). Čeká na nasazení (nový PR) a
 opakovaný ruční E2E test — pak zaškrtnout poslední kritérium.
+
+### Druhý ruční test (2026-09-04) — 4 další zjištění po nasazení opravy č. 1
+
+Po mergi opravy z předchozí sekce (PR integer-studio/volny#4) další kolo
+testování odhalilo:
+
+1. **`friend_imfree` chodil úplně všem spojením**, i těm, co zrovna volno
+   nemají — opraveno v `FreeTimesController.NotifyConnectionsImFreeAsync`:
+   nový filtr na aktuálně aktivní `FreeTime` (stejný dotazový vzor jako
+   `ConnectionsController.Free`, `GET /api/connections/free`), notifikace
+   teď jde jen spojením, co jsou taky právě volná.
+2. **Android push nedorazí** — v kódu (Expo cesta) nenalezena žádná
+   regrese z předchozích dvou PR. Zůstává otevřené, čeká na diagnostiku z
+   BE logu při příštím reálném testu (stejný postup jako u FCM — najít
+   řádky `ExpoPushNotificationService` kolem času odeslání) a ověření, že
+   nainstalovaná appka má nejnovější EAS Update.
+3. **Web, fokusovaný tab: notifikace ukázala jen "Volný" (fallback text),
+   bez title/body.** Nefokusovaný tab chvíli fungoval správně, pak přestal.
+   U jednoho účtu se navíc vůbec neobjevil banner z opravy č. 1, přestože
+   `Notification.permission` byl `default` (banner se zobrazit měl).
+4. **Kořenová příčina bodu 3 (obojí)**: zastaralý cachovaný service worker
+   / JS bundle v testovacím prohlížečovém profilu. `firebase-messaging-sw.js`
+   byl natvrdo připnutý na Firebase SDK `11.0.0` (CDN), zatímco
+   `package.json` (`"firebase": "^11.0.0"`) reálně nainstaloval `11.10.0` —
+   SW a stránka běžely na different verzích SDK. SW navíc neměl
+   `skipWaiting()`/`clients.claim()`, takže při opakovaných nasazeních
+   během testování mohla stará verze SW běžet mnohem déle, než by měla.
+   Opraveno: `firebase-messaging-sw.js` teď má `self.skipWaiting()` +
+   `clients.claim()` na `activate`, CDN verze sjednocená na `11.10.0`
+   (stejně jako `package.json`, teď přesně připnuté, ne `^11.0.0`), a
+   `staticwebapp.config.json` má `Cache-Control: no-cache` route pro
+   `/firebase-messaging-sw.js`, ať prohlížeč vždy zkontroluje nejnovější
+   verzi.
+
+Ověřeno `dotnet build`, `tsc --noEmit`, `npx expo export -p web`. Bod 2
+(Android) zůstává neopravený — nejde jen o kód, potřeba dat z BE logu z
+reálného testu. Čeká na nasazení (nový PR) a další kolo ručního testu,
+tentokrát v čistém prohlížečovém profilu (bez starého SW).

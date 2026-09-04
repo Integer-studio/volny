@@ -113,8 +113,21 @@ public class FreeTimesController : ControllerBase
     {
         var me = await _db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.UserID == userId);
         var connections = await _connections.GetConnectionsAsync(userId);
+        if (connections.Count == 0) return;
 
-        foreach (var c in connections)
+        // Only tell connections who are ALSO free right now - same "who is free"
+        // query as ConnectionsController.Free (GET /api/connections/free), otherwise
+        // every friend gets pinged regardless of whether hanging out is even possible.
+        var connectionIds = connections.Select(c => c.UserID).ToList();
+        var now = DateTime.UtcNow;
+        var freeUserIds = (await _db.FreeTimes.AsNoTracking()
+            .Where(f => connectionIds.Contains(f.UserID) && f.StartTime <= now && f.EndTime > now)
+            .Select(f => f.UserID)
+            .Distinct()
+            .ToListAsync())
+            .ToHashSet();
+
+        foreach (var c in connections.Where(c => freeUserIds.Contains(c.UserID)))
         {
             var data = new Dictionary<string, string> { { "type", "friend_imfree" }, { "freeTimeId", freeTimeId.ToString() } };
             string title;
