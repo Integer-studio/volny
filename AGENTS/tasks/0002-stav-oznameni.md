@@ -76,10 +76,9 @@ drží `google-services.json` pro Android):
    token → stávající `ExpoPushNotificationService`, FCM web token →
    přímé volání FCM HTTP v1 API.
 4. Android zůstává beze změny (Expo Push funguje, není důvod migrovat).
-5. Doplnit in-app UI (seznam/badge oznámení) — chybí na obou
-   platformách, na webu je bez něj notifikační zkušenost nulová i po
-   zavedení web push. Přirozeně navazuje na realtime mechanismus z
-   [tasku 0001](./0001-realtime-aktualizace.md).
+
+In-app UI pro oznámení (seznam/badge) se aktuálně neplánuje — mimo
+rozsah.
 
 Samotná implementace vyčleněna do
 [tasku 0004](./0004-web-push-notifikace.md).

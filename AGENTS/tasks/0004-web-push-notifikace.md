@@ -15,12 +15,6 @@ Navržená architektura (viz Poznámky v tasku 0002): web push půjde mimo
 Expo, přímo přes Firebase Cloud Messaging pro web, ve stávajícím Firebase
 projektu, který už drží `google-services.json` pro Android.
 
-Souběžně chybí i in-app reprezentace oznámení (seznam, badge) na obou
-platformách — bez ní je notifikační zkušenost na webu nulová i po zavedení
-web push. To přirozeně navazuje na realtime mechanismus z
-[tasku 0001](./0001-realtime-aktualizace.md), se kterým je vhodné
-implementaci koordinovat.
-
 ## Kritéria splnění
 
 - [ ] Ve Firebase projektu přidaná Web app a vygenerovaný VAPID klíč
@@ -36,8 +30,6 @@ implementaci koordinovat.
 - [ ] Opravená zastaralá dokumentace (`apps/be/SemFre/FE_PUSH_INSTRUCTIONS.md`,
       sekce "Push notifikace" v `API_DOCS.md`), ať odpovídá skutečné
       implementaci.
-- [ ] Rozhodnuto a případně implementováno in-app UI pro oznámení (seznam,
-      badge) — koordinovat s taskem 0001.
 
 ## Poznámky
 
