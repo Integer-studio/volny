@@ -12,4 +12,6 @@ public class User
     public string? Phone { get; set; }
     public string? Instagram { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? FriendInviteCode { get; set; }
+    public DateTime? FriendInviteCodeGeneratedAt { get; set; }
 }

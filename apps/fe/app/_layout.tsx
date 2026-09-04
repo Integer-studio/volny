@@ -10,6 +10,7 @@ import BootSplash from "../components/BootSplash";
 import OfflineBanner from "../components/OfflineBanner";
 import PushGate from "../components/PushGate";
 import PendingInviteGate from "../components/PendingInviteGate";
+import PendingFriendInviteGate from "../components/PendingFriendInviteGate";
 import BackButton from "../components/BackButton";
 import { warmUp } from "../lib/warmup";
 
@@ -45,6 +46,7 @@ function Navigation() {
     <>
       {status === 'signedIn' && <PushGate />}
       {status === 'signedIn' && <PendingInviteGate />}
+      {status === 'signedIn' && <PendingFriendInviteGate />}
       {status === 'signedIn' && <OfflineBanner />}
       <Stack screenOptions={{ animation: 'slide_from_right', animationDuration: 220 }}>
         {/*
@@ -133,6 +135,14 @@ function Navigation() {
           name="join/[code]"
           options={{
             title: "Pozvánka",
+            headerShown: true,
+            headerStyle: { backgroundColor: '#FCFBF8' },
+          }}
+        />
+        <Stack.Screen
+          name="add-friend/[code]"
+          options={{
+            title: "Přidat přítele",
             headerShown: true,
             headerStyle: { backgroundColor: '#FCFBF8' },
           }}
