@@ -47,17 +47,16 @@ Kód je hotový na BE i FE a ověřený reálným buildem (`dotnet build`,
 (Web app config + VAPID klíč z Firebase Console, projekt
 `volny-zaporatstvo`).
 
-Zbývá jediný krok, mimo repo:
+`Fcm__ServiceAccountJson` je nastavený jako secret na Container App
+`volny-be` (resource group `volny`). Všechny manuální kroky mimo repo jsou
+tím hotové.
 
-- **BE `Fcm:ServiceAccountJson`** — Firebase Console → Project settings →
-  Service accounts → Generate new private key → celý obsah JSON nastavit
-  jako env proměnnou/Container App secret (`Fcm__ServiceAccountJson`).
-  Bez toho běží FCM web kanál jako No-op (loguje, neodesílá) — Android/Expo
-  tím není ovlivněný.
-
-Po nastavení service account JSON proveď end-to-end ověření (dva
-prohlížeče, friend_request, systémová notifikace, tap routing) a zaškrtni
-poslední kritérium.
+Zbývá jen samotné **nasazení + end-to-end ověření** — kód je zatím jen na
+branchi `claude/task-04-planning-dyqm50`, produkční `volny-be`/web běží se
+starým kódem, který `Fcm:ServiceAccountJson` vůbec nečte. Až se branch
+dostane na `main` (PR + merge → oba deploy workflow se spustí automaticky
+podle `paths:`), proveď end-to-end test (dva prohlížeče, friend_request,
+systémová notifikace, tap routing) a zaškrtni poslední kritérium.
 
 Implementační detaily: BE nový `FcmWebPushNotificationService` (FirebaseAdmin
 SDK) + `NotificationServiceDispatcher` (routing podle formátu tokenu, beze
