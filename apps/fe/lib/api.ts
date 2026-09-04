@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { getExpoPushTokenAsync, isPushSupported } from './push';
+import { getExpoPushTokenAsync, getFcmWebTokenAsync, isPushSupported, isWebPushSupported } from './push';
 import * as Storage from './storage';
 import { parseServerDate } from './date';
 import { API_URL } from './config';
@@ -468,14 +468,18 @@ export const api = {
   },
 
   /**
-   * Idempotent: safe (and intended) to call on every app open, because Expo
-   * push tokens can rotate. The backend upserts on deviceToken.
+   * Idempotent: safe (and intended) to call on every app open, because push
+   * tokens (Expo or FCM web) can rotate. The backend upserts on deviceToken
+   * and derives the provider from the token's own format, so this can stay
+   * the single entrypoint both PushGateNative and PushGateWeb call.
    * Returns the registered token, or null if push is unavailable/denied.
    */
   async registerPushToken(): Promise<string | null> {
-    if (!isPushSupported) return null;
-
-    const token = await getExpoPushTokenAsync();
+    const token = isPushSupported
+      ? await getExpoPushTokenAsync()
+      : isWebPushSupported
+        ? await getFcmWebTokenAsync()
+        : null;
     if (!token) return null;
 
     try {

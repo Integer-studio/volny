@@ -45,6 +45,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.DeviceToken).HasMaxLength(255).IsRequired();
             entity.HasIndex(e => e.DeviceToken).IsUnique();
             entity.Property(e => e.Platform).HasMaxLength(50);
+            entity.Property(e => e.TokenType).HasMaxLength(20).IsRequired().HasDefaultValue("expo");
         });
 
         // Case-insensitive uniqueness on Username is enforced by a raw-SQL

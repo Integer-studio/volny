@@ -13,8 +13,10 @@ public class DeviceCreateDtoValidator : AbstractValidator<DeviceCreateDto>
         RuleFor(x => x.DeviceToken)
             .NotEmpty().WithMessage("DeviceToken je povinný.")
             .MaximumLength(255).WithMessage("DeviceToken může mít nejvýš 255 znaků.")
-            .Must(ExpoPushNotificationService.IsValidExpoToken)
-            .WithMessage("DeviceToken must be an Expo push token, e.g. ExponentPushToken[xxxxxxxx].");
+            .Must(token => ExpoPushNotificationService.IsValidExpoToken(token)
+                        || FcmWebPushNotificationService.IsValidFcmWebToken(token))
+            .WithMessage("DeviceToken must be either an Expo push token (ExponentPushToken[xxxxxxxx]) " +
+                         "or an FCM web push token.");
 
         RuleFor(x => x.Platform)
             .MaximumLength(50).WithMessage("Platform může mít nejvýš 50 znaků.")

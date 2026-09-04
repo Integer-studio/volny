@@ -8,6 +8,7 @@ public class DeviceDto
     public int UserID { get; set; }
     public string DeviceToken { get; set; } = null!;
     public string? Platform { get; set; }
+    public string TokenType { get; set; } = "expo";
     public DateTime LastActive { get; set; }
 }
 
