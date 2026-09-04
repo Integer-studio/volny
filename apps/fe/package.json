@@ -4,7 +4,7 @@
   "main": "expo-router/entry",
   "packageManager": "npm@10.8.2",
   "engines": {
-    "npm": "10.8.2"
+    "npm": "^10.8.2"
   },
   "scripts": {
     "start": "expo start",
