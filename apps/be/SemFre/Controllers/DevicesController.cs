@@ -28,6 +28,12 @@ public class DevicesController : ControllerBase
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
         if (string.IsNullOrEmpty(sub) || !int.TryParse(sub, out var userId)) return Unauthorized();
 
+        // The token's own format is the source of truth for its provider - Platform is
+        // caller-supplied and only informational, so it is never used to pick a provider.
+        var tokenType = SemFre.Services.ExpoPushNotificationService.IsValidExpoToken(dto.DeviceToken)
+            ? "expo"
+            : "fcm_web";
+
         var existing = await _db.UserDevices.FirstOrDefaultAsync(d => d.DeviceToken == dto.DeviceToken);
         var isNew = existing == null;
         if (existing != null)
@@ -37,11 +43,12 @@ public class DevicesController : ControllerBase
                 existing.UserID = userId; // re-assign to this user
             }
             existing.Platform = dto.Platform;
+            existing.TokenType = tokenType;
             existing.LastActive = DateTime.UtcNow;
         }
         else
         {
-            existing = new UserDevice { UserID = userId, DeviceToken = dto.DeviceToken, Platform = dto.Platform, LastActive = DateTime.UtcNow };
+            existing = new UserDevice { UserID = userId, DeviceToken = dto.DeviceToken, Platform = dto.Platform, TokenType = tokenType, LastActive = DateTime.UtcNow };
             _db.UserDevices.Add(existing);
         }
 
@@ -55,6 +62,7 @@ public class DevicesController : ControllerBase
             existing = await _db.UserDevices.FirstAsync(d => d.DeviceToken == dto.DeviceToken);
             existing.UserID = userId;
             existing.Platform = dto.Platform;
+            existing.TokenType = tokenType;
             existing.LastActive = DateTime.UtcNow;
             await _db.SaveChangesAsync();
             isNew = false;

@@ -2,6 +2,8 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { router } from 'expo-router';
+import { FIREBASE_VAPID_KEY, FIREBASE_WEB_CONFIG, isFirebaseWebConfigured } from './firebaseWebConfig';
 
 /**
  * CROSS-REPO CONTRACT — the backend must send `channelId: "default"`
@@ -10,13 +12,48 @@ import { Platform } from 'react-native';
  */
 export const ANDROID_CHANNEL_ID = 'default';
 
-/** Remote push is Android-only in this app. Web + iOS are inert. */
+/** Remote push via Expo is Android-only in this app. Web has its own FCM-based
+ * path below (isWebPushSupported); iOS is inert either way. */
 export const isPushSupported = Platform.OS === 'android';
+
+/** Web push via FCM. Requires a secure context (HTTPS or localhost) with
+ * Service Worker + Push API support, and a completed Firebase Console setup. */
+export const isWebPushSupported =
+  Platform.OS === 'web' &&
+  isFirebaseWebConfigured &&
+  typeof navigator !== 'undefined' &&
+  'serviceWorker' in navigator &&
+  typeof window !== 'undefined' &&
+  'PushManager' in window;
 
 export type PushPayload =
   | { type: 'friend_request'; suggesterId?: string | number }
   | { type: 'friend_accepted'; friendId?: string | number }
   | { type: 'friend_imfree'; freeTimeId?: string | number };
+
+/**
+ * Shared tap-routing logic, used by both the native tap handler
+ * (Notifications.useLastNotificationResponse, in PushGateNative) and the web
+ * one (a postMessage relayed from firebase-messaging-sw.js's
+ * `notificationclick`, in PushGateWeb) — same PushPayload contract, same
+ * destinations, on both platforms.
+ */
+export function routeForPushPayload(data: Partial<PushPayload> | undefined): void {
+  switch (data?.type) {
+    case 'friend_request':
+    case 'friend_accepted':
+      // /search is the "Přátelé" screen; it refetches on focus, so the
+      // relevant request/friend appears immediately.
+      router.push('/search');
+      break;
+    case 'friend_imfree':
+      // The free-friends list lives on the home screen.
+      router.dismissTo('/');
+      break;
+    default:
+      break;
+  }
+}
 
 function getProjectId(): string | undefined {
   return (
@@ -87,6 +124,39 @@ export async function getExpoPushTokenAsync(): Promise<string | null> {
     return data;
   } catch (e) {
     console.warn('[push] Failed to obtain Expo push token:', e);
+    return null;
+  }
+}
+
+/**
+ * Returns an FCM web push token, or null. Never throws — same "null = push
+ * unavailable" contract as getExpoPushTokenAsync. Dynamically imports the
+ * Firebase SDK so it never ends up in the native (Android/iOS) bundle.
+ */
+export async function getFcmWebTokenAsync(): Promise<string | null> {
+  if (!isWebPushSupported) return null;
+
+  try {
+    const { initializeApp, getApps } = await import('firebase/app');
+    const { getMessaging, getToken } = await import('firebase/messaging');
+
+    const app = getApps()[0] ?? initializeApp(FIREBASE_WEB_CONFIG);
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.warn('[push] Web notification permission not granted:', permission);
+      return null;
+    }
+
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, {
+      vapidKey: FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: registration,
+    });
+    return token || null;
+  } catch (e) {
+    console.warn('[push] Failed to obtain FCM web token:', e);
     return null;
   }
 }

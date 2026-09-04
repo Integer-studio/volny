@@ -133,9 +133,12 @@ Notes: Frontend must always include `q` when calling this endpoint.
 
 ### POST /api/devices
 - Auth: required
-- Body: `{ "deviceToken": "string", "platform": "string" }`
+- Body: `{ "deviceToken": "string", "platform": "string" }` — `deviceToken` must be
+  either a valid Expo push token (`ExponentPushToken[...]`) or a valid-looking
+  FCM web push token; the server derives `TokenType` (`expo` | `fcm_web`) from
+  the token's own format, not from `platform`.
 - Behavior: creates or updates a `UserDevice`. If token exists for another user, it is reassigned to current user.
-- Success: `201 Created` -> `DeviceDto`
+- Success: `201 Created` -> `DeviceDto` (includes `tokenType`)
 
 ### GET /api/devices
 - Auth: required
@@ -282,22 +285,32 @@ curl -X POST http://localhost:5135/api/friendsuggestions/accept -H "Authorizatio
 
 ## Push notifikace
 
-- Implementace: background queue (`NotificationQueue`) + worker (`NotificationBackgroundService`) zpracovává frontu.
-- Poskytovatel: FCM (Firebase) je podporován přes legacy `serverKey` v konfiguraci `Fcm:ServerKey`.
-- Konfigurace (appsettings):
+- Implementace: background queue (`NotificationQueue`) + worker
+  (`NotificationBackgroundService`) zpracovává frontu. Worker natáhne
+  všechny device tokeny příjemce a pošle je jedním voláním
+  `INotificationService.SendToDevicesAsync` — rozlišení poskytovatele je
+  schované za `NotificationServiceDispatcher`.
+- Poskytovatelé (dva, nezávislé, podle formátu tokenu):
+  - **Expo Push Service** — Android/iOS mobilní klienti (`ExpoPushNotificationService`).
+  - **FCM HTTP v1** — web klienti (`FcmWebPushNotificationService`, přes `FirebaseAdmin` SDK).
+- Konfigurace (appsettings / env proměnné):
 
 ```json
 {
-  "Fcm": {
-    "ServerKey": "<your-fcm-server-key>"
-  }
+  "Expo": { "Enabled": true, "AccessToken": "<optional>", "ChannelId": "default" },
+  "Fcm": { "ServiceAccountJson": "<celý FCM v1 service account JSON jako string>" }
 }
 ```
 
-- Pokud není `Fcm:ServerKey` nastaven, použije se No-op implementace (logování).
-- Příklady použití (interně):
-  - Po přijetí žádosti o přátelství se posílá notifikace autorovi žádosti.
-  - `POST /api/freetimes/imfree` enqueueuje notifikace všem přátelům uživatele.
+- Pokud `Expo:Enabled=false`, nebo `Fcm:ServiceAccountJson` chybí, daný
+  kanál běží jako No-op (jen logování) — druhý kanál tím není ovlivněn.
+  Legacy `Fcm:ServerKey` (server key) se nepoužívá — FCM se volá výhradně
+  přes HTTP v1 (OAuth2 service account).
+- Typy notifikací generovaných na BE: `friend_request`, `friend_accepted`
+  (`FriendSuggestionsController`), `friend_added_via_qr` (`FriendsController`),
+  `friend_imfree` (`FreeTimesController`, rozeslané všem přátelům a členům
+  sdílených skupin přes `IConnectionService`).
+- Detailní FE integrace (Expo i web): viz `FE_PUSH_INSTRUCTIONS.md`.
 
 ---
 

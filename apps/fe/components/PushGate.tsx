@@ -1,23 +1,24 @@
 import { useEffect, useRef } from 'react';
-import { router } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { api } from '../lib/api';
-import { isPushSupported, type PushPayload } from '../lib/push';
+import { isPushSupported, isWebPushSupported, routeForPushPayload, type PushPayload } from '../lib/push';
 
 /**
  * Mounted once, only while the user is authenticated.
- * - registers/refreshes the Expo push token with the backend
+ * - registers/refreshes the push token (Expo or FCM web) with the backend
  * - handles notification taps (cold start + warm)
  * Renders nothing.
  *
- * isPushSupported is a per-platform constant (never changes at runtime), so
- * branching on it here to pick a different component - rather than bailing
- * out of individual hooks inside one component - doesn't break the rules of
- * hooks: a given mounted instance always takes the same branch.
+ * isPushSupported/isWebPushSupported are per-platform constants (never change
+ * at runtime), so branching on them here to pick a different component -
+ * rather than bailing out of individual hooks inside one component - doesn't
+ * break the rules of hooks: a given mounted instance always takes the same
+ * branch.
  */
 export default function PushGate() {
-  if (!isPushSupported) return null;
-  return <PushGateNative />;
+  if (isPushSupported) return <PushGateNative />;
+  if (isWebPushSupported) return <PushGateWeb />;
+  return null;
 }
 
 function PushGateNative() {
@@ -59,22 +60,39 @@ function PushGateNative() {
     handled.current = id;
 
     const data = response.notification.request.content.data as Partial<PushPayload> | undefined;
-
-    switch (data?.type) {
-      case 'friend_request':
-      case 'friend_accepted':
-        // /search is the "Přátelé" screen; it refetches on focus, so the
-        // relevant request/friend appears immediately.
-        router.push('/search');
-        break;
-      case 'friend_imfree':
-        // The free-friends list lives on the home screen.
-        router.dismissTo('/');
-        break;
-      default:
-        break;
-    }
+    routeForPushPayload(data);
   }, [response]);
+
+  return null;
+}
+
+function PushGateWeb() {
+  // Same registration lifecycle as PushGateNative - api.registerPushToken()
+  // branches internally on isWebPushSupported and calls getFcmWebTokenAsync.
+  useEffect(() => {
+    let cancelled = false;
+    api.registerPushToken().then(token => {
+      if (!cancelled && token) {
+        console.log('[push] registered:', token);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Web notification taps happen in the service worker (it runs independently
+  // of the page), which relays them here via postMessage - see the
+  // `notificationclick` handler in public/firebase-messaging-sw.js.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type !== 'push-notification-click') return;
+      routeForPushPayload(event.data.payload as Partial<PushPayload> | undefined);
+    };
+
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  }, []);
 
   return null;
 }

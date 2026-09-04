@@ -10,6 +10,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Text;
 using System.Threading.RateLimiting;
+using FirebaseAdmin;
+using FirebaseAdmin.Messaging;
+using Google.Apis.Auth.OAuth2;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -92,15 +95,36 @@ var expoOptions = new SemFre.Services.ExpoPushOptions
     AccessToken = builder.Configuration["Expo:AccessToken"],
     ChannelId = builder.Configuration["Expo:ChannelId"] ?? "default"
 };
-if (expoOptions.Enabled)
+builder.Services.AddSingleton(expoOptions);
+builder.Services.AddSingleton<SemFre.Services.ExpoPushNotificationService>();
+builder.Services.AddSingleton<SemFre.Services.NoopNotificationService>();
+builder.Services.AddSingleton(sp => new SemFre.Services.NotificationServiceDispatcher.ExpoOrNoop(
+    expoOptions.Enabled
+        ? sp.GetRequiredService<SemFre.Services.ExpoPushNotificationService>()
+        : sp.GetRequiredService<SemFre.Services.NoopNotificationService>()));
+
+// FCM (web push): the whole service account JSON is one config value/env var (see
+// .gitignore's "Firebase service account key (FCM V1)" hint) - there is no file-mount
+// convention in this project, so a mounted-secret-file approach would be inconsistent.
+var fcmServiceAccountJson = builder.Configuration["Fcm:ServiceAccountJson"];
+if (!string.IsNullOrWhiteSpace(fcmServiceAccountJson))
 {
-    builder.Services.AddSingleton(expoOptions);
-    builder.Services.AddSingleton<SemFre.Services.INotificationService, SemFre.Services.ExpoPushNotificationService>();
+    var firebaseApp = FirebaseApp.Create(new AppOptions
+    {
+        Credential = GoogleCredential.FromJson(fcmServiceAccountJson)
+    });
+    builder.Services.AddSingleton(FirebaseMessaging.GetMessaging(firebaseApp));
+    builder.Services.AddSingleton<SemFre.Services.FcmWebPushNotificationService>();
+    builder.Services.AddSingleton(sp => new SemFre.Services.NotificationServiceDispatcher.FcmWebOrNoop(
+        sp.GetRequiredService<SemFre.Services.FcmWebPushNotificationService>()));
 }
 else
 {
-    builder.Services.AddSingleton<SemFre.Services.INotificationService, SemFre.Services.NoopNotificationService>();
+    builder.Services.AddSingleton(sp => new SemFre.Services.NotificationServiceDispatcher.FcmWebOrNoop(
+        sp.GetRequiredService<SemFre.Services.NoopNotificationService>()));
 }
+
+builder.Services.AddSingleton<SemFre.Services.INotificationService, SemFre.Services.NotificationServiceDispatcher>();
 builder.Services.AddHostedService<SemFre.Background.NotificationBackgroundService>();
 
 // JWT Authentication
