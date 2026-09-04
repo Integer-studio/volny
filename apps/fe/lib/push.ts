@@ -26,6 +26,22 @@ export const isWebPushSupported =
   typeof window !== 'undefined' &&
   'PushManager' in window;
 
+/**
+ * True when we should show a UI prompt asking the user to enable web push.
+ * Firefox (and increasingly other browsers) silently refuses
+ * `Notification.requestPermission()` unless it runs inside a direct
+ * user-gesture handler - calling it eagerly on mount gets no dialog at all.
+ * `Notification.permission === 'default'` means "never asked" (as opposed to
+ * 'granted' or 'denied'), so this only fires once per browser profile.
+ */
+export function needsWebNotificationPrompt(): boolean {
+  return (
+    isWebPushSupported &&
+    typeof Notification !== 'undefined' &&
+    Notification.permission === 'default'
+  );
+}
+
 export type PushPayload =
   | { type: 'friend_request'; suggesterId?: string | number }
   | { type: 'friend_accepted'; friendId?: string | number }
@@ -159,4 +175,49 @@ export async function getFcmWebTokenAsync(): Promise<string | null> {
     console.warn('[push] Failed to obtain FCM web token:', e);
     return null;
   }
+}
+
+/**
+ * Messages sent by the backend carry title/body inside `data` (all-string
+ * values, as FCM's data payload requires), not in a top-level `notification`
+ * field - see FcmWebPushNotificationService on the backend. This matters
+ * because a `notification` payload is handled inconsistently depending on
+ * whether the tab is focused: sometimes shown by the browser itself,
+ * sometimes routed to onMessage, sometimes to the service worker's
+ * onBackgroundMessage. A data-only payload always reaches JS code (this
+ * function when the tab is focused, the service worker's
+ * onBackgroundMessage otherwise), so both sides can explicitly decide to
+ * show a notification instead of relying on that ambiguity.
+ *
+ * Registers a listener for pushes that arrive while this tab is focused -
+ * the counterpart to firebase-messaging-sw.js's onBackgroundMessage, which
+ * only fires when no tab has focus. Returns an unsubscribe function.
+ */
+export function listenForForegroundFcmMessages(): () => void {
+  let unsubscribe: (() => void) | undefined;
+  let cancelled = false;
+
+  if (isWebPushSupported) {
+    (async () => {
+      const { initializeApp, getApps } = await import('firebase/app');
+      const { getMessaging, onMessage } = await import('firebase/messaging');
+      if (cancelled) return;
+
+      const app = getApps()[0] ?? initializeApp(FIREBASE_WEB_CONFIG);
+      const messaging = getMessaging(app);
+      unsubscribe = onMessage(messaging, payload => {
+        const data = payload.data as (Partial<PushPayload> & { title?: string; body?: string }) | undefined;
+        const notification = new Notification(data?.title || 'Volný', { body: data?.body || '' });
+        notification.onclick = () => {
+          window.focus();
+          routeForPushPayload(data);
+        };
+      });
+    })();
+  }
+
+  return () => {
+    cancelled = true;
+    unsubscribe?.();
+  };
 }

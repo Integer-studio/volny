@@ -26,8 +26,8 @@ projektu, který už drží `google-services.json` pro Android.
       HTTP v1 API (Expo tokeny beze změny přes `ExpoPushNotificationService`).
 - [ ] Funkční end-to-end test pro alespoň jeden typ oznámení (např.
       `friend_request`) na webu — od vzniku události po zobrazení
-      systémové notifikace v prohlížeči. **Blokováno na BE service account
-      JSON, viz Poznámky.**
+      systémové notifikace v prohlížeči. **Dva bugy nalezené a opravené
+      při prvním pokusu, viz Poznámky — čeká na re-test po nasazení.**
 - [x] Opravená zastaralá dokumentace (`apps/be/SemFre/FE_PUSH_INSTRUCTIONS.md`,
       sekce "Push notifikace" v `API_DOCS.md`), ať odpovídá skutečné
       implementaci.
@@ -51,15 +51,39 @@ Kód je hotový na BE i FE a ověřený reálným buildem (`dotnet build`,
 `volny-be` (resource group `volny`). Všechny manuální kroky mimo repo jsou
 tím hotové.
 
-Zbývá jen samotné **nasazení + end-to-end ověření** — kód je zatím jen na
-branchi `claude/task-04-planning-dyqm50`, produkční `volny-be`/web běží se
-starým kódem, který `Fcm:ServiceAccountJson` vůbec nečte. Až se branch
-dostane na `main` (PR + merge → oba deploy workflow se spustí automaticky
-podle `paths:`), proveď end-to-end test (dva prohlížeče, friend_request,
-systémová notifikace, tap routing) a zaškrtni poslední kritérium.
-
 Implementační detaily: BE nový `FcmWebPushNotificationService` (FirebaseAdmin
 SDK) + `NotificationServiceDispatcher` (routing podle formátu tokenu, beze
 změny `NotificationBackgroundService`), `UserDevice.TokenType` sloupec +
 migrace. FE `PushGateWeb` (`components/PushGate.tsx`), `getFcmWebTokenAsync`
 + `routeForPushPayload` (`lib/push.ts`, sdílené s native tap routingem).
+
+### První ruční E2E test (2026-09-04) — 2 bugy nalezeny a opravené
+
+Po prvním nasazení (PR integer-studio/volny#3, mergnuto) ruční test se
+dvěma účty ve Firefoxu odhalil dva samostatné bugy:
+
+1. **Permission prompt se nezobrazil u druhého účtu** — Firefox tiše
+   odmítne `Notification.requestPermission()`, pokud neběží přímo uvnitř
+   user-gesta (kliku). Kód ho volal automaticky v `useEffect` při mountu
+   `PushGateWeb`. Oprava: nová `apps/fe/components/NotificationPermissionBanner.tsx`
+   (vzor `OfflineBanner`), mountovaná v `app/_layout.tsx` vedle `PushGate`;
+   `Notification.requestPermission()` (přes `api.registerPushToken()`) se
+   teď volá jen z `onPress` banneru. `PushGateWeb` si nechává jen tichý
+   token-refresh pro uživatele s už uděleným oprávněním (`needsWebNotificationPrompt`
+   guard v `lib/push.ts`).
+2. **Notifikace nedorazila ani účtu s platným tokenem a uděleným oprávněním**
+   — BE log potvrdil úspěšné odeslání (`FCM web push ...: 1 ok`), ale nic
+   se nezobrazilo. Příčina: zprávy nesly top-level `notification` payload,
+   který Firebase Web SDK při **fokusovaném tabu** doručí do `onMessage()`
+   na stránce místo do service workeru — a `onMessage` nebyl vůbec
+   implementovaný. Oprava: zprávy jsou teď plně data-only
+   (`FcmWebPushNotificationService.cs` — `title`/`body` v `Data` slovníku,
+   žádný top-level `Notification`/`Webpush.Notification`), nová
+   `listenForForegroundFcmMessages()` v `lib/push.ts` (volaná z
+   `PushGateWeb`) ručně zobrazí `new Notification(...)` pro fokusovaný tab,
+   `firebase-messaging-sw.js`'s `onBackgroundMessage` čte `payload.data`
+   místo `payload.notification` pro nefokusovaný/zavřený tab.
+
+Ověřeno `dotnet build`, `tsc --noEmit`, `npx expo export -p web` (service
+worker v `dist/` identický se zdrojem). Čeká na nasazení (nový PR) a
+opakovaný ruční E2E test — pak zaškrtnout poslední kritérium.
