@@ -60,6 +60,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
             entity.Property(e => e.Phone).HasMaxLength(32);
             entity.Property(e => e.Instagram).HasMaxLength(64);
+            entity.Property(e => e.FriendInviteCode).HasMaxLength(16);
+            entity.HasIndex(e => e.FriendInviteCode).IsUnique();
         });
 
         modelBuilder.Entity<Group>(entity =>

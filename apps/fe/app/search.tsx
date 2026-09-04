@@ -5,20 +5,64 @@ import Check from "lucide-react-native/icons/check";
 import X from "lucide-react-native/icons/x";
 import Trash2 from "lucide-react-native/icons/trash-2";
 import UserPlus from "lucide-react-native/icons/user-plus";
+import QrCode from "lucide-react-native/icons/qr-code";
+import Copy from "lucide-react-native/icons/copy";
+import Share2 from "lucide-react-native/icons/share-2";
+import RefreshCw from "lucide-react-native/icons/refresh-cw";
+import QRCodeSvg from "react-native-qrcode-svg";
 import { api, UserSummary } from "../lib/api";
 import UserRow from "../components/UserRow";
+import BottomSheet from "../components/BottomSheet";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import { useToast } from "../components/Toast";
+import { useAuth } from "../lib/auth-context";
 import { errorMessage } from "../lib/errors";
+import { buildFriendInviteUrl, shareFriendInvite, copyFriendInviteLink } from "../lib/friend-invite-link";
 
 export default function SearchScreen() {
   const { show } = useToast();
+  const { me } = useAuth();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [addedDict, setAddedDict] = useState<Record<string, boolean>>({});
   const [hiddenFriendIds, setHiddenFriendIds] = useState<Set<string>>(new Set());
   const [hiddenRequestIds, setHiddenRequestIds] = useState<Set<string>>(new Set());
+
+  const [qrVisible, setQrVisible] = useState(false);
+  const [myCode, setMyCode] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const myInvite = useAsyncData(() => api.getMyFriendInviteCode(), []);
+
+  useEffect(() => {
+    if (myInvite.data) setMyCode(myInvite.data);
+  }, [myInvite.data]);
+
+  const handleCopyMyCode = async () => {
+    if (!myCode) return;
+    const result = await copyFriendInviteLink(myCode);
+    show(result === 'copied' ? 'Odkaz zkopírován.' : 'Kopírování se nezdařilo.', result === 'copied' ? 'success' : 'error');
+  };
+
+  const handleShareMyCode = async () => {
+    if (!myCode) return;
+    const result = await shareFriendInvite(myCode, me?.name ?? '');
+    if (result === 'copied') show('Odkaz zkopírován.');
+    else if (result === 'failed') show('Sdílení se nezdařilo.', 'error');
+  };
+
+  const handleRegenerateMyCode = async () => {
+    setRegenerating(true);
+    try {
+      const fresh = await api.regenerateFriendInviteCode();
+      setMyCode(fresh);
+      show('Nový kód vygenerován. Starý přestal fungovat.');
+    } catch {
+      show('Nepodařilo se vygenerovat nový kód.', 'error');
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query.trim()), 400);
@@ -87,17 +131,25 @@ export default function SearchScreen() {
 
   return (
     <View className="flex-1 bg-[#FCFBF8] p-4">
-      <View className="flex-row items-center bg-gray-100 p-3 rounded-2xl mb-6">
-        <Search size={20} color="#888" className="mr-2" />
-        <TextInput
-          className="flex-1 text-base text-gray-800"
-          placeholder="Vyhledat uživatele..."
-          value={query}
-          onChangeText={setQuery}
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={{ paddingVertical: 0 }}
-        />
+      <View className="flex-row items-center mb-6">
+        <View className="flex-1 flex-row items-center bg-gray-100 p-3 rounded-2xl mr-2">
+          <Search size={20} color="#888" className="mr-2" />
+          <TextInput
+            className="flex-1 text-base text-gray-800"
+            placeholder="Vyhledat uživatele..."
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={{ paddingVertical: 0 }}
+          />
+        </View>
+        <Pressable
+          onPress={() => setQrVisible(true)}
+          className="p-3 bg-gray-100 rounded-2xl active:opacity-80"
+        >
+          <QrCode size={20} color="#888" />
+        </Pressable>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -190,6 +242,40 @@ export default function SearchScreen() {
         )}
 
       </ScrollView>
+
+      <BottomSheet visible={qrVisible} onClose={() => setQrVisible(false)}>
+        <View className="items-center">
+          <Text className="text-gray-400 text-sm font-medium mb-6">
+            Naskenováním tě ostatní přidají do přátel
+          </Text>
+          {myCode ? (
+            <>
+              <View className="bg-white p-4 rounded-2xl">
+                <QRCodeSvg value={buildFriendInviteUrl(myCode)} size={220} />
+              </View>
+              <Text className="text-gray-900 text-lg font-semibold tracking-wide mt-6">
+                {myCode}
+              </Text>
+              <Text className="text-gray-400 text-xs mt-1">Platí 24 hodin</Text>
+              <View className="flex-row mt-6 w-full">
+                <Pressable onPress={handleCopyMyCode} className="flex-1 flex-row items-center justify-center bg-gray-100 py-3 rounded-xl mr-2 active:opacity-80">
+                  <Copy size={16} color="#333" />
+                  <Text className="text-gray-800 font-medium ml-2">Kopírovat</Text>
+                </Pressable>
+                <Pressable onPress={handleShareMyCode} className="flex-1 flex-row items-center justify-center bg-gray-100 py-3 rounded-xl mx-1 active:opacity-80">
+                  <Share2 size={16} color="#333" />
+                  <Text className="text-gray-800 font-medium ml-2">Sdílet</Text>
+                </Pressable>
+                <Pressable onPress={handleRegenerateMyCode} disabled={regenerating} className="flex-row items-center justify-center bg-gray-100 py-3 px-3 rounded-xl ml-2 active:opacity-80">
+                  {regenerating ? <ActivityIndicator color="#333" /> : <RefreshCw size={16} color="#333" />}
+                </Pressable>
+              </View>
+            </>
+          ) : (
+            <ActivityIndicator size="large" color="#EE6C4D" />
+          )}
+        </View>
+      </BottomSheet>
     </View>
   );
 }

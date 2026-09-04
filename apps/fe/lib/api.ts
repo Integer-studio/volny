@@ -116,6 +116,7 @@ export type GroupSummary = { id: string; name: string; memberCount: number; isOw
 export type GroupMember = { id: string; username: string; name: string; joinedAt: Date; isOwner: boolean };
 export type GroupDetail = GroupSummary & { inviteCode: string; members: GroupMember[]; alreadyMember: boolean };
 export type GroupPreview = { name: string; memberCount: number; ownerName?: string; alreadyMember: boolean };
+export type FriendInvitePreview = { name: string; username: string; alreadyFriend: boolean };
 
 type GroupSummaryDto = { groupID: number; name: string; memberCount: number; isOwner: boolean };
 type GroupMemberDto = { userID: number; username: string; name: string; joinedAt: string; isOwner: boolean };
@@ -124,6 +125,7 @@ type GroupDetailDto = {
   inviteCode: string; members: GroupMemberDto[]; alreadyMember: boolean;
 };
 type GroupInvitePreviewDto = { name: string; memberCount: number; ownerName?: string; alreadyMember: boolean };
+type FriendInvitePreviewDto = { name: string; username: string; alreadyFriend: boolean };
 
 function toGroupDetail(d: GroupDetailDto, currentUserId: number | null): GroupDetail {
   const owner = d.members.find(m => m.isOwner);
@@ -424,6 +426,37 @@ export const api = {
 
   async addFriend(userId: string): Promise<void> {
     await request('/friendsuggestions', { method: 'POST', body: userId });
+  },
+
+  async getMyFriendInviteCode(): Promise<string> {
+    const res = await request('/friends/invite/code');
+    return res.code;
+  },
+
+  async regenerateFriendInviteCode(): Promise<string> {
+    const res = await request('/friends/invite/regenerate', { method: 'POST' });
+    return res.code;
+  },
+
+  async previewFriendInvite(code: string): Promise<FriendInvitePreview> {
+    // Anonymous endpoint, but still sends the token when present (not
+    // `anonymous: true`) so the backend can report alreadyFriend correctly
+    // for a logged-in viewer - same rationale as previewInvite below.
+    const preview: FriendInvitePreviewDto = await request(`/friends/invite/${encodeURIComponent(code)}`, {
+      allowUnauthorized: true,
+    });
+    return preview;
+  },
+
+  async acceptFriendInvite(code: string): Promise<UserSummary> {
+    // Safe to mark idempotent: the backend reports the existing friendship
+    // rather than erroring on a repeat accept, so a retried request after an
+    // ambiguous timeout can't create a duplicate.
+    const friend: FriendDto = await request(`/friends/invite/${encodeURIComponent(code)}/accept`, {
+      method: 'POST',
+      idempotent: true,
+    });
+    return toUserSummary(friend.user);
   },
 
   async acceptRequest(suggesterId: string): Promise<void> {
