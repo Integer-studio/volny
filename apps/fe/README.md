@@ -30,10 +30,9 @@ Deploy on all platforms with Expo Application Services (EAS).
 - [x] qr ve skupine
 - [x] citelne slugs pro invite do skupiny
 - [x] linky a qr pro pridavani lidi jako friends
-- [ ] implementovat sockety (volni lide, friend requests)
-- [ ] zjistit stav oznameni, i na webu
 - [x] APK prihlaseni fail
-- [ ] Moc velke apk
+
+Otevřené úkoly jsou nově vedené v [task trackeru](../../AGENTS/tasks/README.md).
 
 ## Konfigurace API URL
 

@@ -1,0 +1,1 @@
+@../../AGENTS/konvence-be.md

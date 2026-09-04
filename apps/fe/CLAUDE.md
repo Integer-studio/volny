@@ -1,1 +1,1 @@
-@AGENTS.md
+@../../AGENTS/konvence-fe.md
