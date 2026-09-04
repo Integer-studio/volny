@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "packageManager": "npm@10.8.2",
+  "engines": {
+    "npm": "10.8.2"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
