@@ -199,7 +199,8 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
         policy.WithOrigins(
                   "https://thankful-forest-019ea4310.6.azurestaticapps.net",
-                  "https://volny.intstudio.cz")
+                  "https://volny.intstudio.cz",
+                  "http://localhost:8081")
               .AllowAnyHeader()
               .AllowAnyMethod());
 });
