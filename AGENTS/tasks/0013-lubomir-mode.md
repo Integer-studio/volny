@@ -10,12 +10,36 @@
 Volného. V nastavení má být možnost tyto obrázky vypnout a nahradit je
 generickými ikonkami ("Lubomír mode" on/off).
 
-Jde zatím jen o zadání přenesené z poznámek — konkrétní řešení (které
-assety, jaké náhradní ikonky, kde v nastavení) se dořeší později.
+**Zjištěný current stav (2026-09-06):** Jediný obrazový soubor s
+podobiznou je `apps/fe/assets/images/volny.png`, použitý na 5 místech:
+hlavní kruhové tlačítko appky (`components/FreeButton.tsx`), ikona push
+notifikace na webu (`public/firebase-messaging-sw.js`), a navíc app icon
+pro iOS/Android a web favicon (`app.json` → `expo.icon`,
+`android.adaptiveIcon.foregroundImage`, `web.favicon`) — ty poslední dva
+jsou ale statické build-time assety, runtime toggle je bez rebuildu
+nezmění.
+
+**Rozhodnuto (rozsah a výchozí stav):** toggle ovlivní jen runtime
+použití — hlavní tlačítko appky a ikonu push notifikace na webu. App icon
+a favicon zůstávají mimo rozsah (beze změny). **Výchozí stav je zapnuto**
+(opt-out) — viz právní kontext níže, toto je vědomě přijaté riziko, ne
+opomenutí.
 
 ## Kritéria splnění
 
-- [ ] ...
+- [ ] Nastavení (`apps/fe/app/settings.tsx`) obsahuje toggle "Lubomír
+      mode" (výchozí stav: zapnuto).
+- [ ] Když je vypnuto: hlavní kruhové tlačítko (`components/FreeButton.tsx`)
+      zobrazuje generickou ikonku místo `assets/images/volny.png`.
+- [ ] Když je vypnuto: ikona push notifikace na webu
+      (`apps/fe/public/firebase-messaging-sw.js`) je generická.
+- [ ] Mimo rozsah: app icon (iOS/Android) a web favicon (`app.json`)
+      zůstávají beze změny — vyžadovaly by rebuild/app store submission.
+- [ ] Preference se ukládá lokálně na zařízení (přes
+      `apps/fe/lib/storage.ts`) — zatím neexistuje BE endpoint pro
+      per-user preference; pokud má být sdílená mezi zařízeními, je
+      potřeba i BE rozšíření (mimo rozsah tohoto tasku, pokud nebude
+      řečeno jinak).
 
 ## Poznámky
 

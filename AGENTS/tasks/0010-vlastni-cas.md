@@ -16,7 +16,15 @@ později.
 
 ## Kritéria splnění
 
-- [ ] ...
+- [ ] Doplňková volba "vlastní čas na minuty" dostupná vedle presetů/
+      15minutového kroku z nového UI ([0007](./0007-nove-zadavani-casu.md))
+      — např. přepnutí z kroku 15 min na volný `DateTimePicker` (Expo)
+      nebo rozšíření slideru na granularitu 1 minuta.
+- [ ] Datová vrstva nevyžaduje změnu — BE `DateTime` (UTC) podporuje
+      libovolnou přesnost už dnes (viz zjištění v [0007](./0007-nove-zadavani-casu.md)).
+- [ ] UI jasně odlišuje "rychlá volba/presety" od "přesný vlastní čas"
+      (např. samostatné tlačítko/přepínač), aby běžný uživatel nemusel
+      řešit minuty, pokud nechce.
 
 ## Poznámky
 

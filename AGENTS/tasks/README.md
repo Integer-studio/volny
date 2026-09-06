@@ -48,5 +48,5 @@ doby před zavedením priorit je uvedena orientačně.
 | 0012 | "Kde jsem" políčko (volný text) | todo | 3 | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md) |
 | 0013 | Lubomír mode on/off (vypnutý stav bez obrázků) | todo | 1 | [0013-lubomir-mode.md](./0013-lubomir-mode.md) |
 | 0014 | Lepší always-on backend | todo | 1 | [0014-always-on-backend.md](./0014-always-on-backend.md) |
-| 0015 | Rozvedení zadání nových tasků (0006–0014, 0016) | todo | 1 | [0015-rozvedeni-novych-tasku.md](./0015-rozvedeni-novych-tasku.md) |
-| 0016 | Sessions nevydrží po scaledownu backendu | todo | 1 | [0016-sessions-nevydrzi-po-scaledownu.md](./0016-sessions-nevydrzi-po-scaledownu.md) |
+| 0015 | Rozvedení zadání nových tasků (0006–0014, 0016) | done | 1 | [0015-rozvedeni-novych-tasku.md](./0015-rozvedeni-novych-tasku.md) |
+| 0016 | Sessions nevydrží dostatečně dlouho (JWT bez refresh tokenu) | todo | 1 | [0016-sessions-nevydrzi-po-scaledownu.md](./0016-sessions-nevydrzi-po-scaledownu.md) |
