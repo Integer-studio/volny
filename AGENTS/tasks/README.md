@@ -35,3 +35,13 @@ vzít a dopracovat.
 | 0003 | Zmenšit velikost APK | done | [0003-velikost-apk.md](./0003-velikost-apk.md) |
 | 0004 | Web push notifikace | in progress | [0004-web-push-notifikace.md](./0004-web-push-notifikace.md) |
 | 0005 | Web push notifikace pro iOS (Safari) | todo | [0005-ios-safari-web-push.md](./0005-ios-safari-web-push.md) |
+| 0006 | Nepovinný telefon a IG při registraci + disclaimer o viditelnosti | todo | [0006-nepovinny-telefon-ig-registrace.md](./0006-nepovinny-telefon-ig-registrace.md) |
+| 0007 | Nové zadávání času | todo | [0007-nove-zadavani-casu.md](./0007-nove-zadavani-casu.md) |
+| 0008 | Scheduled začátek volna (max. den dopředu) | todo | [0008-scheduled-zacatek-volna.md](./0008-scheduled-zacatek-volna.md) |
+| 0009 | User-based nastavení presetů | todo | [0009-user-presety.md](./0009-user-presety.md) |
+| 0010 | Vlastní čas (manuální zadání) | todo | [0010-vlastni-cas.md](./0010-vlastni-cas.md) |
+| 0011 | Přichycení (snap) času na nejbližší preset | todo | [0011-snap-casu-na-preset.md](./0011-snap-casu-na-preset.md) |
+| 0012 | "Kde jsem" políčko (volný text) | todo | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md) |
+| 0013 | Lubomír mode on/off (vypnutý stav bez obrázků) | todo | [0013-lubomir-mode.md](./0013-lubomir-mode.md) |
+| 0014 | Lepší always-on backend | todo | [0014-always-on-backend.md](./0014-always-on-backend.md) |
+| 0015 | Rozvedení zadání nových tasků (0006–0014) | todo | [0015-rozvedeni-novych-tasku.md](./0015-rozvedeni-novych-tasku.md) |
