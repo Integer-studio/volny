@@ -24,8 +24,12 @@ potřeba nejdřív ověřit/diagnostikovat.
       perzistentní úložiště) a zda scaledown skutečně způsobuje ztrátu
       sessions.
 - [ ] Sessions vydrží po celou očekávanou dobu bez ohledu na
-      škálování/restart instancí backendu.
+      škálování/restart instancí backendu i na deploy nové verze.
 
 ## Poznámky
 
 Vzniklo jako součást dávky nových tasků 2026-09-06, rozvedeno v [0015](./0015-rozvedeni-novych-tasku.md).
+
+Sessions by měly přežít i deploy nové verze backendu, ne jen scaledown —
+pokud řešení bude in-memory only, nový deploy (nové instance) by je
+smazal stejně jako scaledown.
