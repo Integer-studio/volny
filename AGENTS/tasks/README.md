@@ -44,4 +44,5 @@ vzít a dopracovat.
 | 0012 | "Kde jsem" políčko (volný text) | todo | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md) |
 | 0013 | Lubomír mode on/off (vypnutý stav bez obrázků) | todo | [0013-lubomir-mode.md](./0013-lubomir-mode.md) |
 | 0014 | Lepší always-on backend | todo | [0014-always-on-backend.md](./0014-always-on-backend.md) |
-| 0015 | Rozvedení zadání nových tasků (0006–0014) | todo | [0015-rozvedeni-novych-tasku.md](./0015-rozvedeni-novych-tasku.md) |
+| 0015 | Rozvedení zadání nových tasků (0006–0014, 0016) | todo | [0015-rozvedeni-novych-tasku.md](./0015-rozvedeni-novych-tasku.md) |
+| 0016 | Sessions nevydrží po scaledownu backendu | todo | [0016-sessions-nevydrzi-po-scaledownu.md](./0016-sessions-nevydrzi-po-scaledownu.md) |
