@@ -1,6 +1,7 @@
 # 0008 — Scheduled začátek volna (max. den dopředu)
 
 - **Stav:** todo
+- **Priorita:** 2 (důležité, ale nebrání releasu)
 - **Datum vytvoření:** 2026-09-06
 
 ## Popis / kontext

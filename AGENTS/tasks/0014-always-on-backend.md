@@ -1,6 +1,7 @@
 # 0014 — Lepší always-on (nebo aspoň přes den zapnutý) backend
 
 - **Stav:** todo
+- **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-06
 
 ## Popis / kontext

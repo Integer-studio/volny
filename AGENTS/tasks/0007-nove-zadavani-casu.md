@@ -1,6 +1,7 @@
 # 0007 — Nové zadávání času
 
 - **Stav:** todo
+- **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-06
 
 ## Popis / kontext

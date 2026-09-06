@@ -1,6 +1,7 @@
 # 0005 — Web push notifikace pro iOS (Safari)
 
 - **Stav:** todo
+- **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-04
 
 ## Popis / kontext

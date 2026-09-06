@@ -1,6 +1,7 @@
 # 0001 — Realtime aktualizace (volní lidé, friend requesty)
 
 - **Stav:** todo
+- **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-04
 
 ## Popis / kontext

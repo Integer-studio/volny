@@ -1,6 +1,7 @@
 # 0015 — Rozvedení zadání nových tasků (0006–0014, 0016)
 
 - **Stav:** todo
+- **Priorita:** 1 (blokuje pořádné zahájení práce na ostatních tascích)
 - **Datum vytvoření:** 2026-09-06
 
 ## Popis / kontext

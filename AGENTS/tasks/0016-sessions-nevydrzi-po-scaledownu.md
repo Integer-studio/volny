@@ -1,6 +1,7 @@
 # 0016 — Sessions nevydrží dostatečně dlouho (podezření: BE je zahazuje po scaledownu)
 
 - **Stav:** todo
+- **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-06
 
 ## Popis / kontext

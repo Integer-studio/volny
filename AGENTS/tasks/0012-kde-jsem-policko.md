@@ -1,6 +1,7 @@
 # 0012 — "Kde jsem" políčko (volný text)
 
 - **Stav:** todo
+- **Priorita:** 3 (polish/nice-to-have)
 - **Datum vytvoření:** 2026-09-06
 
 ## Popis / kontext

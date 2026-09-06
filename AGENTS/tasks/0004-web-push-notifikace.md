@@ -1,6 +1,7 @@
 # 0004 — Web push notifikace
 
 - **Stav:** in progress
+- **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-04
 
 ## Popis / kontext

@@ -1,6 +1,7 @@
 # 0006 — Nepovinný telefon a IG při registraci + disclaimer o viditelnosti
 
 - **Stav:** todo
+- **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-06
 
 ## Popis / kontext

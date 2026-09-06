@@ -1,6 +1,7 @@
 # 0009 — User-based nastavení presetů (jméno, ikonka, přidávání/odebírání)
 
 - **Stav:** todo
+- **Priorita:** 2 (důležité, ale nebrání releasu)
 - **Datum vytvoření:** 2026-09-06
 
 ## Popis / kontext

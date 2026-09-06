@@ -1,6 +1,7 @@
 # 0011 — Přichycení (snap) vlastního času k nejbližšímu presetu
 
 - **Stav:** todo
+- **Priorita:** 1 (musí být hotové před veřejným releasem — součást implementace [0007](./0007-nove-zadavani-casu.md))
 - **Datum vytvoření:** 2026-09-06
 
 ## Popis / kontext
