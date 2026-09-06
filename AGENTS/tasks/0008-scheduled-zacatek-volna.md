@@ -24,18 +24,16 @@ budoucího začátku — dnes lze zvolit jen konec ("volno do…").
       (ne jen konec), s omezením max. 24 hodin dopředu.
 - [ ] BE: `FreeTimeCreateDtoValidator` validuje, že `StartTime` (pokud je
       v budoucnu) není víc než 24 hodin od teď.
-- [ ] Vyřešeno, že se naplánované volno skutečně aktivuje v okamžiku
-      `StartTime` — přátelé dostanou notifikaci (dnes se u budoucího
-      `StartTime` notifikace nepošle vůbec, viz `FreeTimesController.Create`,
-      podmínka `start <= DateTime.UtcNow`).
-
-**K rozhodnutí před implementací** (technická volba, neblokuje
-rozvedení zadání, ale ovlivní rozsah práce):
-- Je naplánované volno viditelné přátelům už před aktivací (např. "bude
-  volný od 18:00"), nebo se objeví až po aktivaci?
-- Jakým mechanismem se notifikace v čase `StartTime` skutečně odešle —
-  background job/scheduler (analogicky k existující
-  `NotificationBackgroundService`), nebo kontrola při čtení stavu?
+- [ ] Naplánované budoucí volno je přátelům viditelné už před aktivací
+      (např. "bude volný od 18:00"), ne až po aktivaci.
+- [ ] Aktivace v čase `StartTime` (a odeslání notifikace přátelům) je
+      odpovědnost backendu, nezávisle na tom, jestli je klientská appka
+      otevřená — např. periodická kontrola v background service
+      analogicky k existující `NotificationBackgroundService`, ne
+      spoléhání na to, že klient v danou chvíli zavolá nějaký endpoint.
+- [ ] Ověřeno, že notifikace při dosažení `StartTime` skutečně dojde
+      (dnes se u budoucího startu nepošle vůbec, viz
+      `FreeTimesController.Create`, podmínka `start <= DateTime.UtcNow`).
 
 ## Poznámky
 

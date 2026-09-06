@@ -27,18 +27,19 @@ Neřeší návrh implementace samotné — jen doostření zadání.
 - 0006: rozhodnuto přidat telefon/IG jako volitelná pole přímo do
   registračního formuláře (ne jen do Nastavení).
 - 0007/0009/0010/0011: zdokumentován current stav (žádné presety,
-  hodinová granularita) a závislosti mezi tasky. U 0009 zůstává otevřené
-  rozhodnutí lokální vs. serverové úložiště presetů (doporučeno
-  serverové) — je potřeba potvrdit před implementací.
+  hodinová granularita) a závislosti mezi tasky. 0009: rozhodnuto ukládat
+  presety persistentně na backendu (sync mezi zařízeními), ne jen
+  lokálně.
 - 0008: doplněna zjištěná mezera (notifikace se u budoucího startu dnes
-  neodešle vůbec) a dvě otevřené technické otázky k potvrzení před
-  implementací (viditelnost před aktivací, mechanismus notifikace).
+  neodešle vůbec). Rozhodnuto: naplánované volno je přátelům viditelné
+  už před aktivací, a aktivace/notifikace je odpovědnost backendu
+  (background service), ne závislá na otevřené klientské appce.
 - 0013: rozhodnut rozsah (jen runtime — hlavní tlačítko + push ikona na
   webu, app icon/favicon mimo rozsah) a výchozí stav **zapnuto**
   (opt-out) — vědomě přijaté riziko vzhledem k právnímu kontextu v
   původním zadání.
-- 0014: rozhodnut přístup — scheduled scaling přes den, ne trvalé
-  `minReplicas: 1`.
+- 0014: rozhodnut přístup — scheduled scaling přes den (provozní okno
+  7:00–21:00), ne trvalé `minReplicas: 1`.
 - 0016: původní podezření (session zahazovaná při scaledownu) se
   ukázalo jako nesprávné — appka nemá server-side session vůbec, jde o
   stateless JWT bez refresh tokenu s TTL 120 min. Rozhodnuto zavést

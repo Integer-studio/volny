@@ -26,14 +26,14 @@ v `apps/fe/app/index.tsx`. Jde tedy o zavedení zcela nové entity.
 - [ ] Nové UI pro zadávání času ([0007](./0007-nove-zadavani-casu.md))
       čte presety z této nové entity.
 
-**K rozhodnutí před implementací:** presety uložit jen lokálně na
-zařízení (AsyncStorage/SecureStore), nebo persistentně na backendu (nová
-tabulka/endpoint, sync mezi zařízeními — analogicky k `FreeTime`)?
-Doporučení: persistentně na BE, protože appka už dnes synchronizuje
-profil/stav přes backend a uživatel běžně přechází mezi zařízeními (web/
-mobil) — lokální řešení by se muselo nastavovat na každém zařízení znovu.
-Ovlivňuje to ale rozsah práce (nutnost BE modelu/DTO/migrace), takže je
-třeba to potvrdit před zahájením implementace.
+**Rozhodnuto:** presety se ukládají persistentně na backendu (nová
+tabulka/entita a endpointy, analogicky k `FreeTime`), ne jen lokálně na
+zařízení — kvůli synchronizaci mezi zařízeními (web/mobil).
+
+- [ ] Nový BE model/DTO/endpoint pro presety (CRUD — vytvoření, úprava,
+      smazání, výpis vlastních presetů uživatele), vázaný na `UserID`
+      stejně jako `FreeTime`.
+- [ ] Nová DB migrace pro tabulku presetů.
 
 ## Poznámky
 

@@ -23,9 +23,8 @@ jen v očekávané provozní době, scale-to-zero mimo ni (ne trvalé
 
 ## Kritéria splnění
 
-- [ ] Definováno očekávané "provozní okno" appky (konkrétní hodiny a
-      časové pásmo) — k upřesnění s produktovým záměrem před
-      implementací.
+- [ ] Provozní okno: **7:00–21:00**, mimo něj platí stávající
+      scale-to-zero beze změny.
 - [ ] Mechanismus, který mimo ruční zásah mění `minReplicas` v
       `apps/be/app.yaml`/Container Apps revizi podle denní doby (např.
       scheduled GitHub Action nebo Azure Logic App volající Azure
