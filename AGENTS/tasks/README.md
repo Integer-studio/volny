@@ -32,6 +32,6 @@ vzít a dopracovat.
 |----|-------|------|--------|
 | 0001 | Realtime aktualizace (volní lidé, friend requesty) | todo | [0001-realtime-aktualizace.md](./0001-realtime-aktualizace.md) |
 | 0002 | Zjistit a definovat stav oznámení (mobil i web) | done | [0002-stav-oznameni.md](./0002-stav-oznameni.md) |
-| 0003 | Zmenšit velikost APK | todo | [0003-velikost-apk.md](./0003-velikost-apk.md) |
+| 0003 | Zmenšit velikost APK | done | [0003-velikost-apk.md](./0003-velikost-apk.md) |
 | 0004 | Web push notifikace | in progress | [0004-web-push-notifikace.md](./0004-web-push-notifikace.md) |
 | 0005 | Web push notifikace pro iOS (Safari) | todo | [0005-ios-safari-web-push.md](./0005-ios-safari-web-push.md) |

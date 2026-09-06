@@ -1,6 +1,6 @@
 # 0003 — Zmenšit velikost APK
 
-- **Stav:** todo
+- **Stav:** done
 - **Datum vytvoření:** 2026-09-04
 
 ## Popis / kontext
@@ -10,9 +10,9 @@ zatím nejsou žádné konkrétní stížnosti uživatelů, jde o dlouhodobé zl
 
 ## Kritéria splnění
 
-- [ ] Zjištěna aktuální velikost APK a hlavní příčiny (velké assety,
+- [x] Zjištěna aktuální velikost APK a hlavní příčiny (velké assety,
       nepoužívané závislosti apod.).
-- [ ] Velikost APK snížena na rozumnou úroveň.
+- [x] Velikost APK snížena na rozumnou úroveň.
 
 ## Poznámky
 
