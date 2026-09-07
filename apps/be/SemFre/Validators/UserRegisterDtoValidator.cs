@@ -19,5 +19,13 @@ public class UserRegisterDtoValidator : AbstractValidator<UserRegisterDto>
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Zadej jméno.")
             .MaximumLength(100).WithMessage("Jméno může mít nejvýš 100 znaků.");
+        RuleFor(x => x.Phone)
+            .MaximumLength(32).WithMessage("Telefon může mít nejvýš 32 znaků.")
+            .Matches(@"^[0-9+ ]+$").WithMessage("Telefon smí obsahovat jen číslice, mezery a +.")
+            .When(x => !string.IsNullOrEmpty(x.Phone));
+        RuleFor(x => x.Instagram)
+            .MaximumLength(64).WithMessage("Instagram handle může mít nejvýš 64 znaků.")
+            .Matches("^[a-zA-Z0-9._]+$").WithMessage("Instagram handle smí obsahovat jen písmena, čísla, tečku a podtržítko.")
+            .When(x => !string.IsNullOrEmpty(x.Instagram));
     }
 }

@@ -30,7 +30,9 @@ public class AuthController : ControllerBase
         {
             Username = dto.Username,
             PasswordHash = Services.PasswordHasher.Hash(dto.Password),
-            Name = dto.Name
+            Name = dto.Name,
+            Phone = dto.Phone,
+            Instagram = dto.Instagram
         };
         _db.Users.Add(user);
 

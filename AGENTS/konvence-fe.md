@@ -20,4 +20,5 @@ výrazně liší a obecné/starší návody mohou být zavádějící.
 - TypeScript typy piš explicitně tam, kde je inference nejasná; nepoužívej
   `any` jako řešení typové chyby.
 - Sdílenou logiku/komponenty dávej do existujících sdílených adresářů místo
-  duplikace mezi obrazovkami.
+  duplikace mezi obrazovkami — sdílené validátory vstupních polí patří do
+  `apps/fe/lib/validators.ts`.
