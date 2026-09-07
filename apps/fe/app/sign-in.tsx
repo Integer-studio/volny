@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth-context';
 import { useToast } from '../components/Toast';
 import FormField from '../components/FormField';
 import { fieldError as getFieldError, errorMessage } from '../lib/errors';
+import { validatePhone, validateInstagram } from '../lib/validators';
 
 function validatePasswordLocal(v: string): string | null {
   return v.length < 4 ? 'Heslo musí mít alespoň 4 znaky.' : null;
@@ -18,10 +19,14 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [usernameTaken, setUsernameTaken] = useState(false);
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [instagram, setInstagram] = useState('');
   const [loading, setLoading] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [instagramError, setInstagramError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isLogin || username.trim().length === 0) {
@@ -39,11 +44,20 @@ export default function SignIn() {
     setNameError(null);
     setUsernameError(null);
     setPasswordError(null);
+    setPhoneError(null);
+    setInstagramError(null);
 
     if (!isLogin) {
       const localPasswordError = validatePasswordLocal(password);
       if (localPasswordError) {
         setPasswordError(localPasswordError);
+        return;
+      }
+      const localPhoneError = validatePhone(phone);
+      const localInstagramError = validateInstagram(instagram);
+      if (localPhoneError || localInstagramError) {
+        setPhoneError(localPhoneError);
+        setInstagramError(localInstagramError);
         return;
       }
     }
@@ -61,7 +75,7 @@ export default function SignIn() {
       if (isLogin) {
         await signIn(username, password);
       } else {
-        await signUp(username, password, name);
+        await signUp(username, password, name, { phone, instagram });
       }
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
@@ -72,10 +86,14 @@ export default function SignIn() {
         const nameErr = getFieldError(e, 'name');
         const usernameErr = getFieldError(e, 'username');
         const passwordErr = getFieldError(e, 'password');
+        const phoneErr = getFieldError(e, 'phone');
+        const instagramErr = getFieldError(e, 'instagram');
         if (nameErr) setNameError(nameErr);
         if (usernameErr) setUsernameError(usernameErr);
         if (passwordErr) setPasswordError(passwordErr);
-        if (!nameErr && !usernameErr && !passwordErr) {
+        if (phoneErr) setPhoneError(phoneErr);
+        if (instagramErr) setInstagramError(instagramErr);
+        if (!nameErr && !usernameErr && !passwordErr && !phoneErr && !instagramErr) {
           show(errorMessage(e, 'Nepodařilo se přihlásit. Zkus to prosím znovu.'), 'error');
         }
       } else if (!(e instanceof ApiError)) {
@@ -120,6 +138,33 @@ export default function SignIn() {
         error={!isLogin && usernameTaken ? 'Uživatelské jméno je zabrané.' : usernameError}
       />
 
+      {!isLogin && (
+        <>
+          <Text className="text-gray-400 text-xs font-bold tracking-widest mb-3">KONTAKT</Text>
+          <Text className="text-gray-400 text-xs mb-4 -mt-2">
+            Nepovinné. Vidí ho jen přátelé a spolučlenové skupin, nikdo jiný.
+          </Text>
+
+          <FormField
+            label="Telefon"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            error={phoneError}
+          />
+
+          <FormField
+            label="Instagram"
+            prefix="@"
+            value={instagram}
+            onChangeText={(v) => setInstagram(v.replace(/^@+/, ''))}
+            autoCapitalize="none"
+            error={instagramError}
+          />
+        </>
+      )}
+
       <FormField
         label="Heslo"
         value={password}
@@ -139,7 +184,7 @@ export default function SignIn() {
       </Pressable>
 
       <Pressable
-        onPress={() => { setIsLogin(!isLogin); setNameError(null); setUsernameError(null); setPasswordError(null); }}
+        onPress={() => { setIsLogin(!isLogin); setNameError(null); setUsernameError(null); setPasswordError(null); setPhoneError(null); setInstagramError(null); }}
         className="mt-6 items-center p-2"
       >
         <Text className="text-gray-500">

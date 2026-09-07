@@ -308,10 +308,10 @@ export const api = {
     }
   },
 
-  async register(username: string, password: string, name: string): Promise<void> {
+  async register(username: string, password: string, name: string, extra?: { phone?: string; instagram?: string }): Promise<void> {
     await request('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ username, password, name }),
+      body: JSON.stringify({ username, password, name, phone: extra?.phone, instagram: extra?.instagram }),
     });
     await this.login(username, password);
   },

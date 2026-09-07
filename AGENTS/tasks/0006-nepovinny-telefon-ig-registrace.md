@@ -1,6 +1,6 @@
 # 0006 — Nepovinný telefon a IG při registraci + disclaimer o viditelnosti
 
-- **Stav:** todo
+- **Stav:** done
 - **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-06
 
@@ -26,20 +26,30 @@ přímo do registračního formuláře (ne jen řešit dodatečně v Nastavení)
 
 ## Kritéria splnění
 
-- [ ] Registrační formulář (`apps/fe/app/sign-in.tsx`) obsahuje volitelná
+- [x] Registrační formulář (`apps/fe/app/sign-in.tsx`) obsahuje volitelná
       pole Telefon a Instagram vedle jméno/username/heslo, se stejnou
       validací jako v Nastavení (prázdná hodnota je platná).
-- [ ] U obou polí je viditelný disclaimer o viditelnosti — stejné znění
+- [x] U obou polí je viditelný disclaimer o viditelnosti — stejné znění
       jako v Nastavení („Vidí ho jen přátelé a spolučlenové skupin, nikdo
       jiný.“) nebo jeho ekvivalent přizpůsobený kontextu registrace.
-- [ ] Backend `UserRegisterDto` (`apps/be/SemFre/Dtos/UserDtos.cs`)
+- [x] Backend `UserRegisterDto` (`apps/be/SemFre/Dtos/UserDtos.cs`)
       rozšířen o nepovinné `Phone`/`Instagram`, s validací analogickou
       `UserProfileUpdateDtoValidator` (validuje jen když není prázdné).
-- [ ] Hodnoty zadané při registraci se uloží a zůstávají editovatelné
+- [x] Hodnoty zadané při registraci se uloží a zůstávají editovatelné
       stejně jako dnes v Nastavení — žádná duplicitní validační logika.
-- [ ] Ověřeno, že viditelnost zůstává beze změny — telefon/IG vidí jen
+- [x] Ověřeno, že viditelnost zůstává beze změny — telefon/IG vidí jen
       přátelé/spolučlenové skupiny, stejně jako dnes.
 
 ## Poznámky
 
 Vzniklo jako součást dávky nových tasků 2026-09-06, rozvedeno v [0015](./0015-rozvedeni-novych-tasku.md).
+
+**Implementováno 2026-09-07:** `validatePhone`/`validateInstagram` dřív
+existovaly jen lokálně v `settings.tsx` — protože je teď potřeba na dvou
+místech, vytažené do nového sdíleného souboru `apps/fe/lib/validators.ts`
+(dřív žádný takový soubor neexistoval). `apps/fe/lib/api.ts#register` a
+`AuthValue.signUp` (`apps/fe/lib/auth-context.tsx`) rozšířeny o nepovinný
+`extra?: { phone?, instagram? }` parametr. BE: `UserRegisterDto` +
+`UserRegisterDtoValidator` rozšířeny stejnými pravidly jako
+`UserProfileUpdateDto(Validator)`, `AuthController.Register` mapuje
+Phone/Instagram na entitu.

@@ -39,7 +39,7 @@ doby před zavedením priorit je uvedena orientačně.
 | 0003 | Zmenšit velikost APK | done | — | [0003-velikost-apk.md](./0003-velikost-apk.md) |
 | 0004 | Web push notifikace | in progress | 1 | [0004-web-push-notifikace.md](./0004-web-push-notifikace.md) |
 | 0005 | Web push notifikace pro iOS (Safari) | todo | 1 | [0005-ios-safari-web-push.md](./0005-ios-safari-web-push.md) |
-| 0006 | Nepovinný telefon a IG při registraci + disclaimer o viditelnosti | todo | 1 | [0006-nepovinny-telefon-ig-registrace.md](./0006-nepovinny-telefon-ig-registrace.md) |
+| 0006 | Nepovinný telefon a IG při registraci + disclaimer o viditelnosti | done | 1 | [0006-nepovinny-telefon-ig-registrace.md](./0006-nepovinny-telefon-ig-registrace.md) |
 | 0007 | Nové zadávání času | todo | 1 | [0007-nove-zadavani-casu.md](./0007-nove-zadavani-casu.md) |
 | 0008 | Scheduled začátek volna (max. den dopředu) | todo | 2 | [0008-scheduled-zacatek-volna.md](./0008-scheduled-zacatek-volna.md) |
 | 0009 | User-based nastavení presetů | todo | 2 | [0009-user-presety.md](./0009-user-presety.md) |

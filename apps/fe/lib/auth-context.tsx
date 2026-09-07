@@ -23,7 +23,7 @@ type AuthValue = {
    */
   homeRoute: '/' | '/sign-in';
   signIn: (username: string, password: string) => Promise<void>;
-  signUp: (username: string, password: string, name: string) => Promise<void>;
+  signUp: (username: string, password: string, name: string, extra?: { phone?: string; instagram?: string }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshMe: () => Promise<void>;
 };
@@ -218,8 +218,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setStatus('signedIn');
       cacheMe(user);
     },
-    signUp: async (username, password, name) => {
-      await api.register(username, password, name);
+    signUp: async (username, password, name, extra) => {
+      await api.register(username, password, name, extra);
       const user = await api.getMe();
       const userId = api.getCurrentUserId();
       userIdRef.current = userId != null ? String(userId) : null;

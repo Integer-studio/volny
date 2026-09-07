@@ -7,6 +7,7 @@ import FormField from '../components/FormField';
 import { fieldError, errorMessage } from '../lib/errors';
 import { useAutosaveField } from '../hooks/useAutosaveField';
 import { useSlowActionNotice } from '../hooks/useSlowActionNotice';
+import { validatePhone, validateInstagram } from '../lib/validators';
 
 function validateUsername(v: string): string | null {
   if (v.length < 3 || v.length > 50) return 'Uživatelské jméno musí mít 3-50 znaků.';
@@ -19,16 +20,6 @@ function validateName(v: string): string | null {
 }
 function validatePassword(v: string): string | null {
   if (v.length < 4 || v.length > 128) return 'Heslo musí mít 4-128 znaků.';
-  return null;
-}
-function validatePhone(v: string): string | null {
-  if (v.length === 0) return null; // empty clears the field, allowed
-  if (!/^[0-9+ ]+$/.test(v) || v.length > 32) return 'Jen číslice, mezery a +, max. 32 znaků.';
-  return null;
-}
-function validateInstagram(v: string): string | null {
-  if (v.length === 0) return null;
-  if (!/^[a-zA-Z0-9._]+$/.test(v) || v.length > 64) return 'Jen písmena, čísla, tečka a podtržítko, bez @.';
   return null;
 }
 
