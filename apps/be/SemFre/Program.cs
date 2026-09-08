@@ -72,6 +72,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<SemFre.Services.ITokenService, SemFre.Services.TokenService>();
+builder.Services.AddScoped<SemFre.Services.IRefreshTokenService, SemFre.Services.RefreshTokenService>();
 builder.Services.AddScoped<SemFre.Services.IAccessValidator, SemFre.Services.AccessValidator>();
 builder.Services.AddScoped<SemFre.Services.IConnectionService, SemFre.Services.ConnectionService>();
 

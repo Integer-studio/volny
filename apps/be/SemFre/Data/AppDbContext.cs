@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
 
     public DbSet<Product> Products { get; set; } = null!;
     public DbSet<UserDevice> UserDevices { get; set; } = null!;
+    public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
     public DbSet<FreeTime> FreeTimes { get; set; } = null!;
     public DbSet<FriendPair> FriendPairs { get; set; } = null!;
     public DbSet<FriendSuggestion> FriendSuggestions { get; set; } = null!;
@@ -46,6 +47,13 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.DeviceToken).IsUnique();
             entity.Property(e => e.Platform).HasMaxLength(50);
             entity.Property(e => e.TokenType).HasMaxLength(20).IsRequired().HasDefaultValue("expo");
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.Property(e => e.TokenHash).HasMaxLength(64).IsRequired();
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.HasIndex(e => e.UserID);
         });
 
         // Case-insensitive uniqueness on Username is enforced by a raw-SQL

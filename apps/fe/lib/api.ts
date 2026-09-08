@@ -165,6 +165,41 @@ async function getToken() {
   }
 }
 
+// Deduped in-flight refresh so N concurrent 401s trigger exactly one
+// POST /auth/refresh instead of one each.
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function tryRefreshAccessToken(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    try {
+      const refreshToken = await Storage.getItem('refreshToken');
+      if (!refreshToken) return null;
+
+      const res = await performRequest('/auth/refresh', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken }),
+        anonymous: true,
+        allowUnauthorized: true,
+      });
+      currentToken = res.token;
+      try {
+        await Storage.setItem('userToken', res.token);
+      } catch (e) {
+        console.warn('[auth] Failed to persist refreshed token:', e);
+      }
+      return res.token as string;
+    } catch {
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
+}
+
 type RequestOptions = RequestInit & {
   /** Don't fire the global 401 -> logout handler for this call (e.g. verifying a password). */
   allowUnauthorized?: boolean;
@@ -206,7 +241,7 @@ function timeoutSignal(ms: number): AbortSignal | undefined {
   }
 }
 
-async function performRequest(endpoint: string, options: RequestOptions) {
+async function performRequest(endpoint: string, options: RequestOptions, isRefreshRetry = false) {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
@@ -226,9 +261,13 @@ async function performRequest(endpoint: string, options: RequestOptions) {
   });
 
   if (!response.ok) {
-    // 401 must fire exactly once - it's checked outside the retry loop's
-    // eligibility (401 is never a retryable status), so this can't run twice.
+    // 401 must fire the logout/refresh handling exactly once per call chain -
+    // isRefreshRetry guarantees at most one silent refresh-and-retry attempt.
     if (response.status === 401 && !options.allowUnauthorized) {
+      if (!isRefreshRetry) {
+        const newToken = await tryRefreshAccessToken();
+        if (newToken) return performRequest(endpoint, options, true);
+      }
       await api.logout();
       onUnauthorized?.();
     }
@@ -295,6 +334,7 @@ export const api = {
     currentToken = res.token;
     try {
       await Storage.setItem('userToken', res.token);
+      await Storage.setItem('refreshToken', res.refreshToken);
     } catch (e) {
       console.warn('[auth] Failed to persist token to storage:', e);
     }
@@ -317,11 +357,24 @@ export const api = {
   },
 
   async logout(): Promise<void> {
+    const refreshToken = await Storage.getItem('refreshToken').catch(() => null);
+
     currentToken = null;
     currentUserId = null;
     lastRegisteredPushToken = null;
     await Storage.deleteItem('userToken');
+    await Storage.deleteItem('refreshToken');
     await Storage.deleteItem('userId');
+
+    if (refreshToken) {
+      // Best-effort server-side revocation - never blocks client-side logout.
+      request('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ refreshToken }),
+        anonymous: true,
+        noRetry: true,
+      }).catch(() => {});
+    }
   },
 
   async getMe(): Promise<UserDto> {
