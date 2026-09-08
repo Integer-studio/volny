@@ -17,14 +17,16 @@ public class UsersController : ControllerBase
     private readonly IAccessValidator _access;
     private readonly ITokenService _tokenService;
     private readonly IConnectionService _connections;
+    private readonly IRefreshTokenService _refreshTokenService;
 
-    public UsersController(AppDbContext db, AutoMapper.IMapper mapper, IAccessValidator access, ITokenService tokenService, IConnectionService connections)
+    public UsersController(AppDbContext db, AutoMapper.IMapper mapper, IAccessValidator access, ITokenService tokenService, IConnectionService connections, IRefreshTokenService refreshTokenService)
     {
         _db = db;
         _mapper = mapper;
         _access = access;
         _tokenService = tokenService;
         _connections = connections;
+        _refreshTokenService = refreshTokenService;
     }
 
     [HttpGet("me")]
@@ -185,6 +187,7 @@ public class UsersController : ControllerBase
 
         user.PasswordHash = PasswordHasher.Hash(dto.NewPassword);
         await _db.SaveChangesAsync();
+        await _refreshTokenService.RevokeAllForUserAsync(userId.Value);
         return NoContent();
     }
 

@@ -13,11 +13,13 @@ public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly ITokenService _tokenService;
+    private readonly IRefreshTokenService _refreshTokenService;
 
-    public AuthController(AppDbContext db, ITokenService tokenService)
+    public AuthController(AppDbContext db, ITokenService tokenService, IRefreshTokenService refreshTokenService)
     {
         _db = db;
         _tokenService = tokenService;
+        _refreshTokenService = refreshTokenService;
     }
 
     [HttpPost("register")]
@@ -60,6 +62,27 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid credentials" });
 
         var token = _tokenService.CreateToken(user.UserID, user.Username);
+        var refreshToken = await _refreshTokenService.IssueAsync(user.UserID);
+        return Ok(new { token, refreshToken });
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(RefreshTokenDto dto)
+    {
+        var userId = await _refreshTokenService.ValidateAsync(dto.RefreshToken);
+        if (userId == null) return Unauthorized(new { message = "Invalid or expired refresh token" });
+
+        var user = await _db.Users.SingleOrDefaultAsync(u => u.UserID == userId);
+        if (user == null) return Unauthorized(new { message = "Invalid or expired refresh token" });
+
+        var token = _tokenService.CreateToken(user.UserID, user.Username);
         return Ok(new { token });
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(RefreshTokenDto dto)
+    {
+        await _refreshTokenService.RevokeAsync(dto.RefreshToken);
+        return NoContent();
     }
 }
