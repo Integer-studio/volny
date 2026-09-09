@@ -37,7 +37,7 @@ doby před zavedením priorit je uvedena orientačně.
 | 0001 | Realtime aktualizace (volní lidé, friend requesty) | todo | 1 | [0001-realtime-aktualizace.md](./0001-realtime-aktualizace.md) |
 | 0002 | Zjistit a definovat stav oznámení (mobil i web) | done | — | [0002-stav-oznameni.md](./0002-stav-oznameni.md) |
 | 0003 | Zmenšit velikost APK | done | — | [0003-velikost-apk.md](./0003-velikost-apk.md) |
-| 0004 | Web push notifikace | in progress | 1 | [0004-web-push-notifikace.md](./0004-web-push-notifikace.md) |
+| 0004 | Web push notifikace | done | — | [0004-web-push-notifikace.md](./0004-web-push-notifikace.md) |
 | 0005 | Web push notifikace pro iOS (Safari) | todo | 1 | [0005-ios-safari-web-push.md](./0005-ios-safari-web-push.md) |
 | 0006 | Nepovinný telefon a IG při registraci + disclaimer o viditelnosti | done | 1 | [0006-nepovinny-telefon-ig-registrace.md](./0006-nepovinny-telefon-ig-registrace.md) |
 | 0007 | Nové zadávání času | in progress | 1 | [0007-nove-zadavani-casu.md](./0007-nove-zadavani-casu.md) |
