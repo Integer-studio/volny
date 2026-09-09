@@ -1,6 +1,6 @@
 # 0004 — Web push notifikace
 
-- **Stav:** in progress
+- **Stav:** done
 - **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-04
 
@@ -25,10 +25,11 @@ projektu, který už drží `google-services.json` pro Android.
 - [x] BE: `UserDevice` rozlišuje typ tokenu (`expo` vs. `fcm_web`);
       `NotificationQueue`/worker odesílá FCM web tokeny přímo přes FCM
       HTTP v1 API (Expo tokeny beze změny přes `ExpoPushNotificationService`).
-- [ ] Funkční end-to-end test pro alespoň jeden typ oznámení (např.
+- [x] Funkční end-to-end test pro alespoň jeden typ oznámení (např.
       `friend_request`) na webu — od vzniku události po zobrazení
-      systémové notifikace v prohlížeči. **Dva bugy nalezené a opravené
-      při prvním pokusu, viz Poznámky — čeká na re-test po nasazení.**
+      systémové notifikace v prohlížeči. Po třech kolech oprav (viz
+      Poznámky) funguje na webu i na Androidu (potvrzeno uživatelem
+      2026-09-09).
 - [x] Opravená zastaralá dokumentace (`apps/be/SemFre/FE_PUSH_INSTRUCTIONS.md`,
       sekce "Push notifikace" v `API_DOCS.md`), ať odpovídá skutečné
       implementaci.
@@ -188,3 +189,10 @@ doplnit `Expo__AccessToken`.
 Krok 2 zadání (`GET /api/devices`, ověření formátu tokenu) nebyl potřeba
 — příčina byla jednoznačně určená z kódu + logů bez nutnosti fyzického
 testu na zařízení.
+
+### Uzavření (2026-09-09)
+
+Uživatel potvrdil, že push notifikace na Androidu po nasazení opravy
+(`Expo__Enabled=true`) fungují. Web push funguje po třech kolech oprav
+(permission gesto, data-only zprávy + foreground handler, SW
+staleness/SDK verze — viz sekce výše). Task uzavřen jako hotový.
