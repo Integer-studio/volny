@@ -126,3 +126,65 @@ Ověřeno `dotnet build`, `tsc --noEmit`, `npx expo export -p web`. Bod 2
 (Android) zůstává neopravený — nejde jen o kód, potřeba dat z BE logu z
 reálného testu. Čeká na nasazení (nový PR) a další kolo ručního testu,
 tentokrát v čistém prohlížečovém profilu (bez starého SW).
+
+### Diagnóza Android push (2026-09-09) — nalezena skutečná příčina, bez nutnosti ručního testu
+
+Podle zadání v samostatném diagnostickém tasku (viz `az` CLI, přihlášeno
+jako `tonkuc5@gmail.com`, subscription "Azure subscription 1"). Nešlo o
+regresi v kódu (`ExpoPushNotificationService.cs`,
+`NotificationServiceDispatcher.cs`, `PushGateNative`) — příčina je v
+**Azure konfiguraci Container App `volny-be`**, ne v kódu.
+
+**Zjištění:**
+
+1. `az containerapp show --name volny-be --resource-group volny --query
+   "properties.template.containers[0].env"` — Container App má nastavené
+   jen `ConnectionStrings__SqliteConnection`, `Jwt__Key` (secret) a
+   `Fcm__ServiceAccountJson` (secret). **Žádný `Expo__*` env var ani
+   secret vůbec neexistuje.**
+2. `SemFre/Program.cs:95` čte `Expo:Enabled` přes
+   `builder.Configuration.GetValue<bool>("Expo:Enabled")` — když klíč
+   chybí, vrátí se `default(bool)` = `false`. `appsettings.json` nemá
+   sekci `"Expo"` vůbec (fallback na `false` i tam).
+3. Když je `expoOptions.Enabled == false`, DI (`Program.cs:99-103`)
+   zaregistruje do `NotificationServiceDispatcher.ExpoOrNoop` misto
+   `ExpoPushNotificationService` **`NoopNotificationService`** —
+   ten push nikam neposílá, jen zaloguje `"Noop send to {count} devices:
+   {title}"` na úrovni Information a vrátí `AcceptedTokens` (tzn. z
+   pohledu zbytku systému to vypadá jako úspěšné odeslání — proto žádná
+   chyba nikde v aplikaci ani v `NotificationBackgroundService`).
+4. Potvrzeno v produkčních logách (Log Analytics workspace
+   `workspacevolnybf71`, tabulka `ContainerAppConsoleLogs_CL`, dotaz na
+   posledních 30 dní): **žádný jediný řádek `ExpoPushNotificationService`
+   / "Expo push" neexistuje** — místo toho desítky řádků typu
+   `"Noop send to 1 devices: Kamarád má teď volno"` a `"Noop send to 1
+   devices: Žádost o přátelství přijata"` od 2026-09-01 do 2026-09-09.
+   Tzn. **úplně každý** pokus o Android push od nasazení notifikačního
+   systému šel do no-op větve, ne k Expo.
+5. Web push (FCM) funguje nezávisle, protože `Fcm:ServiceAccountJson` je
+   nastavený a `FcmWebOrNoop` není gatovaný žádným `Enabled` flagem —
+   proto FCM cesta byla vždy živá a jen Expo cesta byla mrtvá.
+
+**Oprava nasazená (2026-09-09 12:11 UTC):** `Expo__Enabled=true` nastaveno
+jako env var na Container App `volny-be` (`az containerapp update --name
+volny-be --resource-group volny --set-env-vars "Expo__Enabled=true"`).
+Nová revize `volny-be--0000028` (created 2026-09-09T12:11:32Z) je aktivní
+a běží (1 replika). Ověřeno `az containerapp show ... env` — `Expo__Enabled`
+je teď `"true"` v konfiguraci kontejneru.
+
+`Expo__AccessToken` nebyl nastaven — dle kódu je potřeba jen pokud je v
+EAS dashboardu zapnuté "Enhanced security"; `ChannelId` zůstává na
+defaultu `"default"`.
+
+**Čeká na potvrzení:** žádný reálný Android push se od nasazení nové
+revize ještě neodeslal (dotaz na Log Analytics pro revizi `0000028` je
+zatím prázdný — logicky, nic notifikaci nevyvolalo). Až proběhne další
+reálná akce (friend_request / "jsem volný"), ověřit v logu řádek
+`ExpoPushNotificationService` / `"Expo push \"{title}\": {ok} ok, ..."`
+místo `"Noop send"` a potvrdit, že push na zařízení skutečně dorazí.
+Pokud se objeví `InvalidCredentials`/`MismatchSenderId`, bude potřeba
+doplnit `Expo__AccessToken`.
+
+Krok 2 zadání (`GET /api/devices`, ověření formátu tokenu) nebyl potřeba
+— příčina byla jednoznačně určená z kódu + logů bez nutnosti fyzického
+testu na zařízení.
