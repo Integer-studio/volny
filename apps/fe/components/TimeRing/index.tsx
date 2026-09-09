@@ -63,8 +63,15 @@ export const BUTTON_RATIO = 180 / RING_BASE;
 
 const END_ANGLE = START_ANGLE + SWEEP;
 /** Mezikruží, ve kterém prstenec vůbec reaguje na dotek. */
-const HIT_INNER = R - 34;
-const HIT_OUTER = R + 34;
+/**
+ * Vnitřní hrana je svázaná s dráhou, ne zvolená od oka: dřív začínala 2 px za
+ * dotykovým terčem tlačítka (92 vs 90), takže prst míříci na tlačítko chytil
+ * prstenec. Tlačítko je hlavní akce, tak má mít přednost - mezi ním a
+ * prstencem je teď ~20 px mrtvá zóna. Cenou je, že vnitřních pár pixelů
+ * handle už nechytá; jeho střed i vnější část ano.
+ */
+const HIT_INNER = R - TRACK_W / 2;
+const HIT_OUTER = R + TRACK_W / 2 + 22;
 /** Jak daleko od handle (ve stupních po dráze) ještě začíná tažení. Úhlová
  * tolerance je pro prstenec přirozenější než vzdálenost od středu knoflíku -
  * chytit ho jde i u vnitřní nebo vnější hrany dráhy. Dál od něj je to tap. */
