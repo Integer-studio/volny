@@ -1,14 +1,9 @@
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
   Pressable,
+  Platform,
   ScrollView,
   ActivityIndicator,
   Animated,
@@ -18,21 +13,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SettingsIcon from "lucide-react-native/icons/settings";
 import UserPlus from "lucide-react-native/icons/user-plus";
 import Users from "lucide-react-native/icons/users";
-import Slider from "@react-native-community/slider";
 import { api, FreeEntry } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { parseServerDate } from "../lib/date";
-import { formatTime, hourOffset, isTomorrow } from "../lib/time";
+import { formatTime } from "../lib/time";
 import { useNow } from "../hooks/useNow";
 import UserRow from "../components/UserRow";
 import GroupBadge from "../components/GroupBadge";
 import OnboardingCard from "../components/OnboardingCard";
-import FreeButton from "../components/FreeButton";
+import FreeDial from "../components/FreeDial";
 import StatusHeadline from "../components/StatusHeadline";
 import Reveal from "../components/Reveal";
 import FadeIn from "../components/FadeIn";
-import BottomSheet from "../components/BottomSheet";
 import ProfileSheet from "../components/ProfileSheet";
+import BottomFade from "../components/BottomFade";
 import { useToast } from "../components/Toast";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
@@ -57,7 +51,7 @@ export default function Index() {
   // fire-and-forget (no pending flag to serialize taps on) - an older
   // request's rollback/success must never clobber a newer one's result.
   const statusRunId = useRef(0);
-  // Shared between FreeButton and StatusHeadline so the circle and the
+  // Shared between FreeDial's button and StatusHeadline so the circle and the
   // status text crossfade in lockstep instead of drifting apart - each
   // component drives its own scale/position, but there's only one fade.
   const fade = useRef(new Animated.Value(isFree ? 1 : 0)).current;
@@ -90,12 +84,9 @@ export default function Index() {
   }, [isFree, freeUntil]);
 
   const [pendingCount, setPendingCount] = useState(0);
-  const [modalVisible, setModalVisible] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
-  // Index of the target hour, not a duration: 1 = the next full hour, 2 =
-  // the one after that, etc. - see lib/time.ts hourOffset(). Replaces the
-  // old "N hours from now" slider so every result lands on :00.
-  const [hourIndex, setHourIndex] = useState(1);
+  // Zbývá pod hranou obrazovky ještě obsah? Řídí odstín u dolní hrany.
+  const [canScrollMore, setCanScrollMore] = useState(false);
   const now = useNow();
 
   // No spinner at all if this resolves in under 600ms (useDeferredPending,
@@ -151,7 +142,7 @@ export default function Index() {
   // the circle already shows the result the moment you tap it, so a loading
   // state on top of that would just contradict what's on screen for a
   // normal, fast request. But past 1s of continuous pending, showLoading
-  // flips true and FreeButton disables further taps and shows its overlay,
+  // flips true and the dial's button disables further taps and shows its overlay,
   // and past 4s useSlowActionNotice puts up the shared cold-start toast - a
   // cold container no longer leaves the button looking "done" with no
   // indication the write hasn't actually landed yet. Rollback still happens
@@ -162,7 +153,17 @@ export default function Index() {
   const showLoading = useDeferredPending(statusPending, 1000);
   useSlowActionNotice(statusPending);
 
-  const applyStatus = (nextFree: boolean, until: Date | null) => {
+  /**
+   * `mode: "extend"` posouvá konec už běžícího volna, takže musí jít přes
+   * `PUT /freetimes/{id}`, ne přes `POST` - ten na backendu vždy zakládá nový
+   * záznam, čímž by vzniklo druhé překrývající se volno a přátelům by
+   * podruhé odešla notifikace "má teď volno".
+   */
+  const applyStatus = (
+    nextFree: boolean,
+    until: Date | null,
+    mode: "set" | "extend" = "set",
+  ) => {
     const prevFree = isFree;
     const prevUntil = freeUntil;
     const runId = ++statusRunId.current;
@@ -171,7 +172,8 @@ export default function Index() {
     setStatusPending(true);
     (async () => {
       try {
-        await api.setMyStatus(nextFree, until ?? undefined);
+        if (mode === "extend" && until) await api.extendMyStatus(until);
+        else await api.setMyStatus(nextFree, until ?? undefined);
         if (statusRunId.current === runId) await refreshMe();
       } catch (e) {
         if (statusRunId.current !== runId) return;
@@ -184,45 +186,13 @@ export default function Index() {
     })();
   };
 
-  const toggleFree = () => {
-    if (isFree) {
-      applyStatus(false, null);
-    } else {
-      setHourIndex(1);
-      setModalVisible(true);
-    }
-  };
-
-  const handleSetTime = () => {
-    const untilDate = hourOffset(hourIndex, now);
-    closeModal();
-    applyStatus(true, untilDate);
-  };
-
-  const handleQuickSet = (offset: number) => {
-    applyStatus(true, hourOffset(offset, now));
-  };
-
-  // BottomSheet itself runs the slide-down before calling this, so this just
-  // flips the state that controls it.
-  const closeModal = () => setModalVisible(false);
-
-  const calculatedTime = useMemo(
-    () => hourOffset(hourIndex, now),
-    [hourIndex, now],
-  );
-
-  // Quick buttons: next full hour, +1, +2, +4 further - always a clock time
-  // ("19:00"), never a duration ("3h"). Recomputed from `now` (ticks every
-  // 60s via useNow) rather than on every render, so the labels don't drift.
-  const quickOffsets = useMemo(
-    () => [1, 2, 3, 5].map((n) => hourOffset(n, now)),
-    [now],
-  );
-
   return (
     <View className="flex-1 bg-[#FCFBF8]">
       <View style={{ paddingTop: insets.top }} className="bg-[#FCFBF8]">
+        {/* Odsazení je větší než u obsahu níž (24 vs 16 px od kraje):
+            ikony potřebují víc vzduchu, aby nevypadaly přilepené ke
+            hraně. Drží se symetricky na obou stranách, jinak by levá
+            a pravá ikona sedla jinak. */}
         <View className="flex-row items-center justify-between px-2 py-2">
           <Pressable onPress={() => router.push("/settings")} className="p-2">
             <SettingsIcon size={22} color="#000" />
@@ -245,146 +215,127 @@ export default function Index() {
         </View>
       </View>
 
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{
-          flexGrow: 1,
-          alignItems: "center",
-          paddingTop: 24,
-          paddingHorizontal: 16,
-        }}
-      >
-        <StatusHeadline fade={fade} freeUntil={freeUntil} formatTime={formatTime} />
-
-        <OnboardingCard
-          name={me?.name ?? ""}
-          connectionCount={connectionCount}
-          connectionsSettled={connections.settled}
-        />
-
-        <FreeButton
-          isFree={isFree}
-          onPress={toggleFree}
-          fade={fade}
-          pending={showLoading}
-        />
-
-        <Reveal
-          visible={!isFree}
-          delayMs={180}
-          className="flex-row w-full justify-between mt-10"
+      {/* Obal kvůli odstínu u dolní hrany - ten musí ležet nad rolovanou
+          oblastí, ne v ní, aby se s obsahem neposouval. */}
+      <View className="flex-1">
+        <ScrollView
+          className="flex-1"
+          // Obsah se do plochy vejde, ale ScrollView si i tak drží scrollbar
+          // a nechá se přetáhnout za konec (na webu overscroll, na nativu
+          // bounce). Pro obrazovku, která je z principu na jednu výšku, to jen
+          // rozbíjí dojem - proto indikátory pryč a přetahování zakázané.
+          // Rolování samo funguje dál, kdyby seznam volných přátel narostl.
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+          onScroll={(e) => {
+            const { contentOffset, contentSize, layoutMeasurement } =
+              e.nativeEvent;
+            setCanScrollMore(
+              contentOffset.y + layoutMeasurement.height <
+                contentSize.height - 2,
+            );
+          }}
+          scrollEventThrottle={16}
+          bounces={false}
+          overScrollMode="never"
+          style={
+            Platform.OS === "web"
+              ? ({ overscrollBehavior: "none" } as object)
+              : undefined
+          }
+          contentContainerStyle={{
+            flexGrow: 1,
+            alignItems: "center",
+            paddingTop: 12,
+            paddingHorizontal: 16,
+          }}
         >
-          {quickOffsets.map((target, i) => (
-            <Pressable
-              key={i}
-              onPress={() => handleQuickSet([1, 2, 3, 5][i])}
-              disabled={showLoading}
-              className="flex-1 bg-white items-center p-3 rounded-xl active:bg-gray-50 mx-1 border border-gray-200"
-              style={showLoading ? { opacity: 0.5 } : undefined}
-            >
-              <Text className="text-gray-800 font-semibold text-sm">
-                {formatTime(target)}
-              </Text>
-              {isTomorrow(target, now) && (
-                <Text className="text-gray-400 text-[10px] mt-1">zítra</Text>
-              )}
-            </Pressable>
-          ))}
-        </Reveal>
+          <StatusHeadline fade={fade} />
 
-        <Reveal
-          visible={isFree}
-          delayMs={180}
-          className="w-full mt-20 flex-1"
-        >
-          <Text className="text-gray-400 font-medium text-xs tracking-widest uppercase mb-4 ml-2">
-            Kdo je také volný
-          </Text>
+          <OnboardingCard
+            name={me?.name ?? ""}
+            connectionCount={connectionCount}
+            connectionsSettled={connections.settled}
+          />
 
-          {freeList.error && (
-            <Pressable
-              onPress={freeList.reload}
-              className="bg-red-50 rounded-xl px-3 py-2 mb-3 mx-2"
-            >
-              <Text className="text-red-500 text-xs">
-                Nepodařilo se načíst — zobrazuji poslední známý stav. Zkusit
-                znovu.
-              </Text>
-            </Pressable>
-          )}
+          <FreeDial
+            isFree={isFree}
+            freeUntil={freeUntil}
+            fade={fade}
+            pending={showLoading}
+            now={now}
+            onConfirm={(until) => applyStatus(true, until)}
+            onChangeEnd={(until) => applyStatus(true, until, "extend")}
+            onEnd={() => applyStatus(false, null)}
+          />
 
-          {freeList.showSpinner ? (
-            <ActivityIndicator size="small" color="#000" />
-          ) : friends.length > 0 ? (
-            <FadeIn>
-              {friends.map((entry) => (
-                <UserRow
-                  key={entry.user.id}
-                  user={entry.user}
-                  subtitle={"Do " + formatTime(entry.freeUntil)}
-                  badge={<GroupBadge via={entry.via} />}
-                  onPress={() => setProfileId(entry.user.id)}
-                />
-              ))}
-            </FadeIn>
-          ) : !freeList.settled ? null : connectionCount === 0 ? (
-            <FadeIn className="ml-2">
-              <Text className="text-gray-300 text-base mb-2">
-                Zatím nikoho nemáš.
-              </Text>
-              <Pressable onPress={() => router.push("/search")} className="mb-1">
-                <Text className="text-[#EE6C4D] font-medium text-base">
-                  Přidej přátele →
+          <Reveal visible={isFree} delayMs={180} className="w-full mt-6 flex-1">
+            {/* Odstupy drž shodné se seznamem presetů v PresetList - oba
+              seznamy se v témže místě střídají, takže rozdíl by se projevil
+              jako poskočení obsahu při přepnutí stavu. */}
+            <Text className="text-gray-400 font-medium text-xs tracking-widest uppercase mb-2">
+              Kdo je také volný
+            </Text>
+
+            {freeList.error && (
+              <Pressable
+                onPress={freeList.reload}
+                className="bg-red-50 rounded-xl px-3 py-2 mb-3"
+              >
+                <Text className="text-red-500 text-xs">
+                  Nepodařilo se načíst — zobrazuji poslední známý stav. Zkusit
+                  znovu.
                 </Text>
               </Pressable>
-              <Pressable onPress={() => router.push("/groups")}>
-                <Text className="text-[#EE6C4D] font-medium text-base">
-                  Připoj se ke skupině →
+            )}
+
+            {freeList.showSpinner ? (
+              <ActivityIndicator size="small" color="#000" />
+            ) : friends.length > 0 ? (
+              <FadeIn>
+                {friends.map((entry) => (
+                  <UserRow
+                    key={entry.user.id}
+                    user={entry.user}
+                    subtitle={"Do " + formatTime(entry.freeUntil)}
+                    badge={<GroupBadge via={entry.via} />}
+                    onPress={() => setProfileId(entry.user.id)}
+                  />
+                ))}
+              </FadeIn>
+            ) : !freeList.settled ? null : connectionCount === 0 ? (
+              <FadeIn>
+                <Text className="text-gray-300 text-base mb-2">
+                  Zatím nikoho nemáš.
                 </Text>
-              </Pressable>
-            </FadeIn>
-          ) : (
-            <FadeIn>
-              <Text className="text-gray-300 ml-2 text-base">
-                Zatím nikdo z přátel.
-              </Text>
-            </FadeIn>
-          )}
-        </Reveal>
-      </ScrollView>
+                <Pressable
+                  onPress={() => router.push("/search")}
+                  className="mb-1"
+                >
+                  <Text className="text-[#EE6C4D] font-medium text-base">
+                    Přidej přátele →
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => router.push("/groups")}>
+                  <Text className="text-[#EE6C4D] font-medium text-base">
+                    Připoj se ke skupině →
+                  </Text>
+                </Pressable>
+              </FadeIn>
+            ) : (
+              <FadeIn>
+                <Text className="text-gray-300 text-base">
+                  Zatím nikdo z přátel.
+                </Text>
+              </FadeIn>
+            )}
+          </Reveal>
+        </ScrollView>
 
-      <BottomSheet visible={modalVisible} onClose={closeModal}>
-        <View className="items-center mb-8">
-          <Text className="text-gray-400 text-sm font-medium mb-1">
-            Volný do
-          </Text>
-          <Text className="text-5xl font-light tracking-tight text-gray-900">
-            {formatTime(calculatedTime)}
-          </Text>
-          {isTomorrow(calculatedTime, now) && (
-            <Text className="text-gray-400 text-sm mt-1">zítra</Text>
-          )}
-        </View>
-
-        <Slider
-          style={{ width: "100%", height: 40, marginBottom: 32 }}
-          minimumValue={1}
-          maximumValue={24}
-          step={1}
-          value={hourIndex}
-          onValueChange={setHourIndex}
-          minimumTrackTintColor="#EE6C4D"
-          maximumTrackTintColor="#f3f4f6"
-          thumbTintColor="#EE6C4D"
-        />
-
-        <Pressable
-          onPress={handleSetTime}
-          className="bg-[#EE6C4D] py-4 rounded-full items-center active:opacity-80"
-        >
-          <Text className="text-white text-base font-medium">Potvrdit</Text>
-        </Pressable>
-      </BottomSheet>
+        {/* Scrollbary jsou skryté, takže bez tohohle nic nenapovídá, že seznam
+          volných přátel pokračuje pod hranou obrazovky. */}
+        <BottomFade visible={canScrollMore} />
+      </View>
 
       <ProfileSheet userId={profileId} onClose={() => setProfileId(null)} />
     </View>

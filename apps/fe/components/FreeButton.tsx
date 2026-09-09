@@ -19,6 +19,9 @@ type Props = {
    * (see app/index.tsx's useDeferredPending) - disables the button and
    * shows a loading overlay so a slow request can't be mistaken for done. */
   pending: boolean;
+  /** Průměr kruhu v px. Menší varianta se používá uvnitř TimeRing, aby se
+   * tlačítko nedotýkalo prstence. */
+  size?: number;
 };
 
 /**
@@ -30,7 +33,13 @@ type Props = {
  * whose opacity crossfades via `fade`. Everything here (opacity, transform)
  * stays on the native driver.
  */
-export default function FreeButton({ isFree, onPress, fade, pending }: Props) {
+export default function FreeButton({
+  isFree,
+  onPress,
+  fade,
+  pending,
+  size = 256,
+}: Props) {
   // Spring "pop" on a real state change - dip then overshoot then settle.
   const stateScale = useRef(new Animated.Value(1)).current;
   // Independent press squish, so it can run concurrently with a state pop
@@ -127,7 +136,10 @@ export default function FreeButton({ isFree, onPress, fade, pending }: Props) {
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={pending}
-        className="w-64 h-64 rounded-full justify-center items-center overflow-hidden bg-gray-100"
+        accessibilityRole="button"
+        accessibilityLabel={isFree ? "Ukončit volno" : "Označit se jako volný"}
+        style={{ width: size, height: size }}
+        className="rounded-full justify-center items-center overflow-hidden bg-gray-100"
       >
         <Animated.View
           style={{

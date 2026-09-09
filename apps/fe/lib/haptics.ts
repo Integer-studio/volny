@@ -11,3 +11,18 @@ import * as Haptics from "expo-haptics";
 export function tapFeedback(): void {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 }
+
+/**
+ * Jemné cvaknutí při přeskoku prstence na další čtvrthodinu. Volá se z
+ * gesta, ne z výsledku - vazba na tah je to jediné, co dává smysl cítit.
+ * `selectionAsync` je přesně ta "ozubená" varianta, kterou iOS používá pro
+ * kolečkové pickery; na webu je to no-op.
+ */
+export function tickFeedback(): void {
+  Haptics.selectionAsync().catch(() => {});
+}
+
+/** Výraznější cvaknutí, když prstenec zaklapne na preset. */
+export function snapFeedback(): void {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+}

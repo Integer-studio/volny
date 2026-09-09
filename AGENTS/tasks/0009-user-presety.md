@@ -37,6 +37,19 @@ zařízení — kvůli synchronizaci mezi zařízeními (web/mobil).
 
 ## Poznámky
 
+**Kam to na FE zapojit (2026-09-07):** nové UI z
+[0007](./0007-nove-zadavani-casu.md) už presety vykresluje — jako ikonky
+v kolečkách na prstenci. Berou se z jednoho místa,
+`apps/fe/components/TimeRing/presets.ts`: `ANCHORS` (id, lucide ikonka,
+jméno, hodina) a `resolvePresets(now)`, který kotvu přepočítá na nejbližší
+budoucí výskyt. Stačí tedy vyměnit ten seznam za data z nové entity, zbytek
+prstence se nezmění.
+
+Pozor na dva rozdíly proti zadání výše: pole `[1, 2, 3, 5]` v
+`apps/fe/app/index.tsx` už neexistuje (odešlo s popupem), a presety jsou
+**absolutní denní kotvy** ("do oběda"), ne relativní offsety ("na 3 hodiny").
+Nová entita by tomu měla odpovídat — hodina dne, ne délka.
+
 Vzniklo jako součást dávky nových tasků 2026-09-06, rozvedeno v [0015](./0015-rozvedeni-novych-tasku.md).
 Souvisí s [0007](./0007-nove-zadavani-casu.md), [0010](./0010-vlastni-cas.md) a
 [0011](./0011-snap-casu-na-preset.md).

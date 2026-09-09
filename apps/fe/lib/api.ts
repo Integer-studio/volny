@@ -442,6 +442,46 @@ export const api = {
     }));
   },
 
+  /**
+   * Aktivní záznam volna, tedy ten, do kterého padá `now`. Sdílené mezi
+   * ukončením a prodloužením - `GET /users/me` u `activeFreeTime` nevrací id,
+   * takže se musí dohledat ze seznamu.
+   */
+  async getActiveFreeTime(): Promise<FreeTimeDto | null> {
+    const myTimes: FreeTimeDto[] = await request('/freetimes');
+    const now = new Date();
+    return (
+      myTimes.find((ft) => {
+        const start = new Date(ft.startTime);
+        const end = new Date(ft.endTime);
+        return now >= start && now < end;
+      }) ?? null
+    );
+  },
+
+  /**
+   * Změní konec už běžícího volna. Jde přes `PUT /freetimes/{id}`, ne přes
+   * `POST /freetimes` (což dělá `setMyStatus`): POST na backendu vždy zakládá
+   * NOVÝ záznam, takže by vzniklo druhé překrývající se volno a přátelům by
+   * podruhé odešla notifikace "má teď volno". `StartTime` se schválně
+   * neposílá - backend si nechá původní, takže volno neztratí svůj začátek.
+   *
+   * Když už žádné volno neběží (mezitím vypršelo nebo ho ukončilo jiné
+   * zařízení), založí se místo toho nové - jinak by se změna tiše zahodila.
+   */
+  async extendMyStatus(until: Date): Promise<void> {
+    const active = await this.getActiveFreeTime();
+    if (!active) {
+      await this.setMyStatus(true, until);
+      return;
+    }
+    await request(`/freetimes/${active.freeTimeID}`, {
+      method: 'PUT',
+      idempotent: true,
+      body: JSON.stringify({ endTime: until.toISOString() }),
+    });
+  },
+
   async setMyStatus(isFree: boolean, until?: Date): Promise<void> {
     if (isFree && until) {
       const startTime = new Date().toISOString();
@@ -453,13 +493,7 @@ export const api = {
     } else if (isFree) {
       await request('/freetimes/imfree', { method: 'POST' });
     } else {
-      const myTimes: FreeTimeDto[] = await request('/freetimes');
-      const now = new Date();
-      const active = myTimes.find((ft) => {
-        const start = new Date(ft.startTime);
-        const end = new Date(ft.endTime);
-        return now >= start && now < end;
-      });
+      const active = await this.getActiveFreeTime();
       if (active) {
         await request(`/freetimes/${active.freeTimeID}`, { method: 'DELETE', idempotent: true });
       }

@@ -1,30 +1,21 @@
-import React, { useRef } from "react";
+import React from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 
 type Props = {
-  /** Shared with FreeButton so text and circle crossfade in lockstep. */
+  /** Sdílené s FreeButton, aby text a kruh crossfadovaly zároveň. */
   fade: Animated.Value;
-  freeUntil: Date | null;
-  formatTime: (date: Date) => string;
 };
 
 /**
- * Crossfades "Nemám volno" / "Jsem Volný" (+ time) instead of swapping them
- * instantly. Height is fixed by construction, not a magic number: an
- * invisible sizer holds both lines of the taller (free) variant, and the two
- * real variants are absolutely positioned on top of it - this replaces the
- * old text-transparent "placeholder" trick (see git history on
- * app/index.tsx) with something that doesn't depend on guessing a pixel
- * height, so it still holds under a system font-size bump.
+ * Crossfade "Nemám volno" / "Jsem volný". Nese **jen stav**, žádný čas -
+ * ten patří do jediného slotu pod tlačítkem, aby se nestěhoval podle stavu
+ * (a aby se během tažení neměnil na dvou místech zároveň).
+ *
+ * Výška je dána konstrukcí, ne magickým číslem: neviditelný sizer drží jeden
+ * řádek a obě varianty leží absolutně na něm. Drží to i při zvětšeném
+ * systémovém fontu.
  */
-export default function StatusHeadline({ fade, freeUntil, formatTime }: Props) {
-  // Keep the last known non-null freeUntil so the outgoing "Jsem Volný"
-  // variant doesn't lose its time mid-crossfade (freeUntil goes to null in
-  // the same tick isFree flips false).
-  const lastFreeUntil = useRef<Date | null>(freeUntil);
-  if (freeUntil) lastFreeUntil.current = freeUntil;
-  const shownFreeUntil = freeUntil ?? lastFreeUntil.current;
-
+export default function StatusHeadline({ fade }: Props) {
   const notFreeOpacity = fade.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 0],
@@ -39,10 +30,9 @@ export default function StatusHeadline({ fade, freeUntil, formatTime }: Props) {
   });
 
   return (
-    <View className="items-center mb-6 w-full">
+    <View className="items-center mb-3 w-full">
       <View style={{ opacity: 0 }} pointerEvents="none">
-        <Text className="text-2xl font-bold">Jsem Volný</Text>
-        <Text className="text-sm mt-1">do 00:00</Text>
+        <Text className="text-2xl font-bold">Nemám volno</Text>
       </View>
 
       <Animated.View
@@ -73,13 +63,8 @@ export default function StatusHeadline({ fade, freeUntil, formatTime }: Props) {
         ]}
       >
         <Text className="text-2xl font-bold text-[#EE6C4D]" numberOfLines={1}>
-          Jsem Volný
+          Jsem volný
         </Text>
-        {shownFreeUntil && (
-          <Text className="text-sm mt-1 text-[#EE6C4D]/70">
-            do {formatTime(shownFreeUntil)}
-          </Text>
-        )}
       </Animated.View>
     </View>
   );
