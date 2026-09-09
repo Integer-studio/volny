@@ -185,6 +185,7 @@ export default function FreeDial({
           fade={fade}
           pending={pending}
           size={buttonSize}
+          pressHaptic={isFree ? "cancel" : "confirm"}
         />
       </TimeRing>
 

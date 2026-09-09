@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import Svg, { Circle, G, Line, Path } from "react-native-svg";
 import { formatTime } from "../../lib/time";
-import { tickFeedback } from "../../lib/haptics";
+import { haptic, resetWindBudget } from "../../lib/haptics";
 import { useReduceMotion } from "../../hooks/useReduceMotion";
 import RingMarker from "./RingMarker";
 import { Preset } from "./presets";
@@ -27,6 +27,7 @@ import {
   polar,
   rangeForOffset,
   snapToVisibleTick,
+  tickWeight,
   visibleStep,
 } from "./scale";
 
@@ -78,6 +79,16 @@ const HIT_OUTER = R + TRACK_W / 2 + 22;
 const GRAB_DEG = 26;
 /** Jak daleko se dá handle přetlačit za konec dráhy (stupně, asymptota). */
 const MAX_OVERSHOOT = 8;
+/** Kolik za krajem musí handle povolit, než se doraz smí ohlásit znovu.
+ * Bez hystereze by cukání prstem přesně na kraji spouštělo odezvu ob snímek
+ * a z jednoho nárazu by byla chrastítka. */
+const EDGE_HYSTERESIS = 1.5;
+/** Nad tímhle podílem "jak prudce se táhne" (viz `follow`) se čtvrthodiny
+ * přestanou hlásit, nad druhým prahem i půlhodiny. Cvakají pak jen hodiny,
+ * což je zároveň nejsilnější a nejřidší odezva - přesný opak dosavadního
+ * stavu, kdy hustý proud slabých cuknutí splýval v kaši. */
+const HAPTIC_DAMP_QUARTER = 0.3;
+const HAPTIC_DAMP_HALF = 0.7;
 
 /** Rychlost (°/ms), pod kterou se tažení bere jako "mířím na přesný čas". */
 const SPEED_SLOW = 0.03;
@@ -272,8 +283,16 @@ export default function TimeRing({
 
   const ticks = useMemo(() => buildTicks(now, range), [now.getTime(), range]);
 
-  const latest = useRef({ now, onPreview, onChange });
-  latest.current = { now, onPreview, onChange };
+  // Časy kotev jako Set kvůli haptice. Schválně přes `latest` ref a ne přes
+  // deps `pan` memo: `resolvePresets(now)` ve FreeDial vrací nové `Date`
+  // objekty každou minutu, takže by se PanResponder pořád přegeneroval - a
+  // přegenerování uprostřed tažení gesto rozbije.
+  const presetTimes = useMemo(
+    () => new Set(presets.map((p) => p.date.getTime())),
+    [presets],
+  );
+  const latest = useRef({ now, onPreview, onChange, presetTimes });
+  latest.current = { now, onPreview, onChange, presetTimes };
 
   /**
    * Doplutí na danou hodnotu: úhel i okno pružinou současně. Kdyby se hýbal
@@ -309,6 +328,10 @@ export default function TimeRing({
   /** Doběh po puštění handle nebo po klepnutí - navíc ohlásí hodnotu nahoru. */
   const settleTo = (date: Date) => {
     const off = clampOffset(dateToOffset(date, latest.current.now));
+    // Jedno místo pro tři cesty naráz: puštění tažení, klepnutí na dráhu
+    // i klepnutí na kolečko kotvy. Zdvojení s odezvou z přejezdu řeší
+    // rozestup kanálu `preset` v lib/haptics.ts, ne bookkeeping tady.
+    if (presetTimes.has(date.getTime())) haptic("preset");
     latest.current.onChange?.(date);
     animateTo(off, rangeForOffset(off));
   };
@@ -327,6 +350,8 @@ export default function TimeRing({
     let velocity = 0;
     let prevTime = 0;
     let edgeLoop: number | null = null;
+    /** Na které straně dráhy handle právě tlačí za kraj (kvůli dorazu). */
+    let edgeSide: "lo" | "hi" | null = null;
 
     const local = (pageX: number, pageY: number) => ({
       x: pageX - origin.x,
@@ -343,13 +368,43 @@ export default function TimeRing({
     const snapAt = (a: number, rng: number) =>
       snapToVisibleTick(readOffset(a, rng), rng, latest.current.now);
 
-    /** Ohlásí nahoru novou náhledovou hodnotu, ale jen když se opravdu změnila. */
-    const preview = (a: number, rng: number) => {
+    /**
+     * Ohlásí nahoru novou náhledovou hodnotu, ale jen když se opravdu
+     * změnila. Zároveň je to jediné místo, odkud jde odezva při tažení -
+     * je to okamžik změny hodnoty, takže odezva sedí na to, co je vidět.
+     *
+     * `effort` je existující `follow` (0..1, jak prudce se táhne), takže
+     * tlumení haptiky jede po stejné křivce jako dohánění zoomu. `source`
+     * odlišuje namotávání za koncem dráhy, kde se hodnota mění bez pohybu
+     * prstu a `effort` by byl zastaralý.
+     */
+    const preview = (
+      a: number,
+      rng: number,
+      source: "drag" | "wind",
+      effort: number,
+    ) => {
       const snapped = snapAt(a, rng);
       if (snapped.getTime() === lastTickKey) return;
       lastTickKey = snapped.getTime();
-      tickFeedback();
       latest.current.onPreview?.(snapped);
+
+      // Kotva má přednost před třídou čárky a nesmí se pustit obojí -
+      // dvě odezvy v jednom snímku splynou v jeden tupý pulz.
+      if (latest.current.presetTimes.has(lastTickKey)) {
+        haptic("preset");
+        return;
+      }
+      const weight = tickWeight(snapped);
+      if (source === "wind") {
+        // Při namotávání jde jen o pocit "motám", ne o čtení čárek.
+        if (weight === "hour") haptic("tickWind");
+        return;
+      }
+      if (weight === "hour") haptic("tickHour");
+      else if (weight === "half" && effort < HAPTIC_DAMP_HALF) haptic("tickHalf");
+      else if (weight === "quarter" && effort < HAPTIC_DAMP_QUARTER)
+        haptic("tickMinor");
     };
 
     /** Posun okna o jeden krok směrem k tomu, co hodnota potřebuje. */
@@ -373,7 +428,7 @@ export default function TimeRing({
       const over = desired - END_ANGLE;
       if (over <= 0) return;
       const nextRange = easeRange(desired, clamp(over / 30, 0, 1) * 0.06);
-      preview(withRubberBand(desired), nextRange);
+      preview(withRubberBand(desired), nextRange, "wind", 0);
     };
 
     const stopEdge = () => {
@@ -415,6 +470,8 @@ export default function TimeRing({
         grabOffset = normalizeDelta(touchAngle - cur);
         velocity = 0;
         prevTime = Date.now();
+        edgeSide = null;
+        resetWindBudget();
         lastTickKey = snapAt(cur, rangeRef.current).getTime();
         mode.current = "drag";
         setDragging(true);
@@ -444,6 +501,25 @@ export default function TimeRing({
         angleRef.current = next;
         angleAnim.setValue(next);
 
+        // Doraz se hlásí hranově, ne průběžně, a sleduje se strana - jinak by
+        // přejezd od jednoho konce k druhému odezvu nezopakoval. Uvolní se
+        // teprve po návratu o `EDGE_HYSTERESIS` dovnitř, aby cukání přesně
+        // na kraji nedělalo chrastítka. Namotávací smyčka drží stranu
+        // nastavenou, takže se to samo neopakuje.
+        const side =
+          desired > END_ANGLE ? "hi" : desired < START_ANGLE ? "lo" : null;
+        if (side !== null) {
+          if (side !== edgeSide) haptic("limit");
+          edgeSide = side;
+        } else if (
+          desired < END_ANGLE - EDGE_HYSTERESIS &&
+          desired > START_ANGLE + EDGE_HYSTERESIS
+        ) {
+          edgeSide = null;
+          // Vrátili jsme se do dráhy, takže další namotávání začíná znovu.
+          resetWindBudget();
+        }
+
         // Okno hodnotu jen dohání, a to podle rychlosti tahu: při pomalém
         // míření je zoom prakticky zmrazený, takže se čárky nehýbou pod
         // prstem; při prudkém tahu dojede skoro okamžitě.
@@ -458,7 +534,7 @@ export default function TimeRing({
             : ZOOM_SHRINK;
         const nextRange = easeRange(next, kz.base + kz.fast * follow);
 
-        preview(next, nextRange);
+        preview(next, nextRange, "drag", follow);
       },
 
       onPanResponderRelease: (_e, g) => {
@@ -485,8 +561,13 @@ export default function TimeRing({
           // schválně nic nedělá - hodnotu mění jen handle.
           const p = local(g.moveX || g.x0, g.moveY || g.y0);
           const a = clamp(pointToAngle(p.x, p.y, c), START_ANGLE, END_ANGLE);
-          tickFeedback();
-          settleTo(snapAt(a, rangeRef.current));
+          const target = snapAt(a, rangeRef.current);
+          // Vědomé klepnutí má mít pevnou odezvu. Když míří na kotvu, pustí
+          // ji `settleTo` - tady by to bylo dvakrát.
+          if (!latest.current.presetTimes.has(target.getTime())) {
+            haptic("tickHour");
+          }
+          settleTo(target);
         }
         grabbed = null;
       },

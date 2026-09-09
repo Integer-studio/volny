@@ -188,6 +188,18 @@ export function buildTicks(now: Date, range: number): Tick[] {
   return ticks;
 }
 
+/** Váha čárky - celá hodina / půlhodina / čtvrthodina. */
+export type TickWeight = "hour" | "half" | "quarter";
+
+/**
+ * Do které třídy čárka patří. Kopíruje pravidlo, podle kterého se čárky
+ * kreslí (viz `buildTicks`), aby hmatová odezva odpovídala tomu, co je vidět.
+ */
+export function tickWeight(date: Date): TickWeight {
+  const m = date.getMinutes();
+  return m === 0 ? "hour" : m % 30 === 0 ? "half" : "quarter";
+}
+
 /** Nejjemnější krok čárek, který je v daném okně ještě vidět (minuty). */
 export function visibleStep(range: number): number {
   if (opacityForStep(STEP, range) > 0) return STEP;

@@ -8,6 +8,7 @@ import { fieldError, errorMessage } from '../lib/errors';
 import { useAutosaveField } from '../hooks/useAutosaveField';
 import { useSlowActionNotice } from '../hooks/useSlowActionNotice';
 import { validatePhone, validateInstagram } from '../lib/validators';
+import HapticLab from '../components/HapticLab';
 
 function validateUsername(v: string): string | null {
   if (v.length < 3 || v.length > 50) return 'Uživatelské jméno musí mít 3-50 znaků.';
@@ -167,6 +168,8 @@ export default function Settings() {
         state={instagramField.state}
         containerClassName="mb-8"
       />
+
+      <HapticLab />
 
       <Text className="text-gray-400 text-xs font-bold tracking-widest mb-3">ZMĚNA HESLA</Text>
       <FormField label="Současné heslo" value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry autoComplete="current-password" textContentType="password" error={passwordErrors.current} />

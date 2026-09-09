@@ -90,6 +90,8 @@ notifikace "má teď volno".
 
 Implementováno 2026-09-07 na větvi `feature/prstencovy-slider-casu`.
 
+Hmatová odezva prstence se řeší zvlášť v [0018](./0018-haptika-prstence.md).
+
 Vzniklo jako součást dávky nových tasků 2026-09-06, rozvedeno v [0015](./0015-rozvedeni-novych-tasku.md).
 Souvisí s [0009](./0009-user-presety.md), [0010](./0010-vlastni-cas.md) a
 [0011](./0011-snap-casu-na-preset.md) — všechny se týkají zadávání času.

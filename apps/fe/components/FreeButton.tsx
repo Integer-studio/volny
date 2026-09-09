@@ -6,7 +6,7 @@ import {
   Image,
   Pressable,
 } from "react-native";
-import { tapFeedback } from "../lib/haptics";
+import { haptic, HapticEvent } from "../lib/haptics";
 import { useReduceMotion } from "../hooks/useReduceMotion";
 
 type Props = {
@@ -22,6 +22,10 @@ type Props = {
   /** Průměr kruhu v px. Menší varianta se používá uvnitř TimeRing, aby se
    * tlačítko nedotýkalo prstence. */
   size?: number;
+  /** Kterou odezvu pustit při stisku. Tlačítko samo neví, co jeho stisk
+   * znamená - význam zná až rodič, a dvě odezvy (obecná při stisku a
+   * sémantická při puštění) by se ~80 ms po sobě slily v jeden tupý pulz. */
+  pressHaptic: HapticEvent;
 };
 
 /**
@@ -39,6 +43,7 @@ export default function FreeButton({
   fade,
   pending,
   size = 256,
+  pressHaptic,
 }: Props) {
   // Spring "pop" on a real state change - dip then overshoot then settle.
   const stateScale = useRef(new Animated.Value(1)).current;
@@ -100,7 +105,10 @@ export default function FreeButton({
   }, [isFree]);
 
   const handlePressIn = () => {
-    tapFeedback();
+    // Ze stisku, ne z puštění ani z odpovědi serveru: zápis stavu je
+    // fire-and-forget (viz applyStatus v app/index.tsx), takže cokoli
+    // pozdějšího by se od gesta odpojilo.
+    haptic(pressHaptic);
     if (reduceMotion) return;
     Animated.spring(pressScale, {
       toValue: 0.94,
