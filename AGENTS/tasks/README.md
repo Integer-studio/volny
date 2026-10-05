@@ -52,4 +52,4 @@ doby před zavedením priorit je uvedena orientačně.
 | 0016 | Sessions nevydrží dostatečně dlouho (JWT bez refresh tokenu) | in progress | 1 | [0016-sessions-nevydrzi-po-scaledownu.md](./0016-sessions-nevydrzi-po-scaledownu.md) |
 | 0017 | Osobní friend QR kód viditelný při načtení stránky | todo | 2 | [0017-qr-kod-viditelny-pri-nacteni.md](./0017-qr-kod-viditelny-pri-nacteni.md) |
 | 0018 | Haptika prstencového zadávání času | in progress | 2 | [0018-haptika-prstence.md](./0018-haptika-prstence.md) |
-| 0019 | Interaktivní onboarding po registraci | in progress | 1 | [0019-onboarding-po-registraci.md](./0019-onboarding-po-registraci.md) |
+| 0019 | Interaktivní onboarding po registraci | done | 1 | [0019-onboarding-po-registraci.md](./0019-onboarding-po-registraci.md) |
