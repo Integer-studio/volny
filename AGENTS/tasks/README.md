@@ -15,31 +15,28 @@ vzít a dopracovat.
 
 1. Zkopíruj [`sablona.md`](./sablona.md) do nového souboru
    `NNNN-strucny-nazev.md` v této složce (`NNNN` je další volné čtyřmístné
-   číslo, viz tabulka níže).
+   číslo, viz tabulky níže).
 2. Vyplň všechna pole v šabloně.
-3. Přidej řádek do tabulky níže se stavem `todo`.
+3. Přidej řádek do tabulky [Otevřené úkoly](#otevřené-úkoly) se stavem `todo`.
 
 ## Jak si úkol vzít / dokončit
 
 1. Otevři si soubor úkolu, přečti kontext a kritéria splnění.
 2. Přepni stav v tabulce i v hlavičce souboru úkolu na `in progress`.
-3. Po dokončení nastav stav na `done`. Pokud úkol souvisí s PR, odkaž na něj
-   v poznámkách souboru úkolu.
+3. Po dokončení nastav stav na `done` a přesuň řádek z tabulky
+   [Otevřené úkoly](#otevřené-úkoly) do [Hotové úkoly](#hotové-úkoly). Pokud
+   úkol souvisí s PR, odkaž na něj v poznámkách souboru úkolu.
 
 Priorita: 1 = musí být hotové před veřejným releasem, 2 = důležité, ale
 nebrání releasu, 3 = polish/nice-to-have. U hotových/rozpracovaných tasků z
 doby před zavedením priorit je uvedena orientačně.
 
-## Úkoly
+## Otevřené úkoly
 
 | ID | Název | Stav | Priorita | Soubor |
 |----|-------|------|----------|--------|
 | 0001 | Realtime aktualizace (volní lidé, friend requesty) | todo | 1 | [0001-realtime-aktualizace.md](./0001-realtime-aktualizace.md) |
-| 0002 | Zjistit a definovat stav oznámení (mobil i web) | done | — | [0002-stav-oznameni.md](./0002-stav-oznameni.md) |
-| 0003 | Zmenšit velikost APK | done | — | [0003-velikost-apk.md](./0003-velikost-apk.md) |
-| 0004 | Web push notifikace | done | — | [0004-web-push-notifikace.md](./0004-web-push-notifikace.md) |
 | 0005 | Web push notifikace pro iOS (Safari) | in progress | 1 | [0005-ios-safari-web-push.md](./0005-ios-safari-web-push.md) |
-| 0006 | Nepovinný telefon a IG při registraci + disclaimer o viditelnosti | done | 1 | [0006-nepovinny-telefon-ig-registrace.md](./0006-nepovinny-telefon-ig-registrace.md) |
 | 0007 | Nové zadávání času | in progress | 1 | [0007-nove-zadavani-casu.md](./0007-nove-zadavani-casu.md) |
 | 0008 | Scheduled začátek volna (max. den dopředu) | todo | 2 | [0008-scheduled-zacatek-volna.md](./0008-scheduled-zacatek-volna.md) |
 | 0009 | User-based nastavení presetů | todo | 2 | [0009-user-presety.md](./0009-user-presety.md) |
@@ -48,8 +45,17 @@ doby před zavedením priorit je uvedena orientačně.
 | 0012 | "Kde jsem" políčko (volný text) | todo | 3 | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md) |
 | 0013 | Lubomír mode on/off (vypnutý stav bez obrázků) | todo | 1 | [0013-lubomir-mode.md](./0013-lubomir-mode.md) |
 | 0014 | Lepší always-on backend | todo | 1 | [0014-always-on-backend.md](./0014-always-on-backend.md) |
+| 0017 | Osobní friend QR kód viditelný při načtení stránky | todo | 2 | [0017-qr-kod-viditelny-pri-nacteni.md](./0017-qr-kod-viditelny-pri-nacteni.md) |
+
+## Hotové úkoly
+
+| ID | Název | Stav | Priorita | Soubor |
+|----|-------|------|----------|--------|
+| 0002 | Zjistit a definovat stav oznámení (mobil i web) | done | — | [0002-stav-oznameni.md](./0002-stav-oznameni.md) |
+| 0003 | Zmenšit velikost APK | done | — | [0003-velikost-apk.md](./0003-velikost-apk.md) |
+| 0004 | Web push notifikace | done | — | [0004-web-push-notifikace.md](./0004-web-push-notifikace.md) |
+| 0006 | Nepovinný telefon a IG při registraci + disclaimer o viditelnosti | done | 1 | [0006-nepovinny-telefon-ig-registrace.md](./0006-nepovinny-telefon-ig-registrace.md) |
 | 0015 | Rozvedení zadání nových tasků (0006–0014, 0016) | done | 1 | [0015-rozvedeni-novych-tasku.md](./0015-rozvedeni-novych-tasku.md) |
 | 0016 | Sessions nevydrží dostatečně dlouho (JWT bez refresh tokenu) | done | 1 | [0016-sessions-nevydrzi-po-scaledownu.md](./0016-sessions-nevydrzi-po-scaledownu.md) |
-| 0017 | Osobní friend QR kód viditelný při načtení stránky | todo | 2 | [0017-qr-kod-viditelny-pri-nacteni.md](./0017-qr-kod-viditelny-pri-nacteni.md) |
 | 0018 | Haptika prstencového zadávání času | done | 2 | [0018-haptika-prstence.md](./0018-haptika-prstence.md) |
 | 0019 | Interaktivní onboarding po registraci | done | 1 | [0019-onboarding-po-registraci.md](./0019-onboarding-po-registraci.md) |
