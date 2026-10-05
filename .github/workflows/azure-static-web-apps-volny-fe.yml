@@ -9,6 +9,12 @@ on:
       - '.github/workflows/azure-static-web-apps-volny-fe.yml'
   workflow_dispatch:
 
+# Souběžné deploye do stejné SWA se navzájem ruší ("Deployment Canceled"),
+# např. když je stejný commit pushnut dvakrát. Deploye proto běží po jednom.
+concurrency:
+  group: swa-deploy-volny-fe
+  cancel-in-progress: false
+
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
