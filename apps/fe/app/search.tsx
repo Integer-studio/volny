@@ -13,6 +13,7 @@ import QRCodeSvg from "react-native-qrcode-svg";
 import { api, UserSummary } from "../lib/api";
 import UserRow from "../components/UserRow";
 import BottomSheet from "../components/BottomSheet";
+import Reveal from "../components/Reveal";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import { useRealtimeRefetch, useRefreshInterval } from "../hooks/useRealtime";
@@ -23,6 +24,52 @@ import { useFocusEffect } from "expo-router";
 import { useTour, useTourTarget } from "../components/tour/TourProvider";
 import TourOverlay from "../components/tour/TourOverlay";
 import { buildFriendInviteUrl, shareFriendInvite, copyFriendInviteLink } from "../lib/friend-invite-link";
+
+type MyQrContentProps = {
+  code: string | null;
+  size: number;
+  regenerating: boolean;
+  onCopy: () => void;
+  onShare: () => void;
+  onRegenerate: () => void;
+};
+
+// Shared by the inline card (idle state) and the BottomSheet (while searching).
+function MyQrContent({ code, size, regenerating, onCopy, onShare, onRegenerate }: MyQrContentProps) {
+  if (!code) {
+    return (
+      <View className="items-center justify-center" style={{ height: size }}>
+        <ActivityIndicator size="large" color="#EE6C4D" />
+      </View>
+    );
+  }
+  return (
+    <View className="items-center w-full">
+      <View className="bg-white p-3 rounded-2xl">
+        <QRCodeSvg value={buildFriendInviteUrl(code)} size={size} />
+      </View>
+      <View className="flex-row mt-5 w-full">
+        <Pressable onPress={onCopy} className="flex-1 flex-row items-center justify-center bg-gray-100 py-3 rounded-xl mr-2 active:opacity-80">
+          <Copy size={16} color="#333" />
+          <Text className="text-gray-800 font-medium ml-2">Kopírovat</Text>
+        </Pressable>
+        <Pressable onPress={onShare} className="flex-1 flex-row items-center justify-center bg-gray-100 py-3 rounded-xl mx-1 active:opacity-80">
+          <Share2 size={16} color="#333" />
+          <Text className="text-gray-800 font-medium ml-2">Sdílet</Text>
+        </Pressable>
+        <Pressable
+          onPress={onRegenerate}
+          disabled={regenerating}
+          accessibilityRole="button"
+          accessibilityLabel="Vygenerovat nový kód"
+          className="flex-row items-center justify-center bg-gray-100 py-3 px-3 rounded-xl ml-2 active:opacity-80"
+        >
+          {regenerating ? <ActivityIndicator color="#333" /> : <RefreshCw size={16} color="#333" />}
+        </Pressable>
+      </View>
+    </View>
+  );
+}
 
 export default function SearchScreen() {
   const { show } = useToast();
@@ -44,6 +91,8 @@ export default function SearchScreen() {
   useEffect(() => {
     if (myInvite.data) setMyCode(myInvite.data);
   }, [myInvite.data]);
+
+  const isSearching = query.trim().length > 0;
 
   const handleCopyMyCode = async () => {
     if (!myCode) return;
@@ -140,7 +189,7 @@ export default function SearchScreen() {
   return (
     <View className="flex-1 bg-[#FCFBF8] p-4">
       <View className="flex-row items-center mb-6">
-        <View className="flex-1 flex-row items-center bg-gray-100 p-3 rounded-2xl mr-2">
+        <View className={`flex-1 flex-row items-center bg-gray-100 p-3 rounded-2xl ${isSearching ? 'mr-2' : ''}`}>
           <Search size={20} color="#888" className="mr-2" />
           <TextInput
             className="flex-1 text-base text-gray-800"
@@ -152,21 +201,40 @@ export default function SearchScreen() {
             style={{ paddingVertical: 0 }}
           />
         </View>
-        <Pressable
-          ref={qrTarget}
-          onPress={() => setQrVisible(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Můj QR kód"
-          className="p-3 bg-gray-100 rounded-2xl active:opacity-80"
-        >
-          <QrCode size={20} color="#888" />
-        </Pressable>
+        {/* While searching the inline card is hidden; the code stays one tap away. */}
+        <Reveal visible={isSearching}>
+          <Pressable
+            onPress={() => setQrVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Můj QR kód"
+            className="p-3 bg-gray-100 rounded-2xl active:opacity-80"
+          >
+            <QrCode size={20} color="#888" />
+          </Pressable>
+        </Reveal>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
 
+        {/* Můj QR kód */}
+        <Reveal visible={!isSearching}>
+          <View ref={qrTarget} className="bg-white rounded-3xl p-5 mb-8 items-center">
+            <Text className="text-gray-500 text-sm font-medium mb-4">
+              Ukaž kamarádovi, ať si tě naskenuje
+            </Text>
+            <MyQrContent
+              code={myCode}
+              size={180}
+              regenerating={regenerating}
+              onCopy={handleCopyMyCode}
+              onShare={handleShareMyCode}
+              onRegenerate={handleRegenerateMyCode}
+            />
+          </View>
+        </Reveal>
+
         {/* Hledání výsledků */}
-        {query.trim().length > 0 && (
+        {isSearching && (
           <View className="mb-8">
             <Text className="text-gray-400 text-xs font-bold tracking-widest mb-4">VÝSLEDKY HLEDÁNÍ</Text>
             {search.showSpinner && search.data === undefined ? (
@@ -259,32 +327,14 @@ export default function SearchScreen() {
           <Text className="text-gray-400 text-sm font-medium mb-6">
             Naskenováním tě ostatní přidají do přátel
           </Text>
-          {myCode ? (
-            <>
-              <View className="bg-white p-4 rounded-2xl">
-                <QRCodeSvg value={buildFriendInviteUrl(myCode)} size={220} />
-              </View>
-              <Text className="text-gray-900 text-lg font-semibold tracking-wide mt-6">
-                {myCode}
-              </Text>
-              <Text className="text-gray-400 text-xs mt-1">Platí 24 hodin</Text>
-              <View className="flex-row mt-6 w-full">
-                <Pressable onPress={handleCopyMyCode} className="flex-1 flex-row items-center justify-center bg-gray-100 py-3 rounded-xl mr-2 active:opacity-80">
-                  <Copy size={16} color="#333" />
-                  <Text className="text-gray-800 font-medium ml-2">Kopírovat</Text>
-                </Pressable>
-                <Pressable onPress={handleShareMyCode} className="flex-1 flex-row items-center justify-center bg-gray-100 py-3 rounded-xl mx-1 active:opacity-80">
-                  <Share2 size={16} color="#333" />
-                  <Text className="text-gray-800 font-medium ml-2">Sdílet</Text>
-                </Pressable>
-                <Pressable onPress={handleRegenerateMyCode} disabled={regenerating} className="flex-row items-center justify-center bg-gray-100 py-3 px-3 rounded-xl ml-2 active:opacity-80">
-                  {regenerating ? <ActivityIndicator color="#333" /> : <RefreshCw size={16} color="#333" />}
-                </Pressable>
-              </View>
-            </>
-          ) : (
-            <ActivityIndicator size="large" color="#EE6C4D" />
-          )}
+          <MyQrContent
+            code={myCode}
+            size={220}
+            regenerating={regenerating}
+            onCopy={handleCopyMyCode}
+            onShare={handleShareMyCode}
+            onRegenerate={handleRegenerateMyCode}
+          />
         </View>
       </BottomSheet>
 
