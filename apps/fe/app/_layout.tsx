@@ -13,6 +13,7 @@ import PushGate from "../components/PushGate";
 import PendingInviteGate from "../components/PendingInviteGate";
 import PendingFriendInviteGate from "../components/PendingFriendInviteGate";
 import BackButton from "../components/BackButton";
+import { TourProvider } from "../components/tour/TourProvider";
 import { warmUp } from "../lib/warmup";
 
 // SDK 57: shouldShowAlert is deprecated; banner + list replace it.
@@ -80,6 +81,12 @@ function Navigation() {
               the status line needs more room and styling than a native
               header title supports. */}
           <Stack.Screen name="index" options={{ headerShown: false }} />
+          {/* Úvod průvodce po registraci (task 0019). Bez gesta zpět - z
+              úvodních kroků se odchází jen jejich tlačítky. */}
+          <Stack.Screen
+            name="onboarding"
+            options={{ headerShown: false, gestureEnabled: false, animation: "fade" }}
+          />
           <Stack.Screen
             name="search"
             options={{
@@ -159,7 +166,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <Navigation />
+        <TourProvider>
+          <Navigation />
+        </TourProvider>
       </ToastProvider>
     </AuthProvider>
   );

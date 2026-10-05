@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<Product> Products { get; set; } = null!;
     public DbSet<UserDevice> UserDevices { get; set; } = null!;
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+    public DbSet<HandoffCode> HandoffCodes { get; set; } = null!;
     public DbSet<FreeTime> FreeTimes { get; set; } = null!;
     public DbSet<FriendPair> FriendPairs { get; set; } = null!;
     public DbSet<FriendSuggestion> FriendSuggestions { get; set; } = null!;
@@ -54,6 +55,12 @@ public class AppDbContext : DbContext
             entity.Property(e => e.TokenHash).HasMaxLength(64).IsRequired();
             entity.HasIndex(e => e.TokenHash).IsUnique();
             entity.HasIndex(e => e.UserID);
+        });
+
+        modelBuilder.Entity<HandoffCode>(entity =>
+        {
+            entity.Property(e => e.CodeHash).HasMaxLength(64).IsRequired();
+            entity.HasIndex(e => e.CodeHash).IsUnique();
         });
 
         // Case-insensitive uniqueness on Username is enforced by a raw-SQL

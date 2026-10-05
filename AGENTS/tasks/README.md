@@ -38,7 +38,7 @@ doby před zavedením priorit je uvedena orientačně.
 | 0002 | Zjistit a definovat stav oznámení (mobil i web) | done | — | [0002-stav-oznameni.md](./0002-stav-oznameni.md) |
 | 0003 | Zmenšit velikost APK | done | — | [0003-velikost-apk.md](./0003-velikost-apk.md) |
 | 0004 | Web push notifikace | done | — | [0004-web-push-notifikace.md](./0004-web-push-notifikace.md) |
-| 0005 | Web push notifikace pro iOS (Safari) | todo | 1 | [0005-ios-safari-web-push.md](./0005-ios-safari-web-push.md) |
+| 0005 | Web push notifikace pro iOS (Safari) | in progress | 1 | [0005-ios-safari-web-push.md](./0005-ios-safari-web-push.md) |
 | 0006 | Nepovinný telefon a IG při registraci + disclaimer o viditelnosti | done | 1 | [0006-nepovinny-telefon-ig-registrace.md](./0006-nepovinny-telefon-ig-registrace.md) |
 | 0007 | Nové zadávání času | in progress | 1 | [0007-nove-zadavani-casu.md](./0007-nove-zadavani-casu.md) |
 | 0008 | Scheduled začátek volna (max. den dopředu) | todo | 2 | [0008-scheduled-zacatek-volna.md](./0008-scheduled-zacatek-volna.md) |
@@ -52,3 +52,4 @@ doby před zavedením priorit je uvedena orientačně.
 | 0016 | Sessions nevydrží dostatečně dlouho (JWT bez refresh tokenu) | in progress | 1 | [0016-sessions-nevydrzi-po-scaledownu.md](./0016-sessions-nevydrzi-po-scaledownu.md) |
 | 0017 | Osobní friend QR kód viditelný při načtení stránky | todo | 2 | [0017-qr-kod-viditelny-pri-nacteni.md](./0017-qr-kod-viditelny-pri-nacteni.md) |
 | 0018 | Haptika prstencového zadávání času | in progress | 2 | [0018-haptika-prstence.md](./0018-haptika-prstence.md) |
+| 0019 | Interaktivní onboarding po registraci | in progress | 1 | [0019-onboarding-po-registraci.md](./0019-onboarding-po-registraci.md) |

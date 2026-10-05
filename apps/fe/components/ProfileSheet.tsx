@@ -15,6 +15,9 @@ import { useToast } from './Toast';
 import { errorMessage } from '../lib/errors';
 import BottomSheet from './BottomSheet';
 import FadeIn from './FadeIn';
+import TipCard from './tour/TipCard';
+import { useTour } from './tour/TourProvider';
+import { TOUR_DUMMY_ID, TOUR_DUMMY_PROFILE } from './tour/dummy';
 
 type Props = {
   /** The profile to show, or null to keep the sheet closed. */
@@ -33,11 +36,20 @@ export default function ProfileSheet({ userId, onClose }: Props) {
   const { show } = useToast();
   const [busy, setBusy] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  // U ukázkového přítele místo vytáčení jen vysvětlení. Přímo v listu, ne
+  // toastem - toast leží pod RN Modalem a ukázal by se až po zavření.
+  const [dummyNote, setDummyNote] = useState(false);
 
-  const profile = useAsyncData(
-    () => (userId ? api.getUserProfile(userId) : Promise.resolve(null)),
+  const { skip } = useTour();
+  // Ukázkový přítel z průvodce po registraci - jen na frontendu, bez API.
+  const isDummy = userId === TOUR_DUMMY_ID;
+  const fetched = useAsyncData(
+    () => (userId && !isDummy ? api.getUserProfile(userId) : Promise.resolve(null)),
     [userId],
   );
+  const profile = isDummy
+    ? { ...fetched, data: TOUR_DUMMY_PROFILE, showSpinner: false, settled: true }
+    : fetched;
   // Neither list this sheet is opened from ever includes the viewer
   // themselves, but guard it anyway rather than showing a nonsensical
   // "add yourself as a friend" button if that ever changes.
@@ -45,6 +57,7 @@ export default function ProfileSheet({ userId, onClose }: Props) {
 
   const handleClose = () => {
     setConfirmingRemove(false);
+    setDummyNote(false);
     onClose();
   };
 
@@ -71,6 +84,10 @@ export default function ProfileSheet({ userId, onClose }: Props) {
     }, 'Odebrání se nezdařilo.');
 
   const openContact = async (url: string, copyValue: string) => {
+    if (isDummy) {
+      setDummyNote(true);
+      return;
+    }
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) {
@@ -120,6 +137,23 @@ export default function ProfileSheet({ userId, onClose }: Props) {
             </View>
           )}
 
+          {isDummy && (
+            <View className="w-full mb-4">
+              <TipCard
+                step="dummyContact"
+                title="Tady uvidíš jeho kontakt."
+                body="Můžeš mu zavolat, nebo napsat na Instagram!"
+                action="Hotovo"
+                onAction={handleClose}
+                onSkip={() => {
+                  skip();
+                  handleClose();
+                }}
+                outlined
+              />
+            </View>
+          )}
+
           {(profile.data.phone || profile.data.instagram) && (
             <View className="w-full mb-6">
               {profile.data.phone && (
@@ -147,8 +181,14 @@ export default function ProfileSheet({ userId, onClose }: Props) {
             </View>
           )}
 
+          {isDummy && dummyNote && (
+            <Text className="text-gray-500 text-sm text-center -mt-3 mb-2">
+              Tohle je jen ukázka – u skutečných přátel se ti otevře telefon nebo Instagram.
+            </Text>
+          )}
+
           <View className="w-full">
-            {isSelf ? (
+            {isDummy ? null : isSelf ? (
               <View className="items-center">
                 <Text className="text-gray-400 text-base mb-4">To jsi ty! 😛</Text>
                 <Pressable

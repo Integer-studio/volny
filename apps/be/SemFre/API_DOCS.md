@@ -95,6 +95,22 @@ Sample:
 curl -X POST http://localhost:5135/api/auth/login -H "Content-Type: application/json" -d '{"username":"test","password":"test123"}'
 ```
 
+### POST /api/auth/handoff
+Jednorázový kód pro přenos přihlášení ze Safari do aplikace přidané na plochu iOS (ta má vlastní úložiště). FE ho uloží do cookie, kterou iOS 17.2+ při "Přidat na plochu" zkopíruje.
+- Auth: Bearer
+- Body: žádné
+- Success: `200 OK` -> `{ "code": "<base64url, 43 znaků>" }`, platí 10 minut, jen jednou
+- Errors: `401` bez přihlášení
+
+### POST /api/auth/handoff/redeem
+- Auth: none
+- Body:
+```json
+{ "code": "string" }
+```
+- Success: `200 OK` -> `{ "token": "<jwt>", "refreshToken": "string" }`
+- Errors: `401` neplatný, prošlý nebo už použitý kód (stejná odpověď pro všechny tři)
+
 ---
 
 ## 2) Users

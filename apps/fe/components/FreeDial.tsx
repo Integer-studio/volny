@@ -5,6 +5,7 @@ import PresetList, { PRESET_LIST_H } from "./PresetList";
 import Reveal from "./Reveal";
 import TimeRing, { BUTTON_RATIO, RING_BASE } from "./TimeRing";
 import { clampTarget } from "./TimeRing/scale";
+import { useTourTarget } from "./tour/TourProvider";
 import { defaultTarget, resolvePresets } from "./TimeRing/presets";
 import {
   formatDuration,
@@ -40,6 +41,8 @@ type Props = {
   onChangeEnd: (until: Date) => void;
   /** Klepnutí na tlačítko, když volno běží - ukončuje ho. */
   onEnd: () => void;
+  /** Uživatel si sám vybral čas (puštění handle, klepnutí na preset) - pro průvodce po registraci. */
+  onPick?: () => void;
 };
 
 /**
@@ -63,7 +66,12 @@ export default function FreeDial({
   onConfirm,
   onChangeEnd,
   onEnd,
+  onPick,
 }: Props) {
+  // Cíle nápověd průvodce po registraci (components/tour).
+  const ringTarget = useTourTarget("ring");
+  const buttonTarget = useTourTarget("button");
+
   // Prstenec je navržený na `RING_BASE`; na menších obrazovkách se celý
   // poměrově zmenší, včetně tlačítka uprostřed.
   //
@@ -160,6 +168,7 @@ export default function FreeDial({
     clearReset();
     setTarget(d);
     setPreview(null);
+    onPick?.();
     // Puštění na stejné hodnotě by jinak poslalo PUT, který nic nemění.
     if (isFree && freeUntil && d.getTime() !== freeUntil.getTime()) {
       onChangeEnd(d);
@@ -171,23 +180,27 @@ export default function FreeDial({
       className="items-center w-full"
       onLayout={(e) => setAvail(e.nativeEvent.layout.width)}
     >
-      <TimeRing
-        target={safeTarget}
-        now={now}
-        size={ringSize}
-        presets={presets}
-        onPreview={setPreview}
-        onChange={handleChange}
-      >
-        <FreeButton
-          isFree={isFree}
-          onPress={handlePress}
-          fade={fade}
-          pending={pending}
-          size={buttonSize}
-          pressHaptic={isFree ? "cancel" : "confirm"}
-        />
-      </TimeRing>
+      <View ref={ringTarget} collapsable={false}>
+        <TimeRing
+          target={safeTarget}
+          now={now}
+          size={ringSize}
+          presets={presets}
+          onPreview={setPreview}
+          onChange={handleChange}
+        >
+          <View ref={buttonTarget} collapsable={false}>
+            <FreeButton
+              isFree={isFree}
+              onPress={handlePress}
+              fade={fade}
+              pending={pending}
+              size={buttonSize}
+              pressHaptic={isFree ? "cancel" : "confirm"}
+            />
+          </View>
+        </TimeRing>
+      </View>
 
       {/* Jediný slot pro čas i délku, stejný v obou stavech. Dřív se
           absolutní čas stěhoval (při zadávání sem, za běhu do headline) a

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import Users from 'lucide-react-native/icons/users';
 import Plus from 'lucide-react-native/icons/plus';
 import { api, ApiError } from '../../lib/api';
@@ -9,6 +9,8 @@ import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { useToast } from '../../components/Toast';
 import FormField from '../../components/FormField';
 import FadeIn from '../../components/FadeIn';
+import { useTour, useTourTarget } from '../../components/tour/TourProvider';
+import TourOverlay from '../../components/tour/TourOverlay';
 
 function memberCountLabel(n: number): string {
   if (n === 1) return '1 člen';
@@ -18,6 +20,9 @@ function memberCountLabel(n: number): string {
 
 export default function GroupsList() {
   const { show } = useToast();
+  const { advance } = useTour();
+  const createTarget = useTourTarget('groupsCreate');
+  useFocusEffect(useCallback(() => advance('groupsIcon'), [advance]));
   const groups = useAsyncData(() => api.getGroups(), [], { cacheKey: 'groups' });
   useAutoRefresh(groups.reload, { intervalMs: 30_000 });
 
@@ -101,12 +106,15 @@ export default function GroupsList() {
       </View>
 
       <Pressable
+        ref={createTarget}
         onPress={() => router.push('/groups/new')}
         className="flex-row items-center justify-center border border-[#EE6C4D] py-3 rounded-xl active:bg-[#EE6C4D]/5 mt-4 mb-6"
       >
         <Plus size={18} color="#EE6C4D" />
         <Text className="text-[#EE6C4D] font-medium ml-2">Vytvořit skupinu</Text>
       </Pressable>
+
+      <TourOverlay screen="groups" />
     </View>
   );
 }

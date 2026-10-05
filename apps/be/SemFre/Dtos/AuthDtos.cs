@@ -5,3 +5,9 @@ public class RefreshTokenDto
 {
     public string RefreshToken { get; set; } = null!;
 }
+
+/// <summary>Body shape for POST /auth/handoff/redeem.</summary>
+public class HandoffRedeemDto
+{
+    public string Code { get; set; } = null!;
+}

@@ -356,6 +356,33 @@ export const api = {
     await this.login(username, password);
   },
 
+  /** Jednorázový kód pro přenos přihlášení do aplikace na ploše iOS - viz lib/handoff.ts. */
+  async createHandoff(): Promise<string> {
+    const res = await request('/auth/handoff', { method: 'POST', noRetry: true });
+    return res.code;
+  },
+
+  /**
+   * Vymění handoff kód za vlastní pár tokenů a uloží je stejně jako login().
+   * Neplatný/propadlý kód vyhodí ApiError 401 - volající pak nechá uživatele
+   * přihlásit se normálně.
+   */
+  async redeemHandoff(code: string): Promise<void> {
+    const res = await request('/auth/handoff/redeem', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+      anonymous: true,
+      allowUnauthorized: true,
+      noRetry: true,
+    });
+    currentToken = res.token;
+    await Storage.setItem('userToken', res.token);
+    await Storage.setItem('refreshToken', res.refreshToken);
+    const me = await this.getMe();
+    currentUserId = me.userID;
+    await Storage.setItem('userId', currentUserId.toString());
+  },
+
   async logout(): Promise<void> {
     const refreshToken = await Storage.getItem('refreshToken').catch(() => null);
 
