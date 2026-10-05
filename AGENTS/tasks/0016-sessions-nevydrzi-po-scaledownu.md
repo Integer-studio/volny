@@ -1,6 +1,6 @@
 # 0016 — Sessions nevydrží dostatečně dlouho (JWT bez refresh tokenu, TTL 2 h)
 
-- **Stav:** in progress
+- **Stav:** done
 - **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-06
 
@@ -51,11 +51,9 @@ nezávislý.
 - [x] Refresh token má vlastní TTL, 90 dní
       (`Auth:RefreshTokenExpiresDays`, bez rotace při použití — vědomé
       zjednodušení, appka nemusí být "ultra secure").
-- [ ] Ověřeno, že mechanismus funguje nezávisle na scale-to-zero/deploy
-      backendu v reálném Azure prostředí — z návrhu to plyne (SQLite na
-      persistent volume, žádný in-memory stav), ale reálné ověření
-      (kill/restart Container App mezi requesty) vyžaduje přístup k
-      běžícímu Azure prostředí, který v tomto sezení nebyl k dispozici.
+- [x] Ověřeno, že mechanismus funguje nezávisle na scale-to-zero/deploy
+      backendu v reálném Azure prostředí — potvrzeno uživatelem
+      (2026-10-05).
 
 ## Poznámky
 
