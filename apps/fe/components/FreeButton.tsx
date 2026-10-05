@@ -151,6 +151,18 @@ export default function FreeButton({
         style={{ width: size, height: size }}
         className="rounded-full justify-center items-center overflow-hidden bg-gray-100"
       >
+        {/* Vypnutý stav leží pod oranžovou vrstvou a ta ho při volnu
+            překryje. Černobílá fotka je předpečená v assetu, protože
+            `filter` ve stylu RN na iOS nefunguje. */}
+        {lubomirMode ? (
+          <Image
+            source={require("../assets/images/volny-off.png")}
+            style={{ position: "absolute", width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        ) : (
+          <PartyPopper color="#9CA3AF" size={size * 0.42} strokeWidth={1.75} />
+        )}
         <Animated.View
           style={{
             position: "absolute",

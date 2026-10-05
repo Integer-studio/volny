@@ -213,6 +213,10 @@ export default function Settings() {
           onValueChange={lubomirMode.setEnabled}
           trackColor={{ false: '#E5E7EB', true: '#EE6C4D' }}
           thumbColor="#fff"
+          // react-native-web bere barvu zapnutého jezdce z vlastního propu
+          // (výchozí je zelená #009688), thumbColor platí jen pro vypnutý.
+          // V typech RN ten prop není.
+          {...({ activeThumbColor: '#fff' } as object)}
           accessibilityLabel="Lubomír mode"
         />
       </View>
