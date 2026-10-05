@@ -16,12 +16,14 @@ public class FriendSuggestionsController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IAccessValidator _access;
     private readonly NotificationQueue _notifyQueue;
+    private readonly IRealtimeNotifier _realtime;
 
-    public FriendSuggestionsController(AppDbContext db, IAccessValidator access, NotificationQueue notifyQueue)
+    public FriendSuggestionsController(AppDbContext db, IAccessValidator access, NotificationQueue notifyQueue, IRealtimeNotifier realtime)
     {
         _db = db;
         _access = access;
         _notifyQueue = notifyQueue;
+        _realtime = realtime;
     }
 
     [HttpPost]
@@ -61,6 +63,9 @@ public class FriendSuggestionsController : ControllerBase
                 Data = new Dictionary<string, string> { { "type", "friend_request" }, { "suggesterId", s.SuggesterID.ToString() } }
             }
         });
+
+        await _realtime.FriendRequestReceivedAsync(s.SuggestedID, s.SuggesterID, suggester?.Name ?? suggester?.Username ?? "");
+        await _realtime.FriendsChangedAsync(s.SuggesterID);
 
         return CreatedAtAction(null, dto);
     }
@@ -111,6 +116,7 @@ public class FriendSuggestionsController : ControllerBase
 
         _db.FriendSuggestions.Remove(s);
         await _db.SaveChangesAsync();
+        await _realtime.FriendsChangedAsync(s.SuggesterID, s.SuggestedID);
         return NoContent();
     }
 
@@ -160,6 +166,9 @@ public class FriendSuggestionsController : ControllerBase
             }
         });
 
+        await _realtime.FriendsChangedAsync(a, b);
+        await _realtime.ConnectionsChangedAsync(a, b);
+
         return CreatedAtAction(null, friendDto);
     }
 
@@ -174,6 +183,7 @@ public class FriendSuggestionsController : ControllerBase
 
         _db.FriendSuggestions.Remove(s);
         await _db.SaveChangesAsync();
+        await _realtime.FriendsChangedAsync(s.SuggesterID, s.SuggestedID);
         return NoContent();
     }
 }

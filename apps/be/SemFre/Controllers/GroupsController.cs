@@ -16,12 +16,18 @@ public class GroupsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IAccessValidator _access;
+    private readonly IRealtimeNotifier _realtime;
 
-    public GroupsController(AppDbContext db, IAccessValidator access)
+    public GroupsController(AppDbContext db, IAccessValidator access, IRealtimeNotifier realtime)
     {
         _db = db;
         _access = access;
+        _realtime = realtime;
     }
+
+    // Loaded before a membership change so the leaving/removed member is included.
+    private Task<List<int>> MemberIdsAsync(int groupId) =>
+        _db.GroupMembers.AsNoTracking().Where(m => m.GroupID == groupId).Select(m => m.UserID).ToListAsync();
 
     [HttpPost]
     public async Task<IActionResult> Create(GroupCreateDto dto)
@@ -115,8 +121,10 @@ public class GroupsController : ControllerBase
         if (group == null) return NotFound();
         if (group.OwnerID != userId) return Forbid();
 
+        var memberIds = await MemberIdsAsync(id);
         _db.Groups.Remove(group);
         await _db.SaveChangesAsync();
+        await _realtime.FreeChangedForAsync(memberIds);
         return NoContent();
     }
 
@@ -187,6 +195,7 @@ public class GroupsController : ControllerBase
         {
             _db.GroupMembers.Add(new GroupMember { GroupID = group.GroupID, UserID = userId.Value });
             await _db.SaveChangesAsync();
+            await _realtime.FreeChangedForAsync(await MemberIdsAsync(group.GroupID));
         }
 
         var detail = await BuildDetailAsync(group.GroupID, userId.Value);
@@ -207,8 +216,10 @@ public class GroupsController : ControllerBase
         var member = await _db.GroupMembers.SingleOrDefaultAsync(m => m.GroupID == id && m.UserID == userId);
         if (member == null) return NotFound();
 
+        var memberIds = await MemberIdsAsync(id);
         _db.GroupMembers.Remove(member);
         await _db.SaveChangesAsync();
+        await _realtime.FreeChangedForAsync(memberIds);
         return NoContent();
     }
 
@@ -226,8 +237,10 @@ public class GroupsController : ControllerBase
         var member = await _db.GroupMembers.SingleOrDefaultAsync(m => m.GroupID == id && m.UserID == userId);
         if (member == null) return NotFound();
 
+        var memberIds = await MemberIdsAsync(id);
         _db.GroupMembers.Remove(member);
         await _db.SaveChangesAsync();
+        await _realtime.FreeChangedForAsync(memberIds);
         return NoContent();
     }
 

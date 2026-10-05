@@ -76,6 +76,12 @@ builder.Services.AddScoped<SemFre.Services.IRefreshTokenService, SemFre.Services
 builder.Services.AddScoped<SemFre.Services.IAccessValidator, SemFre.Services.AccessValidator>();
 builder.Services.AddScoped<SemFre.Services.IConnectionService, SemFre.Services.ConnectionService>();
 
+// Realtime refetch signals (task 0001). A single replica (app.yaml maxReplicas: 1)
+// means no backplane is needed; scaling out would require one (e.g. Azure SignalR).
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, SemFre.Services.UserIdProvider>();
+builder.Services.AddScoped<SemFre.Services.IRealtimeNotifier, SemFre.Services.RealtimeNotifier>();
+
 // Notification services: queue, background worker and provider selection (Expo or No-op)
 builder.Services.AddSingleton<SemFre.Services.NotificationQueue>();
 builder.Services.AddHttpClient(SemFre.Services.ExpoPushNotificationService.HttpClientName, client =>
@@ -148,6 +154,18 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ValidateLifetime = true
+        };
+        // Browsers (and the SignalR client in general) can't set headers on a
+        // WebSocket upgrade, so the hub takes the JWT from ?access_token=.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    context.Token = accessToken;
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -242,5 +260,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapControllers();
+app.MapHub<SemFre.Hubs.RealtimeHub>(SemFre.Hubs.RealtimeHub.Path);
 
 app.Run();
