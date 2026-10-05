@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import { FIREBASE_VAPID_KEY, FIREBASE_WEB_CONFIG, isFirebaseWebConfigured } from './firebaseWebConfig';
 import { isRealtimeConnected } from './realtimeStatus';
+import { notificationIcon } from './lubomir-mode';
 
 /**
  * CROSS-REPO CONTRACT — the backend must send `channelId: "default"`
@@ -231,7 +232,7 @@ export function listenForForegroundFcmMessages(): () => void {
       unsubscribe = onMessage(messaging, payload => {
         const data = payload.data as (Partial<PushPayload> & { title?: string; body?: string }) | undefined;
         if (isCoveredByRealtime(data)) return;
-        const notification = new Notification(data?.title || 'Volný', { body: data?.body || '' });
+        const notification = new Notification(data?.title || 'Volný', { body: data?.body || '', icon: notificationIcon() });
         notification.onclick = () => {
           window.focus();
           routeForPushPayload(data);

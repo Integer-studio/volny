@@ -42,12 +42,31 @@ const messaging = firebase.messaging();
 // rules for `notification` payloads.
 messaging.onBackgroundMessage(payload => {
   const data = payload.data || {};
-  self.registration.showNotification(data.title || 'Volný', {
-    body: data.body || '',
-    icon: '/assets/images/volny.png',
-    data,
-  });
+  return notificationIcon().then(icon =>
+    self.registration.showNotification(data.title || 'Volný', {
+      body: data.body || '',
+      icon,
+      data,
+    })
+  );
 });
+
+// Lubomír mode (task 0013): the page mirrors the preference into Cache
+// Storage, because a SW can't read localStorage. Keep the cache name, key and
+// icon paths in sync with apps/fe/lib/lubomir-mode.tsx. Anything other than
+// an explicit 'on' (no entry yet, an error) means the generic icon - the
+// photo is opt-in. Icons live in public/icons/ so their paths stay stable;
+// Metro-bundled assets get hashed filenames.
+function notificationIcon() {
+  return caches
+    .open('volny-prefs')
+    .then(cache => cache.match('/__prefs/lubomir-mode'))
+    .then(res => (res ? res.text() : 'off'))
+    .catch(() => 'off')
+    .then(value =>
+      value === 'on' ? '/icons/notification-lubomir.png' : '/icons/notification-generic.png'
+    );
+}
 
 // Tapping the system notification: focus an existing app tab if there is
 // one, otherwise open a new one, and relay the notification's `data` payload
