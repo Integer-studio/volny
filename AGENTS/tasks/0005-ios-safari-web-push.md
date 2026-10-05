@@ -1,6 +1,6 @@
 # 0005 — Web push notifikace pro iOS (Safari)
 
-- **Stav:** todo
+- **Stav:** in progress
 - **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-04
 
@@ -13,13 +13,13 @@ task.
 
 ## Kritéria splnění
 
-- [ ] Web manifest appky (`apps/fe/app.json`'s `expo.web` sekce / generovaný
+- [x] Web manifest appky (`apps/fe/app.json`'s `expo.web` sekce / generovaný
       PWA manifest) doplněný o `icons` (víc velikostí), `name`/`short_name`,
       `display: "standalone"`, `theme_color` — bez `display: standalone`
       Safari nedovolí push ani po přidání na plochu.
-- [ ] Detekce "appka běží jako nainstalovaná PWA" (`navigator.standalone`
+- [x] Detekce "appka běží jako nainstalovaná PWA" (`navigator.standalone`
       na iOS / `matchMedia('(display-mode: standalone)')` obecně).
-- [ ] Vlastní onboarding UI pro iOS Safari uživatele, co appku ještě nemají
+- [x] Vlastní onboarding UI pro iOS Safari uživatele, co appku ještě nemají
       na ploše — tutoriál "Sdílet → Přidat na plochu" (Safari nemá
       programový install prompt jako Chrome).
 - [ ] Ověřeno na reálném iPhonu (iOS 16.4+): appka nainstalovaná z plochy
@@ -29,6 +29,17 @@ task.
       (foreground i background).
 
 ## Poznámky
+
+### Stav 2026-10-05
+
+Manifest, detekce standalone režimu i tutoriál "Přidat na plochu" jsou
+hotové v rámci [tasku 0019](./0019-onboarding-po-registraci.md):
+`apps/fe/public/manifest.webmanifest` + `public/index.html` (pro výstup
+`single` Expo bere tenhle soubor, ne `app/+html.tsx`), `lib/platform-web.ts`
+a krok "plocha + oznámení" v `app/onboarding.tsx`. Přihlášení se do aplikace
+z plochy přenáší jednorázovým kódem v cookie (`lib/handoff.ts`,
+`POST /api/auth/handoff`). Zbývá ověření na reálném iPhonu (poslední
+kritérium).
 
 ### Zjištění z rešerše (2026-09-04)
 
