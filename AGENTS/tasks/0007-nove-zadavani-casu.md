@@ -27,12 +27,11 @@ minuty) a [0011](./0011-snap-casu-na-preset.md) (výchozí snap na preset)
 
 - [x] Nové UI pro volbu "volno do kdy" nahrazuje současný slider s krokem
       1 hodina — nový krok je 15 minut.
-- [ ] UI zobrazuje presety definované v [0009](./0009-user-presety.md)
-      (uživatelsky nastavitelné), místo natvrdo daných tlačítek
-      `[1, 2, 3, 5]` hodin (`hourOffset` v `apps/fe/lib/time.ts`).
-      **Blokováno 0009** — prstenec presety zobrazuje, ale bere je z pevného
-      seznamu kotev v `apps/fe/components/TimeRing/presets.ts`. Až bude
-      entita z 0009 hotová, vymění se za ni jen ten jeden seznam.
+- [x] UI zobrazuje presety (denní kotvy) místo natvrdo daných tlačítek
+      `[1, 2, 3, 5]` hodin. Bere je z jednoho seznamu
+      v `apps/fe/components/TimeRing/presets.ts`; napojení na uživatelské
+      presety je součástí [0009](./0009-user-presety.md), ne tohoto tasku
+      (rozhodnuto 2026-10-05).
 - [x] Vždy dostupná i možnost zadat vlastní čas
       (viz [0010](./0010-vlastni-cas.md)/[0011](./0011-snap-casu-na-preset.md))
       mimo presety.
@@ -41,10 +40,8 @@ minuty) a [0011](./0011-snap-casu-na-preset.md) (výchozí snap na preset)
 - [x] Datová vrstva (BE `FreeTime`/`FreeTimeCreateDto`) zůstává beze změny.
       Na FE ale přibyl `api.extendMyStatus` — viz poznámky.
 - [ ] Ověřeno manuálním průchodem appkou (Expo) — zadání času novým UI
-      funguje na iOS/Android/webu. **Zatím jen web** (`npm run web`):
-      nastavení, potvrzení i ukončení volna prochází proti API. Na iOS
-      a Androidu neověřeno — chce to hlavně zkusit haptiku a plynulost
-      tažení, které se na webu posoudit nedají.
+      funguje na iOS/Android/webu. Web a Android ověřené (Android
+      2026-10-05, včetně haptiky). **Zbývá iOS.**
 
 ## Implementace
 
@@ -79,8 +76,7 @@ notifikace "má teď volno".
 
 ## Co ještě zbývá
 
-- Presety z 0009 (viz kritéria výše).
-- Ověření na iOS/Androidu.
+- Ověření na iOS.
 - Klávesnice na webu prstenec neovládá: role `adjustable` je nastavená
   (čtečky na nativu umí "zvýšit/snížit"), ale RNW pro ni sama šipky
   neobsluhuje a vlastní `onKeyDown` v jejím API není. Kdo nemůže táhnout,

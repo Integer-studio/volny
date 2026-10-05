@@ -37,12 +37,16 @@ přejíždí, aby prst poznal hierarchii stejně, jako ji oko vidí na čárkác
 - [x] Odezva navíc na: potvrzení volna, ukončení volna, doraz na kraji
       rozsahu (hranově, s hysterezí), dosednutí/přejezd denní kotvy.
 - [x] Fallback pro starší Android — část konstant existuje až od API 30/34.
-- [ ] **Doladit tabulku mapování na Pixelu 8** přes dev seznam
-      (`components/HapticLab.tsx`, viditelný v nastavení pod `__DEV__`).
-      Relativní síla `AndroidHaptics` není dokumentovaná a ladí ji výrobce,
-      takže výchozí hodnoty jsou odhad.
-- [ ] Po doladění **odstranit** `components/HapticLab.tsx` i jeho použití
+- [x] Doladit tabulku mapování na Pixelu 8 — výchozí hodnoty uživatel
+      2026-10-05 potvrdil jako v pořádku, beze změny.
+- [x] Odstranit dev seznam `components/HapticLab.tsx` i jeho použití
       v `app/settings.tsx`.
+- [ ] Odezva i ve webovém prohlížeči — `expo-haptics` na webu nedělá nic,
+      proto `lib/haptics.ts` na webu volá `navigator.vibrate` (pole `web`
+      v tabulce; Vibration API nemá sílu, hierarchii nese délka pulzu).
+      Funguje jen v Chromiu/Firefoxu na Androidu — **Safari (iOS i macOS)
+      Vibration API neimplementuje**, desktop nemá motor. Zbývá ověřit
+      v Chromu na Androidu (web build, ne Expo Go).
 
 ## Poznámky
 

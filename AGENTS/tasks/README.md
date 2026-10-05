@@ -49,7 +49,7 @@ doby před zavedením priorit je uvedena orientačně.
 | 0013 | Lubomír mode on/off (vypnutý stav bez obrázků) | todo | 1 | [0013-lubomir-mode.md](./0013-lubomir-mode.md) |
 | 0014 | Lepší always-on backend | todo | 1 | [0014-always-on-backend.md](./0014-always-on-backend.md) |
 | 0015 | Rozvedení zadání nových tasků (0006–0014, 0016) | done | 1 | [0015-rozvedeni-novych-tasku.md](./0015-rozvedeni-novych-tasku.md) |
-| 0016 | Sessions nevydrží dostatečně dlouho (JWT bez refresh tokenu) | in progress | 1 | [0016-sessions-nevydrzi-po-scaledownu.md](./0016-sessions-nevydrzi-po-scaledownu.md) |
+| 0016 | Sessions nevydrží dostatečně dlouho (JWT bez refresh tokenu) | done | 1 | [0016-sessions-nevydrzi-po-scaledownu.md](./0016-sessions-nevydrzi-po-scaledownu.md) |
 | 0017 | Osobní friend QR kód viditelný při načtení stránky | todo | 2 | [0017-qr-kod-viditelny-pri-nacteni.md](./0017-qr-kod-viditelny-pri-nacteni.md) |
 | 0018 | Haptika prstencového zadávání času | in progress | 2 | [0018-haptika-prstence.md](./0018-haptika-prstence.md) |
 | 0019 | Interaktivní onboarding po registraci | done | 1 | [0019-onboarding-po-registraci.md](./0019-onboarding-po-registraci.md) |
