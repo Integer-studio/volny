@@ -81,17 +81,17 @@ function getProjectId(): string | undefined {
   );
 }
 
+// Only types the realtime hub replaces with an in-app toast. The others
+// (friend_accepted, friend_added_via_qr, friend_imfree) only refresh lists
+// silently, so their system notification stays - otherwise it'd be lost.
 const REALTIME_COVERED_TYPES: ReadonlySet<string> = new Set<PushPayload['type']>([
   'friend_request',
-  'friend_accepted',
-  'friend_added_via_qr',
-  'friend_imfree',
 ]);
 
 /**
  * True for a push that arrives in the foreground while the realtime hub is
- * connected and already updated the UI (live list/badge, plus a toast for
- * friend requests) - showing a system notification on top would duplicate it.
+ * connected and already told the user via a toast (RealtimeGate) - showing a
+ * system notification on top would duplicate it.
  */
 export function isCoveredByRealtime(data: Partial<PushPayload> | undefined): boolean {
   return !!data?.type && REALTIME_COVERED_TYPES.has(data.type) && isRealtimeConnected();

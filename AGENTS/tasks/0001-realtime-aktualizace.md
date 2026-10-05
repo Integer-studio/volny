@@ -32,8 +32,9 @@ Rozhodnuto 2026-10-05:
   kvůli toastu.
 - **Upozornění na nový friend request** v otevřené appce: tečka u ikony
   přátel se aktualizuje živě, zobrazí se toast a systémová push notifikace
-  se nezobrazí, pokud je socket připojený (platí pro `friend_request`,
-  `friend_accepted`, `friend_added_via_qr` a `friend_imfree`).
+  se nezobrazí, pokud je socket připojený. Platí jen pro `friend_request`.
+  Ostatní typy (`friend_accepted`, `friend_added_via_qr`, `friend_imfree`)
+  nemají toast, takže jejich notifikace v popředí zůstává.
 - **Polling zůstává jako fallback**: 30 s bez socketu, 5 min s připojeným
   socketem. Po každém (re)connectu proběhne refetch (`Resync`).
 - **Na pozadí** (na webu skrytý tab) se socket odpojí, při návratu znovu
