@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SettingsIcon from "lucide-react-native/icons/settings";
 import UserPlus from "lucide-react-native/icons/user-plus";
 import Users from "lucide-react-native/icons/users";
+import ArrowRight from "lucide-react-native/icons/arrow-right";
 import { api, FreeEntry } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { parseServerDate } from "../lib/date";
@@ -365,22 +366,20 @@ export default function Index() {
               </FadeIn>
             ) : !freeList.settled || showDummy ? null : connectionCount === 0 ? (
               <FadeIn>
-                <Text className="text-gray-300 text-base mb-2">
+                <Text className="text-gray-400 text-base mb-1">
                   Zatím nikoho nemáš.
                 </Text>
-                <Pressable
+                {/* Šipka jako ikona, ne znak "→": ten systémové písmo nemá
+                    a prohlížeč ho dokreslil cizím fontem. Řádky mají výšku
+                    dotykového cíle, ať se do sebe nemačkají. */}
+                <EmptyStateLink
+                  label="Přidej přátele"
                   onPress={() => router.push("/search")}
-                  className="mb-1"
-                >
-                  <Text className="text-[#EE6C4D] font-medium text-base">
-                    Přidej přátele →
-                  </Text>
-                </Pressable>
-                <Pressable onPress={() => router.push("/groups")}>
-                  <Text className="text-[#EE6C4D] font-medium text-base">
-                    Připoj se ke skupině →
-                  </Text>
-                </Pressable>
+                />
+                <EmptyStateLink
+                  label="Připoj se ke skupině"
+                  onPress={() => router.push("/groups")}
+                />
               </FadeIn>
             ) : (
               <FadeIn>
@@ -407,5 +406,24 @@ export default function Index() {
         }}
       />
     </View>
+  );
+}
+
+function EmptyStateLink({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="link"
+      className="flex-row items-center self-start gap-1.5 py-2.5 active:opacity-70"
+    >
+      <Text className="text-[#EE6C4D] font-medium text-base">{label}</Text>
+      <ArrowRight size={16} color="#EE6C4D" strokeWidth={2.25} />
+    </Pressable>
   );
 }
