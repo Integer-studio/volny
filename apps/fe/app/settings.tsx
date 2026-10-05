@@ -26,7 +26,7 @@ function validatePassword(v: string): string | null {
 }
 
 export default function Settings() {
-  const { me, refreshMe, signOut } = useAuth();
+  const { me, refreshMe, signOut, deleteAccount } = useAuth();
   const { show } = useToast();
   const { goTo } = useTour();
 
@@ -81,6 +81,38 @@ export default function Settings() {
   useSlowActionNotice(passwordSaving);
 
   const [confirmingLogout, setConfirmingLogout] = useState(false);
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | undefined>();
+  const [deleting, setDeleting] = useState(false);
+  useSlowActionNotice(deleting);
+
+  const cancelDelete = () => {
+    setConfirmingDelete(false);
+    setDeletePassword('');
+    setDeleteError(undefined);
+  };
+
+  const submitDelete = async () => {
+    if (!deletePassword) {
+      setDeleteError('Zadej heslo.');
+      return;
+    }
+    setDeleting(true);
+    try {
+      // On success the auth status flips to signedOut and Stack.Protected
+      // swaps this screen for sign-in, so there is nothing to reset here.
+      await deleteAccount(deletePassword);
+    } catch (e) {
+      setDeleting(false);
+      if (e instanceof ApiError && e.status === 400) {
+        setDeleteError(fieldError(e, 'password') ?? e.serverMessage ?? 'Heslo není správné.');
+      } else {
+        show(errorMessage(e, 'Smazání účtu se nezdařilo.'), 'error');
+      }
+    }
+  };
 
   const savePassword = async () => {
     const errs: typeof passwordErrors = {};
@@ -210,6 +242,45 @@ export default function Settings() {
               </Pressable>
               <Pressable onPress={signOut} className="flex-1 bg-red-500 py-3 rounded-xl items-center ml-2 active:opacity-80">
                 <Text className="text-white font-medium">Odhlásit</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+      </View>
+
+      <View className="mt-10">
+        <Text className="text-gray-400 text-xs font-bold tracking-widest mb-3">SMAZÁNÍ ÚČTU</Text>
+        {!confirmingDelete ? (
+          <Pressable onPress={() => setConfirmingDelete(true)} className="border border-red-200 py-3 rounded-xl items-center active:bg-red-50">
+            <Text className="text-red-500 font-medium">Smazat účet</Text>
+          </Pressable>
+        ) : (
+          <View>
+            <Text className="text-gray-600 mb-4">
+              Účet i všechna tvoje data se nenávratně smažou. Skupiny, které vlastníš, převezme jejich nejdéle přítomný člen.
+            </Text>
+            <FormField
+              label="Heslo pro potvrzení"
+              value={deletePassword}
+              onChangeText={(v) => {
+                setDeletePassword(v);
+                if (deleteError) setDeleteError(undefined);
+              }}
+              secureTextEntry
+              autoComplete="current-password"
+              textContentType="password"
+              error={deleteError}
+            />
+            <View className="flex-row">
+              <Pressable onPress={cancelDelete} disabled={deleting} className="flex-1 bg-gray-100 py-3 rounded-xl items-center mr-2 active:opacity-80">
+                <Text className="text-gray-700 font-medium">Zrušit</Text>
+              </Pressable>
+              <Pressable
+                onPress={submitDelete}
+                disabled={deleting || !deletePassword}
+                className={`flex-1 bg-red-500 py-3 rounded-xl items-center ml-2 active:opacity-80 ${!deletePassword ? 'opacity-50' : ''}`}
+              >
+                {deleting ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-medium">Smazat účet</Text>}
               </Pressable>
             </View>
           </View>

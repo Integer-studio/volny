@@ -383,15 +383,21 @@ export const api = {
     await Storage.setItem('userId', currentUserId.toString());
   },
 
-  async logout(): Promise<void> {
-    const refreshToken = await Storage.getItem('refreshToken').catch(() => null);
-
+  // Local-only half of logout(), also used after account deletion - the
+  // server no longer knows the refresh token, so revoking it would just 401.
+  async clearSession(): Promise<void> {
     currentToken = null;
     currentUserId = null;
     lastRegisteredPushToken = null;
     await Storage.deleteItem('userToken');
     await Storage.deleteItem('refreshToken');
     await Storage.deleteItem('userId');
+  },
+
+  async logout(): Promise<void> {
+    const refreshToken = await Storage.getItem('refreshToken').catch(() => null);
+
+    await this.clearSession();
 
     if (refreshToken) {
       // Best-effort server-side revocation - never blocks client-side logout.
@@ -427,6 +433,14 @@ export const api = {
     await request('/users/me/password', {
       method: 'POST',
       body: JSON.stringify({ currentPassword: input.currentPassword, newPassword: input.newPassword }),
+      allowUnauthorized: true,
+    });
+  },
+
+  async deleteAccount(password: string): Promise<void> {
+    await request('/users/me', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
       allowUnauthorized: true,
     });
   },

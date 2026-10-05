@@ -203,8 +203,28 @@ public class UsersController : ControllerBase
         if (!PasswordHasher.Verify(user.PasswordHash, dto.Password))
             return BadRequest(new { message = "Heslo není správné." });
 
+        // Owned groups would cascade away with the owner (Group.OwnerID), so hand
+        // each one to its longest-standing remaining member first. Groups with no
+        // other member are left to the cascade.
+        await using var tx = await _db.Database.BeginTransactionAsync();
+        var ownedGroups = await _db.Groups
+            .Include(g => g.Members)
+            .Where(g => g.OwnerID == userId)
+            .ToListAsync();
+        foreach (var group in ownedGroups)
+        {
+            var heir = group.Members
+                .Where(m => m.UserID != userId)
+                .OrderBy(m => m.JoinedAt)
+                .ThenBy(m => m.UserID)
+                .FirstOrDefault();
+            if (heir != null) group.OwnerID = heir.UserID;
+        }
+        await _db.SaveChangesAsync();
+
         _db.Users.Remove(user);
         await _db.SaveChangesAsync();
+        await tx.CommitAsync();
         return NoContent();
     }
 }

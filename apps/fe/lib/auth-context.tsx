@@ -27,6 +27,8 @@ type AuthValue = {
   signIn: (username: string, password: string) => Promise<void>;
   signUp: (username: string, password: string, name: string, extra?: { phone?: string; instagram?: string }) => Promise<void>;
   signOut: () => Promise<void>;
+  // Throws (and stays signed in) when the server rejects it, e.g. wrong password.
+  deleteAccount: (password: string) => Promise<void>;
   refreshMe: () => Promise<void>;
 };
 
@@ -270,6 +272,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         new Promise(resolve => setTimeout(resolve, 2000)),
       ]);
       await api.logout();
+    },
+    deleteAccount: async (password: string) => {
+      await api.deleteAccount(password);
+      // The server cascade already removed devices and refresh tokens, so
+      // only local state is left - no unregisterPushToken / logout calls.
+      if (backgroundTimer.current) clearTimeout(backgroundTimer.current);
+      setStatus('signedOut');
+      setMe(null);
+      setVerified(false);
+      setOffline(false);
+      clearCache();
+      await api.clearSession();
     },
     refreshMe: async () => {
       const user = await api.getMe();

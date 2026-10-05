@@ -59,3 +59,4 @@ doby před zavedením priorit je uvedena orientačně.
 | 0017 | Osobní friend QR kód viditelný při načtení stránky                | done | 2        | [0017-qr-kod-viditelny-pri-nacteni.md](./0017-qr-kod-viditelny-pri-nacteni.md)       |
 | 0018 | Haptika prstencového zadávání času                                | done | 2        | [0018-haptika-prstence.md](./0018-haptika-prstence.md)                               |
 | 0019 | Interaktivní onboarding po registraci                             | done | 1        | [0019-onboarding-po-registraci.md](./0019-onboarding-po-registraci.md)               |
+| 0020 | Mazání účtu                                                       | done | 1        | [0020-mazani-uctu.md](./0020-mazani-uctu.md)                                         |
