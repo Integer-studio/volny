@@ -1,6 +1,6 @@
 # 0019 — Interaktivní onboarding po registraci
 
-- **Stav:** in progress
+- **Stav:** done
 - **Priorita:** 1
 - **Datum vytvoření:** 2026-10-05
 
@@ -58,6 +58,13 @@ nespustí.
 - [ ] Ověřeno v nativním APK (výřez nad modálními obrazovkami stacku).
 
 ## Poznámky
+
+- Hotovo v [PR #11](https://github.com/Integer-studio/volny/pull/11), nasazeno
+  2026-10-05 (BE, web i EAS Update prošly; na produkci ověřeno: handoff
+  endpointy odpovídají, tabulka `HandoffCodes` existuje, manifest/ikony/video
+  se servírují se správným content-type). Ověření na reálných zařízeních
+  (tři nezaškrtnutá kritéria výš) zůstává otevřené – iPhone hlídá i
+  [task 0005](./0005-ios-safari-web-push.md).
 
 - Pro výstup `web.output: "single"` Expo bere `public/index.html`, ne
   `app/+html.tsx` (ověřeno exportem) – manifest a odchyt
