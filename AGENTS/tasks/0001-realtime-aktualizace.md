@@ -1,6 +1,6 @@
 # 0001 — Realtime aktualizace (volní lidé, friend requesty)
 
-- **Stav:** in progress
+- **Stav:** done
 - **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-04
 
@@ -15,9 +15,9 @@ bez nutnosti manuálního refreshe:
 
 ## Kritéria splnění
 
-- [ ] Seznam volných lidí se v UI aktualizuje v reálném čase, jakmile někdo
+- [x] Seznam volných lidí se v UI aktualizuje v reálném čase, jakmile někdo
       změní svůj stav (bez nutnosti refreshe/reloadu obrazovky).
-- [ ] Nový příchozí friend request se objeví/upozorní uživatele okamžitě,
+- [x] Nový příchozí friend request se objeví/upozorní uživatele okamžitě,
       bez nutnosti refreshe.
 
 ## Poznámky
@@ -42,3 +42,5 @@ Rozhodnuto 2026-10-05:
 - `FreeChanged` chodí i při změně přátelství a skupin, protože ty mění,
   koho v seznamu vidím. Lidi bez volna seznam neřeší, protože se načítá,
   jen když jsem sám volný.
+
+Implementováno v PR [#17](https://github.com/Integer-studio/volny/pull/17).
