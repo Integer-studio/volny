@@ -10,6 +10,7 @@ import BootSplash from "../components/BootSplash";
 import OfflineBanner from "../components/OfflineBanner";
 import NotificationPermissionBanner from "../components/NotificationPermissionBanner";
 import PushGate from "../components/PushGate";
+import RealtimeGate from "../components/RealtimeGate";
 import PendingInviteGate from "../components/PendingInviteGate";
 import PendingFriendInviteGate from "../components/PendingFriendInviteGate";
 import BackButton from "../components/BackButton";
@@ -47,6 +48,7 @@ function Navigation() {
   return (
     <>
       {status === 'signedIn' && <PushGate />}
+      {status === 'signedIn' && <RealtimeGate />}
       {status === 'signedIn' && <PendingInviteGate />}
       {status === 'signedIn' && <PendingFriendInviteGate />}
       {status === 'signedIn' && <OfflineBanner />}

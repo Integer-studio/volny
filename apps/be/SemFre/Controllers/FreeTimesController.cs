@@ -18,9 +18,11 @@ public class FreeTimesController : ControllerBase
     private readonly IAccessValidator _access;
     private readonly IConnectionService _connections;
     private readonly NotificationQueue _notifyQueue;
+    private readonly IRealtimeNotifier _realtime;
 
-    public FreeTimesController(AppDbContext db, AutoMapper.IMapper mapper, IAccessValidator access, IConnectionService connections, NotificationQueue notifyQueue)
+    public FreeTimesController(AppDbContext db, AutoMapper.IMapper mapper, IAccessValidator access, IConnectionService connections, NotificationQueue notifyQueue, IRealtimeNotifier realtime)
     {
+        _realtime = realtime;
         _db = db;
         _mapper = mapper;
         _access = access;
@@ -84,6 +86,7 @@ public class FreeTimesController : ControllerBase
         if (start <= DateTime.UtcNow)
         {
             await NotifyConnectionsImFreeAsync(userId.Value, res.FreeTimeID);
+            await _realtime.FreeChangedAsync(userId.Value);
         }
 
         return CreatedAtAction(nameof(Get), new { id = res.FreeTimeID }, res);
@@ -105,6 +108,7 @@ public class FreeTimesController : ControllerBase
         var res = _mapper.Map<FreeTimeDto>(ft);
 
         await NotifyConnectionsImFreeAsync(userId.Value, res.FreeTimeID);
+        await _realtime.FreeChangedAsync(userId.Value);
 
         return CreatedAtAction(nameof(Get), new { id = res.FreeTimeID }, res);
     }
@@ -173,6 +177,7 @@ public class FreeTimesController : ControllerBase
         ft.EndTime = end;
 
         await _db.SaveChangesAsync();
+        await _realtime.FreeChangedAsync(userId.Value);
         return NoContent();
     }
 
@@ -188,6 +193,7 @@ public class FreeTimesController : ControllerBase
 
         _db.FreeTimes.Remove(ft);
         await _db.SaveChangesAsync();
+        await _realtime.FreeChangedAsync(userId.Value);
         return NoContent();
     }
 }

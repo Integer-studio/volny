@@ -330,6 +330,31 @@ curl -X POST http://localhost:5135/api/friendsuggestions/accept -H "Authorizatio
 
 ---
 
+## Realtime (SignalR, task 0001)
+
+Hub `/hubs/realtime` (SignalR, JSON protokol). Jen server → klient: klient
+nic nevolá, jen poslouchá signály a podle nich refetchne existující REST
+endpointy.
+
+- **Auth**: JWT jako `?access_token=` (WebSocket upgrade neumí hlavičky).
+  FE se připojuje rovnou přes WebSockets se `skipNegotiation: true`, takže
+  se nevolá `/negotiate` a CORS se neuplatní.
+- **Adresace**: `Clients.User(userId)` → všechna zařízení uživatele.
+  Signál dostává i původce akce (jeho další zařízení).
+- **Škálování**: bez backplane — předpokládá 1 repliku (`app.yaml`
+  `maxReplicas: 1`).
+
+| Event | Payload | Kdo ho dostane | Refetch na FE |
+|---|---|---|---|
+| `FreeChanged` | – | Uživatel + všechna jeho spojení při změně volna (`freetimes` POST/imfree/PUT/DELETE); obě strany + jejich spojení při změně přátelství (accept, QR accept, odebrání); všichni členové skupiny při join/leave/kick/smazání skupiny | `GET /api/connections/free` |
+| `FriendsChanged` | – | Obě strany při odeslání/zrušení/přijetí/odmítnutí žádosti, QR přidání a odebrání přítele | `GET /api/friends`, `GET /api/friendsuggestions/incoming` |
+| `FriendRequestReceived` | `{ fromUserId, fromName }` | Adresát nové žádosti | jako `FriendsChanged` + toast |
+
+Konec volna v `EndTime` nepošle žádný event — FE filtruje `freeUntil > now`
+lokálně. Implementace: `Hubs/RealtimeHub.cs`, `Services/RealtimeNotifier.cs`.
+
+---
+
 ---
 
 *Dokument vytvořen automaticky pomocí interního nástroje vývojového prostředí.*

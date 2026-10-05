@@ -29,6 +29,7 @@ import BottomFade from "../components/BottomFade";
 import { useToast } from "../components/Toast";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
+import { useRealtimeRefetch, useRefreshInterval } from "../hooks/useRealtime";
 import { useDeferredPending } from "../hooks/useDeferredPending";
 import { useSlowActionNotice } from "../hooks/useSlowActionNotice";
 import { errorMessage } from "../lib/errors";
@@ -149,7 +150,11 @@ export default function Index() {
     (f) => f.freeUntil.getTime() > now.getTime(),
   );
 
-  useAutoRefresh(freeList.reload, { intervalMs: 30_000, enabled: isFree });
+  const refreshIntervalMs = useRefreshInterval();
+  useAutoRefresh(freeList.reload, { intervalMs: refreshIntervalMs, enabled: isFree });
+  useRealtimeRefetch(["FreeChanged"], () => {
+    if (isFree) freeList.reload();
+  });
 
   const connections = useAsyncData(
     () => Promise.all([api.getAllFriends(), api.getGroups()]),
@@ -159,20 +164,30 @@ export default function Index() {
   const connectionCount =
     (connections.data?.[0]?.length ?? 0) + (connections.data?.[1]?.length ?? 0);
 
+  // Latest-wins guard: a slower earlier response must not overwrite a newer one.
+  const pendingSeq = useRef(0);
+  const loadPendingCount = useCallback(() => {
+    const seq = ++pendingSeq.current;
+    api
+      .getPendingRequests()
+      .then((reqs) => {
+        if (seq === pendingSeq.current) setPendingCount(reqs.length);
+      })
+      .catch(() => {});
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
-      let isActive = true;
-      api
-        .getPendingRequests()
-        .then((reqs) => {
-          if (isActive) setPendingCount(reqs.length);
-        })
-        .catch(() => {});
+      loadPendingCount();
       return () => {
-        isActive = false;
+        pendingSeq.current++;
       };
-    }, []),
+    }, [loadPendingCount]),
   );
+  useRealtimeRefetch(["FriendsChanged", "FriendRequestReceived"], () => {
+    loadPendingCount();
+    connections.reload();
+  });
 
   // No spinner/disabled state for the first ~1s (useDeferredPending below) -
   // the circle already shows the result the moment you tap it, so a loading

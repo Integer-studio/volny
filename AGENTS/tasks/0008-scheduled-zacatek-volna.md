@@ -38,3 +38,9 @@ budoucího začátku — dnes lze zvolit jen konec ("volno do…").
 ## Poznámky
 
 Vzniklo jako součást dávky nových tasků 2026-09-06, rozvedeno v [0015](./0015-rozvedeni-novych-tasku.md).
+
+Realtime ([0001](./0001-realtime-aktualizace.md)): background aktivace
+naplánovaného volna musí po uložení zavolat
+`IRealtimeNotifier.FreeChangedAsync(userId)`, jinak se aktivace přátelům
+v otevřené appce projeví až fallback pollingem (5 min). Dnes
+`FreeTimesController.Create` pro budoucí start realtime signál neposílá.

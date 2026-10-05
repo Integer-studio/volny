@@ -17,12 +17,14 @@ public class FriendsController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IAccessValidator _access;
     private readonly NotificationQueue _notifyQueue;
+    private readonly IRealtimeNotifier _realtime;
 
-    public FriendsController(AppDbContext db, IAccessValidator access, NotificationQueue notifyQueue)
+    public FriendsController(AppDbContext db, IAccessValidator access, NotificationQueue notifyQueue, IRealtimeNotifier realtime)
     {
         _db = db;
         _access = access;
         _notifyQueue = notifyQueue;
+        _realtime = realtime;
     }
 
     [HttpGet]
@@ -64,6 +66,8 @@ public class FriendsController : ControllerBase
 
         _db.FriendPairs.Remove(pair);
         await _db.SaveChangesAsync();
+        await _realtime.FriendsChangedAsync(a, b);
+        await _realtime.ConnectionsChangedAsync(a, b);
         return NoContent();
     }
 
@@ -190,6 +194,9 @@ public class FriendsController : ControllerBase
                     Data = new Dictionary<string, string> { { "type", "friend_added_via_qr" }, { "friendId", me.UserID.ToString() } }
                 }
             });
+
+            await _realtime.FriendsChangedAsync(a, b);
+            await _realtime.ConnectionsChangedAsync(a, b);
         }
 
         return Ok(new FriendDto

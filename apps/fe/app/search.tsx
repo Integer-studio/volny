@@ -15,6 +15,7 @@ import UserRow from "../components/UserRow";
 import BottomSheet from "../components/BottomSheet";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
+import { useRealtimeRefetch, useRefreshInterval } from "../hooks/useRealtime";
 import { useToast } from "../components/Toast";
 import { useAuth } from "../lib/auth-context";
 import { errorMessage } from "../lib/errors";
@@ -90,7 +91,8 @@ export default function SearchScreen() {
     [],
     { cacheKey: 'friendsAndPending' }
   );
-  useAutoRefresh(friendsAndPending.reload, { intervalMs: 30_000 });
+  useAutoRefresh(friendsAndPending.reload, { intervalMs: useRefreshInterval() });
+  useRealtimeRefetch(['FriendsChanged', 'FriendRequestReceived'], friendsAndPending.reload);
   const loadingFriends = friendsAndPending.data === undefined && friendsAndPending.showSpinner;
   const myFriends = (friendsAndPending.data?.[0] ?? []).filter(f => !hiddenFriendIds.has(f.id));
   const pendingRequests = (friendsAndPending.data?.[1] ?? []).filter(u => !hiddenRequestIds.has(u.id));

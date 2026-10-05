@@ -35,7 +35,7 @@ doby před zavedením priorit je uvedena orientačně.
 
 | ID | Název | Stav | Priorita | Soubor |
 |----|-------|------|----------|--------|
-| 0001 | Realtime aktualizace (volní lidé, friend requesty) | todo | 1 | [0001-realtime-aktualizace.md](./0001-realtime-aktualizace.md) |
+| 0001 | Realtime aktualizace (volní lidé, friend requesty) | in progress | 1 | [0001-realtime-aktualizace.md](./0001-realtime-aktualizace.md) |
 | 0005 | Web push notifikace pro iOS (Safari) | in progress | 1 | [0005-ios-safari-web-push.md](./0005-ios-safari-web-push.md) |
 | 0007 | Nové zadávání času | in progress | 1 | [0007-nove-zadavani-casu.md](./0007-nove-zadavani-casu.md) |
 | 0008 | Scheduled začátek volna (max. den dopředu) | todo | 2 | [0008-scheduled-zacatek-volna.md](./0008-scheduled-zacatek-volna.md) |
