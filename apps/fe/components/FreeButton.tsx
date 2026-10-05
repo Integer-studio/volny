@@ -157,8 +157,16 @@ export default function FreeButton({
         {lubomirMode ? (
           <Image
             source={require("../assets/images/volny-off.png")}
-            style={{ position: "absolute", width: "100%", height: "100%" }}
-            resizeMode="cover"
+            // Menší než kruh a posazená ke spodnímu okraji, aby ramena
+            // navazovala na hranu kruhu a hlava se neořezávala.
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: "11%",
+              width: "78%",
+              aspectRatio: 419 / 364,
+            }}
+            resizeMode="contain"
           />
         ) : (
           <PartyPopper color="#9CA3AF" size={size * 0.42} strokeWidth={1.75} />
