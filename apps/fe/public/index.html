@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>Volný</title>
+    <!--
+      Manifest + ikony pro "Přidat na plochu" (task 0019). Bez manifestu
+      Android Chrome appku nenabídne k instalaci a iOS dá ikoně jen
+      screenshot stránky. (Pro výstup "single" Expo bere tenhle soubor,
+      app/+html.tsx platí jen pro statický výstup.)
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#EE6C4D" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Volný" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script>
+      // `beforeinstallprompt` chodí brzy a jen jednou - odchytit ho ještě
+      // před startem Reactu, krok v app/onboarding.tsx si ho pak vyzvedne.
+      window.__volnyInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__volnyInstallPrompt = e;
+      });
+      window.addEventListener('appinstalled', function () {
+        window.__volnyInstallPrompt = null;
+      });
+    </script>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+        background-color: #FCFBF8;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      Volný potřebuje zapnutý JavaScript.
+    </noscript>
+    <div id="root"></div>
+  </body>
+</html>

@@ -5,6 +5,13 @@
       "headers": {
         "Cache-Control": "no-cache"
       }
+    },
+    {
+      "route": "/manifest.webmanifest",
+      "headers": {
+        "Content-Type": "application/manifest+json",
+        "Cache-Control": "no-cache"
+      }
     }
   ],
   "navigationFallback": {
@@ -12,7 +19,14 @@
     "exclude": [
       "/_expo/*",
       "/assets/*",
-      "/*.{css,js,json,ico,png,jpg,jpeg,svg,gif,webp,woff,woff2,ttf,map,txt}"
+      "/*.{css,js,json,ico,png,jpg,jpeg,svg,gif,webp,woff,woff2,ttf,map,txt}",
+      "/tutorial/*",
+      "/icons/*",
+      "/manifest.webmanifest"
     ]
+  },
+  "mimeTypes": {
+    ".webmanifest": "application/manifest+json",
+    ".mp4": "video/mp4"
   }
 }
