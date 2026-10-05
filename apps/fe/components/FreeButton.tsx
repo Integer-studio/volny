@@ -171,7 +171,7 @@ export default function FreeButton({
           >
             <Image
               source={require("../assets/images/volny-off.png")}
-              style={{ width: size * 0.78, height: (size * 0.78 * 364) / 419 }}
+              style={{ width: size * 0.95, height: (size * 0.95 * 364) / 419 }}
               resizeMode="contain"
             />
           </View>
