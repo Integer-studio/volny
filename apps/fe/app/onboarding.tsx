@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View, useWind
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
+import Check from 'lucide-react-native/icons/check';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
 import { fieldError, errorMessage } from '../lib/errors';
@@ -14,6 +15,7 @@ import { isOnboardingStep, type TourStep } from '../lib/tour';
 import { useTour } from '../components/tour/TourProvider';
 import { EMBER, PAPER } from '../components/tour/colors';
 import FormField from '../components/FormField';
+import FadeIn from '../components/FadeIn';
 import InstallVideo from '../components/onboarding/InstallVideo';
 import { useToast } from '../components/Toast';
 
@@ -311,7 +313,8 @@ function InstallStep({
     setAskingNotif(false);
     const perm = typeof Notification !== 'undefined' ? Notification.permission : 'denied';
     setNotifState(perm === 'granted' ? 'granted' : 'denied');
-    if (variant === 'notifyOnly' && perm === 'granted') onNext();
+    // Chvíli nechat vidět potvrzení, ať přechod dál nepůsobí jako chyba.
+    if (variant === 'notifyOnly' && perm === 'granted') setTimeout(onNext, 700);
   };
 
   const install = async () => {
@@ -359,7 +362,9 @@ function InstallStep({
               Zapni si oznámení. A když si Volný přidáš na plochu, budeš ho mít po ruce jako aplikaci.
             </Text>
             <View className="gap-3 mt-8">
-              {notifState !== 'granted' && (
+              {notifState === 'granted' ? (
+                <NotificationsOn />
+              ) : (
                 <PrimaryButton
                   label={notifState === 'denied' ? 'Oznámení jsou zablokovaná' : 'Zapnout oznámení'}
                   onPress={enableNotifications}
@@ -367,7 +372,6 @@ function InstallStep({
                   disabled={notifState === 'denied'}
                 />
               )}
-              {notifState === 'granted' && <Text className="text-[#2B2724] text-base">✓ Oznámení máš zapnutá.</Text>}
               {installPrompt ? (
                 <Pressable
                   onPress={install}
@@ -378,7 +382,7 @@ function InstallStep({
                 </Pressable>
               ) : (
                 <Text className="text-gray-500 text-sm leading-5">
-                  Na plochu si ho přidáš v menu prohlížeče ⋮ → Přidat na plochu.
+                  Na plochu si ho přidáš přes menu prohlížeče (tři tečky) a volbu Přidat na plochu.
                 </Text>
               )}
             </View>
@@ -391,6 +395,8 @@ function InstallStep({
               <Text className="text-gray-500 text-sm leading-5">
                 Oznámení jsou v prohlížeči zablokovaná. Povolit je můžeš v nastavení webu.
               </Text>
+            ) : notifState === 'granted' ? (
+              <NotificationsOn />
             ) : (
               <PrimaryButton label="Zapnout oznámení" onPress={enableNotifications} loading={askingNotif} />
             )}
@@ -410,6 +416,27 @@ function InstallStep({
         </Text>
       </Pressable>
     </ScrollView>
+  );
+}
+
+/**
+ * Potvrzení na místě tlačítka "Zapnout oznámení": stejná výška i zaoblení,
+ * takže se tlačítko v klidu promění a nic pod ním neposkočí. Klidné
+ * papírové pozadí místo akcentu - už to není výzva k akci.
+ */
+function NotificationsOn() {
+  return (
+    <FadeIn>
+      <View
+        accessibilityLiveRegion="polite"
+        className="flex-row items-center justify-center gap-2.5 py-4 rounded-2xl bg-[#FCFBF8] border border-[#E7E3DC]"
+      >
+        <View className="w-6 h-6 rounded-full bg-[#EE6C4D] items-center justify-center">
+          <Check size={14} color="#fff" strokeWidth={3} />
+        </View>
+        <Text className="text-[#2B2724] font-semibold text-lg">Oznámení máš zapnutá</Text>
+      </View>
+    </FadeIn>
   );
 }
 
