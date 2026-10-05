@@ -6,8 +6,10 @@ import {
   Image,
   Pressable,
 } from "react-native";
+import PartyPopper from "lucide-react-native/icons/party-popper";
 import { haptic, HapticEvent } from "../lib/haptics";
 import { useReduceMotion } from "../hooks/useReduceMotion";
+import { useLubomirMode } from "../lib/lubomir-mode";
 
 type Props = {
   isFree: boolean;
@@ -53,6 +55,7 @@ export default function FreeButton({
     Animated.multiply(stateScale, pressScale),
   ).current;
   const reduceMotion = useReduceMotion();
+  const { enabled: lubomirMode } = useLubomirMode();
 
   const isFirst = useRef(true);
   const prevIsFree = useRef(isFree);
@@ -155,13 +158,22 @@ export default function FreeButton({
             height: "100%",
             opacity: fade,
             backgroundColor: "#EE6C4D",
+            justifyContent: "center",
+            alignItems: "center",
           }}
         >
-          <Image
-            source={require("../assets/images/volny.png")}
-            style={{ position: "absolute", width: "100%", height: "100%" }}
-            resizeMode="cover"
-          />
+          {/* Fotka jen v Lubomír mode (task 0013, opt-in) - jinak generická
+              ikona, aby appka nepoužívala podobiznu reálné osoby bez
+              souhlasu. */}
+          {lubomirMode ? (
+            <Image
+              source={require("../assets/images/volny.png")}
+              style={{ position: "absolute", width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
+          ) : (
+            <PartyPopper color="#fff" size={size * 0.42} strokeWidth={1.75} />
+          )}
         </Animated.View>
         {pending && (
           <Animated.View

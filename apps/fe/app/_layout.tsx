@@ -15,6 +15,7 @@ import PendingInviteGate from "../components/PendingInviteGate";
 import PendingFriendInviteGate from "../components/PendingFriendInviteGate";
 import BackButton from "../components/BackButton";
 import { TourProvider } from "../components/tour/TourProvider";
+import { LubomirModeProvider } from "../lib/lubomir-mode";
 import { warmUp } from "../lib/warmup";
 
 // SDK 57: shouldShowAlert is deprecated; banner + list replace it.
@@ -168,9 +169,11 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <TourProvider>
-          <Navigation />
-        </TourProvider>
+        <LubomirModeProvider>
+          <TourProvider>
+            <Navigation />
+          </TourProvider>
+        </LubomirModeProvider>
       </ToastProvider>
     </AuthProvider>
   );

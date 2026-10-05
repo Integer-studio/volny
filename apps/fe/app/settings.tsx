@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Switch } from 'react-native';
 import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
 import { useToast } from '../components/Toast';
@@ -10,6 +10,7 @@ import { useSlowActionNotice } from '../hooks/useSlowActionNotice';
 import { validatePhone, validateInstagram } from '../lib/validators';
 import { router } from 'expo-router';
 import { useTour } from '../components/tour/TourProvider';
+import { useLubomirMode } from '../lib/lubomir-mode';
 
 function validateUsername(v: string): string | null {
   if (v.length < 3 || v.length > 50) return 'Uživatelské jméno musí mít 3-50 znaků.';
@@ -29,6 +30,7 @@ export default function Settings() {
   const { me, refreshMe, signOut, deleteAccount } = useAuth();
   const { show } = useToast();
   const { goTo } = useTour();
+  const lubomirMode = useLubomirMode();
 
   const nameField = useAutosaveField({
     initial: me?.name ?? '',
@@ -202,6 +204,21 @@ export default function Settings() {
         state={instagramField.state}
         containerClassName="mb-8"
       />
+
+      <Text className="text-gray-400 text-xs font-bold tracking-widest mb-3">VZHLED</Text>
+      <View className="flex-row items-center justify-between mb-2">
+        <Text className="text-gray-800 font-medium">Lubomír mode</Text>
+        <Switch
+          value={lubomirMode.enabled}
+          onValueChange={lubomirMode.setEnabled}
+          trackColor={{ false: '#E5E7EB', true: '#EE6C4D' }}
+          thumbColor="#fff"
+          accessibilityLabel="Lubomír mode"
+        />
+      </View>
+      <Text className="text-gray-400 text-xs mb-10">
+        Zobrazí na hlavním tlačítku a v notifikacích fotku Lubomíra Volného. Platí jen pro toto zařízení.
+      </Text>
 
       {/* Návrat do průvodce (task 0019) - pro ty, kdo ho přeskočili nebo ho
           chtějí projít znovu. Začíná nápovědami nad hlavní obrazovkou;
