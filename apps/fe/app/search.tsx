@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, TextInput, Pressable, ScrollView, ActivityIndicator, Text } from "react-native";
 import Search from "lucide-react-native/icons/search";
 import Check from "lucide-react-native/icons/check";
@@ -18,11 +18,17 @@ import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import { useToast } from "../components/Toast";
 import { useAuth } from "../lib/auth-context";
 import { errorMessage } from "../lib/errors";
+import { useFocusEffect } from "expo-router";
+import { useTour, useTourTarget } from "../components/tour/TourProvider";
+import TourOverlay from "../components/tour/TourOverlay";
 import { buildFriendInviteUrl, shareFriendInvite, copyFriendInviteLink } from "../lib/friend-invite-link";
 
 export default function SearchScreen() {
   const { show } = useToast();
   const { me } = useAuth();
+  const { advance } = useTour();
+  const qrTarget = useTourTarget("friendsQr");
+  useFocusEffect(useCallback(() => advance("friendsIcon"), [advance]));
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [addedDict, setAddedDict] = useState<Record<string, boolean>>({});
@@ -145,7 +151,10 @@ export default function SearchScreen() {
           />
         </View>
         <Pressable
+          ref={qrTarget}
           onPress={() => setQrVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Můj QR kód"
           className="p-3 bg-gray-100 rounded-2xl active:opacity-80"
         >
           <QrCode size={20} color="#888" />
@@ -276,6 +285,8 @@ export default function SearchScreen() {
           )}
         </View>
       </BottomSheet>
+
+      <TourOverlay screen="search" />
     </View>
   );
 }

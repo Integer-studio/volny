@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -20,7 +20,6 @@ import { formatTime } from "../lib/time";
 import { useNow } from "../hooks/useNow";
 import UserRow from "../components/UserRow";
 import GroupBadge from "../components/GroupBadge";
-import OnboardingCard from "../components/OnboardingCard";
 import FreeDial from "../components/FreeDial";
 import StatusHeadline from "../components/StatusHeadline";
 import Reveal from "../components/Reveal";
@@ -33,11 +32,28 @@ import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import { useDeferredPending } from "../hooks/useDeferredPending";
 import { useSlowActionNotice } from "../hooks/useSlowActionNotice";
 import { errorMessage } from "../lib/errors";
+import { isOnboardingStep } from "../lib/tour";
+import { useTour, useTourTarget } from "../components/tour/TourProvider";
+import TourOverlay from "../components/tour/TourOverlay";
+import { makeTourDummyEntry, TOUR_DUMMY_ID } from "../components/tour/dummy";
 
 export default function Index() {
   const { me, refreshMe } = useAuth();
   const { show } = useToast();
   const insets = useSafeAreaInsets();
+  const tour = useTour();
+  const friendsIconTarget = useTourTarget("friendsIcon");
+  const groupsIconTarget = useTourTarget("groupsIcon");
+  const dummyTarget = useTourTarget("dummy");
+  const scrollRef = useRef<ScrollView>(null);
+  /** Ukázkový volný přítel - jen v posledních krocích průvodce, nikdy z API. */
+  const showDummy = tour.step === "dummy" || tour.step === "dummyContact";
+  const dummyEntry = useMemo(() => (showDummy ? makeTourDummyEntry() : null), [showDummy]);
+
+  // Úvodní kroky průvodce po registraci mají vlastní obrazovku.
+  useEffect(() => {
+    if (isOnboardingStep(tour.step)) router.replace("/onboarding");
+  }, [tour.step]);
 
   // Hydrated from me.activeFreeTime (see auth-context / GET /users/me) so a
   // reload shows the real server state instead of always resetting to "not
@@ -55,6 +71,23 @@ export default function Index() {
   // status text crossfade in lockstep instead of drifting apart - each
   // component drives its own scale/position, but there's only one fade.
   const fade = useRef(new Animated.Value(isFree ? 1 : 0)).current;
+
+  // Průvodce: potvrzení tlačítkem posune kroky "kolečko" i "tlačítko" - kdo
+  // klepne rovnou na tlačítko, kolečko tím taky zvládl.
+  const { advance, step: tourStep } = tour;
+  useEffect(() => {
+    if (!isFree) return;
+    advance("ring");
+    advance("button");
+  }, [isFree, tourStep, advance]);
+
+  // Ukázkový přítel se objeví v seznamu pod prstencem, který na menších
+  // displejích leží pod hranou - dorolovat k němu, ať na něj nápověda vidí.
+  useEffect(() => {
+    if (tourStep !== "dummy") return;
+    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350);
+    return () => clearTimeout(t);
+  }, [tourStep]);
 
   useEffect(() => {
     if (me?.activeFreeTime) {
@@ -194,16 +227,30 @@ export default function Index() {
             hraně. Drží se symetricky na obou stranách, jinak by levá
             a pravá ikona sedla jinak. */}
         <View className="flex-row items-center justify-between px-2 py-2">
-          <Pressable onPress={() => router.push("/settings")} className="p-2">
+          <Pressable
+            onPress={() => router.push("/settings")}
+            accessibilityRole="button"
+            accessibilityLabel="Nastavení"
+            className="p-2"
+          >
             <SettingsIcon size={22} color="#000" />
           </Pressable>
 
           <View className="flex-row items-center gap-3">
-            <Pressable onPress={() => router.push("/groups")} className="p-2">
+            <Pressable
+              ref={groupsIconTarget}
+              onPress={() => router.push("/groups")}
+              accessibilityRole="button"
+              accessibilityLabel="Skupiny"
+              className="p-2"
+            >
               <Users size={22} color="#000" />
             </Pressable>
             <Pressable
+              ref={friendsIconTarget}
               onPress={() => router.push("/search")}
+              accessibilityRole="button"
+              accessibilityLabel="Přátelé"
               className="p-2 relative"
             >
               <UserPlus size={22} color="#000" />
@@ -219,6 +266,7 @@ export default function Index() {
           oblastí, ne v ní, aby se s obsahem neposouval. */}
       <View className="flex-1">
         <ScrollView
+          ref={scrollRef}
           className="flex-1"
           // Obsah se do plochy vejde, ale ScrollView si i tak drží scrollbar
           // a nechá se přetáhnout za konec (na webu overscroll, na nativu
@@ -252,12 +300,6 @@ export default function Index() {
         >
           <StatusHeadline fade={fade} />
 
-          <OnboardingCard
-            name={me?.name ?? ""}
-            connectionCount={connectionCount}
-            connectionsSettled={connections.settled}
-          />
-
           <FreeDial
             isFree={isFree}
             freeUntil={freeUntil}
@@ -267,15 +309,33 @@ export default function Index() {
             onConfirm={(until) => applyStatus(true, until)}
             onChangeEnd={(until) => applyStatus(true, until, "extend")}
             onEnd={() => applyStatus(false, null)}
+            onPick={() => advance("ring")}
           />
 
-          <Reveal visible={isFree} delayMs={180} className="w-full mt-6 flex-1">
+          <Reveal
+            visible={isFree || showDummy}
+            delayMs={180}
+            className="w-full mt-6 flex-1"
+          >
             {/* Odstupy drž shodné se seznamem presetů v PresetList - oba
               seznamy se v témže místě střídají, takže rozdíl by se projevil
               jako poskočení obsahu při přepnutí stavu. */}
             <Text className="text-gray-400 font-medium text-xs tracking-widest uppercase mb-2">
               Kdo je také volný
             </Text>
+
+            {dummyEntry && (
+              <View ref={dummyTarget} collapsable={false}>
+                <UserRow
+                  user={dummyEntry.user}
+                  subtitle={"Do " + formatTime(dummyEntry.freeUntil)}
+                  onPress={() => {
+                    setProfileId(TOUR_DUMMY_ID);
+                    advance("dummy");
+                  }}
+                />
+              </View>
+            )}
 
             {freeList.error && (
               <Pressable
@@ -303,7 +363,7 @@ export default function Index() {
                   />
                 ))}
               </FadeIn>
-            ) : !freeList.settled ? null : connectionCount === 0 ? (
+            ) : !freeList.settled || showDummy ? null : connectionCount === 0 ? (
               <FadeIn>
                 <Text className="text-gray-300 text-base mb-2">
                   Zatím nikoho nemáš.
@@ -337,7 +397,15 @@ export default function Index() {
         <BottomFade visible={canScrollMore} />
       </View>
 
-      <ProfileSheet userId={profileId} onClose={() => setProfileId(null)} />
+      <TourOverlay screen="index" />
+
+      <ProfileSheet
+        userId={profileId}
+        onClose={() => {
+          if (profileId === TOUR_DUMMY_ID) advance("dummyContact");
+          setProfileId(null);
+        }}
+      />
     </View>
   );
 }

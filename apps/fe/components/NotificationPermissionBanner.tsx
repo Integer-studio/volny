@@ -3,6 +3,7 @@ import { Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../lib/api';
 import { needsWebNotificationPrompt } from '../lib/push';
+import { useTour } from './tour/TourProvider';
 
 /**
  * Web-only banner that asks for notification permission. This exists because
@@ -19,8 +20,11 @@ import { needsWebNotificationPrompt } from '../lib/push';
 export default function NotificationPermissionBanner() {
   const insets = useSafeAreaInsets();
   const [asked, setAsked] = useState(false);
+  // Během průvodce po registraci by lišta překryla jeho nápovědy - o
+  // oznámení se tam stejně ptá krok "plocha + oznámení".
+  const { step } = useTour();
 
-  if (asked || !needsWebNotificationPrompt()) return null;
+  if (asked || step != null || !needsWebNotificationPrompt()) return null;
 
   const enable = () => {
     setAsked(true);

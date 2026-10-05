@@ -3,6 +3,8 @@ import { AppState } from 'react-native';
 import { api, ApiError, setUnauthorizedHandler, type UserDto } from './api';
 import * as Storage from './storage';
 import { hydrateCache, readCacheSync, writeCache, clearCache } from './cache';
+import { writeTourStep } from './tour';
+import { clearHandoffCookie, pendingHandoffCode } from './handoff';
 
 export type AuthStatus = 'loading' | 'signedOut' | 'signedIn';
 
@@ -148,6 +150,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ]);
 
     if (!token) {
+      // Aplikace z plochy iOS, do které uživatel přišel z průvodce v Safari:
+      // přihlášení si převezme z handoff cookie (viz lib/handoff.ts) a
+      // průvodce pokračuje krokem s oznámeními. Cokoli selže = normální
+      // přihlašovací obrazovka.
+      const handoff = pendingHandoffCode();
+      if (handoff) {
+        clearHandoffCookie();
+        try {
+          await api.redeemHandoff(handoff);
+          const handedOffId = api.getCurrentUserId();
+          if (handedOffId != null) await writeTourStep(String(handedOffId), 'notify');
+          await blockingProbe();
+          return;
+        } catch {
+          // spadne na signedOut níž
+        }
+      }
       if (alive.current) setStatus('signedOut');
       return;
     }
@@ -224,6 +243,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userId = api.getCurrentUserId();
       userIdRef.current = userId != null ? String(userId) : null;
       if (userIdRef.current) await hydrateCache(userIdRef.current);
+      // Průvodce po registraci (task 0019) - zapsat ještě před přepnutím
+      // stavu, aby hlavní obrazovka o něm věděla hned při prvním renderu.
+      if (userIdRef.current) await writeTourStep(userIdRef.current, 'intro');
       setMe(user);
       setVerified(true);
       setOffline(false);
