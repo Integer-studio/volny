@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { chapterOf, TOUR_CHAPTERS, type TourStep } from '../../lib/tour';
 import { EMBER, PAPER, TRACK } from './colors';
@@ -24,6 +24,10 @@ const NOTCH = 12;
  */
 export default function TipCard({ step, title, body, action, onAction, onSkip, notch, outlined }: Props) {
   const chapter = chapterOf(step);
+  // Přeskočení je na dvě klepnutí: první jen přepne patičku na potvrzení,
+  // aby průvodce neukončilo uklouznutí prstu nebo netrpělivé ťuknutí.
+  const [confirmingSkip, setConfirmingSkip] = useState(false);
+  useEffect(() => setConfirmingSkip(false), [step]);
 
   return (
     <View
@@ -76,20 +80,50 @@ export default function TipCard({ step, title, body, action, onAction, onSkip, n
         </Text>
       ) : null}
 
-      <View className="flex-row items-center justify-between mt-2.5">
-        <Pressable onPress={onSkip} hitSlop={8} accessibilityRole="button" className="py-1.5">
-          <Text className="text-[#2B2724]/50 text-sm">Přeskočit průvodce</Text>
-        </Pressable>
-        {action && onAction ? (
+      {confirmingSkip ? (
+        <View className="mt-3 pt-3 border-t border-[#E7E3DC]">
+          <Text className="text-[#2B2724] text-[15px] leading-[22px] font-semibold">Opravdu přeskočit?</Text>
+          <Text className="text-[#2B2724]/70 text-[14px] leading-5 mt-0.5">
+            Spustit ho můžeš znovu v nastavení.
+          </Text>
+          <View className="flex-row items-center justify-end gap-2 mt-2.5">
+            <Pressable
+              onPress={() => setConfirmingSkip(false)}
+              accessibilityRole="button"
+              className="rounded-full px-[18px] py-[9px] bg-[#EE6C4D] active:opacity-80"
+            >
+              <Text className="text-white font-semibold text-[15px]">Pokračovat</Text>
+            </Pressable>
+            <Pressable
+              onPress={onSkip}
+              accessibilityRole="button"
+              className="rounded-full px-[14px] py-[9px] border border-[#E7E3DC] active:bg-[#E7E3DC]/40"
+            >
+              <Text className="text-[#2B2724]/70 text-[15px]">Přeskočit</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <View className="flex-row items-center justify-between mt-2.5">
           <Pressable
-            onPress={onAction}
+            onPress={() => setConfirmingSkip(true)}
+            hitSlop={4}
             accessibilityRole="button"
-            className="bg-[#EE6C4D] rounded-full px-[18px] py-[9px] active:opacity-80"
+            className="py-1.5"
           >
-            <Text className="text-white font-semibold text-[15px]">{action}</Text>
+            <Text className="text-[#2B2724]/50 text-sm">Přeskočit průvodce</Text>
           </Pressable>
-        ) : null}
-      </View>
+          {action && onAction ? (
+            <Pressable
+              onPress={onAction}
+              accessibilityRole="button"
+              className="bg-[#EE6C4D] rounded-full px-[18px] py-[9px] active:opacity-80"
+            >
+              <Text className="text-white font-semibold text-[15px]">{action}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      )}
     </View>
   );
 }

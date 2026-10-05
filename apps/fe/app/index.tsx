@@ -73,13 +73,17 @@ export default function Index() {
   // component drives its own scale/position, but there's only one fade.
   const fade = useRef(new Animated.Value(isFree ? 1 : 0)).current;
 
-  // Průvodce: potvrzení tlačítkem posune kroky "kolečko" i "tlačítko" - kdo
-  // klepne rovnou na tlačítko, kolečko tím taky zvládl.
+  // Průvodce: klepnutí na tlačítko během kroku "kolečko" ho posune taky -
+  // kolečko tím uživatel zvládl. Krok "tlačítko" je hotový, jakmile je
+  // volno zapnuté; kdo si průvodce spustí znovu z nastavení a volno už má,
+  // ten ho tedy přeskočí, místo aby musel volno ukončit.
   const { advance, step: tourStep } = tour;
+  const prevFree = useRef(isFree);
   useEffect(() => {
-    if (!isFree) return;
-    advance("ring");
-    advance("button");
+    const changed = prevFree.current !== isFree;
+    prevFree.current = isFree;
+    if (changed) advance("ring");
+    if (isFree) advance("button");
   }, [isFree, tourStep, advance]);
 
   // Ukázkový přítel se objeví v seznamu pod prstencem, který na menších
