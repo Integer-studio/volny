@@ -8,7 +8,6 @@ import { fieldError, errorMessage } from '../lib/errors';
 import { useAutosaveField } from '../hooks/useAutosaveField';
 import { useSlowActionNotice } from '../hooks/useSlowActionNotice';
 import { validatePhone, validateInstagram } from '../lib/validators';
-import HapticLab from '../components/HapticLab';
 import { router } from 'expo-router';
 import { useTour } from '../components/tour/TourProvider';
 
@@ -171,8 +170,6 @@ export default function Settings() {
         state={instagramField.state}
         containerClassName="mb-8"
       />
-
-      <HapticLab />
 
       {/* Návrat do průvodce (task 0019) - pro ty, kdo ho přeskočili nebo ho
           chtějí projít znovu. Začíná nápovědami nad hlavní obrazovkou;

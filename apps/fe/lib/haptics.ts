@@ -52,6 +52,11 @@ type Spec = {
   /** Náhrada pod `androidMinApi`. Bez ní by odezva jen tiše zmizela. */
   androidFallback?: SafeAndroidHaptic;
   ios: () => Promise<void>;
+  /**
+   * Web: vzor pro `navigator.vibrate` v ms (vibrace, pauza, vibrace…).
+   * Vibration API má jen délku, žádnou sílu, takže hierarchii nese délka.
+   */
+  web: number | number[];
   /** Nejmenší rozestup mezi dvěma stejně (nebo méně) důležitými událostmi. */
   minGapMs: number;
   /** Vyšší smí prolomit rozestup nastavený tou předchozí. */
@@ -75,18 +80,21 @@ const SPECS: Record<HapticEvent, Spec> = {
     androidMinApi: 34,
     androidFallback: Haptics.AndroidHaptics.Clock_Tick,
     ios: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid),
+    web: 8,
     minGapMs: 45,
     priority: 1,
   },
   tickHalf: {
     android: Haptics.AndroidHaptics.Virtual_Key,
     ios: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid),
+    web: 12,
     minGapMs: 45,
     priority: 2,
   },
   tickHour: {
     android: Haptics.AndroidHaptics.Context_Click,
     ios: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+    web: 20,
     minGapMs: 30,
     priority: 3,
   },
@@ -95,6 +103,7 @@ const SPECS: Record<HapticEvent, Spec> = {
   tickWind: {
     android: Haptics.AndroidHaptics.Context_Click,
     ios: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+    web: 20,
     minGapMs: 180,
     priority: 3,
   },
@@ -103,6 +112,7 @@ const SPECS: Record<HapticEvent, Spec> = {
     androidMinApi: 30,
     androidFallback: Haptics.AndroidHaptics.Virtual_Key,
     ios: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
+    web: [15, 40, 15],
     minGapMs: 250,
     priority: 4,
   },
@@ -111,6 +121,7 @@ const SPECS: Record<HapticEvent, Spec> = {
     androidMinApi: 30,
     androidFallback: Haptics.AndroidHaptics.Long_Press,
     ios: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+    web: 40,
     minGapMs: 250,
     priority: 5,
   },
@@ -119,6 +130,7 @@ const SPECS: Record<HapticEvent, Spec> = {
     androidMinApi: 30,
     androidFallback: Haptics.AndroidHaptics.Virtual_Key,
     ios: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+    web: [20, 60, 30],
     minGapMs: 0,
     priority: 6,
   },
@@ -127,6 +139,7 @@ const SPECS: Record<HapticEvent, Spec> = {
     androidMinApi: 34,
     androidFallback: Haptics.AndroidHaptics.Keyboard_Tap,
     ios: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft),
+    web: 15,
     minGapMs: 0,
     priority: 6,
   },
@@ -168,6 +181,21 @@ const androidEffect = (spec: Spec): Haptics.AndroidHaptics => {
 };
 
 /**
+ * `expo-haptics` na webu nic nedělá, takže se jde rovnou na Vibration API.
+ * Umí ho jen Chromium a Firefox na Androidu - desktop nemá motor a Safari
+ * (iOS i macOS) API vůbec neimplementuje, tam odezva tiše chybí. Chrome navíc
+ * vibraci pustí až po první interakci se stránkou, což tah po prstenci splňuje.
+ */
+function webVibrate(pattern: number | number[]): void {
+  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+  try {
+    navigator.vibrate(pattern);
+  } catch {
+    // Některé prohlížeče hází místo vrácení `false`, když vibraci zakáže stránka.
+  }
+}
+
+/**
  * Pustí odezvu, pokud to hygiena proudu dovolí. Fire-and-forget - haptika se
  * váže na gesto, ne na výsledek nějaké operace, takže na její dokončení nemá
  * smysl čekat.
@@ -177,9 +205,6 @@ const androidEffect = (spec: Spec): Haptics.AndroidHaptics => {
  * to, co má být cítit.
  */
 export function haptic(event: HapticEvent): void {
-  // Na webu není co dělat a `expo-haptics` by jen vyhodilo nedostupnost.
-  if (Platform.OS === "web") return;
-
   const spec = SPECS[event];
   const now = Date.now();
   const since = now - lastAt;
@@ -198,6 +223,10 @@ export function haptic(event: HapticEvent): void {
   lastAt = now;
   lastPriority = spec.priority;
 
+  if (Platform.OS === "web") {
+    webVibrate(spec.web);
+    return;
+  }
   if (Platform.OS === "android") {
     // `performAndroidHapticsAsync` volá nativní modul bez optional chaining,
     // takže když chybí, vyhodí - proto catch, ne jen kvůli odmítnutí OS.
