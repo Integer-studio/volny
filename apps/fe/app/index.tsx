@@ -22,7 +22,6 @@ import { useNow } from "../hooks/useNow";
 import UserRow from "../components/UserRow";
 import GroupBadge from "../components/GroupBadge";
 import FreeDial from "../components/FreeDial";
-import StatusHeadline from "../components/StatusHeadline";
 import Reveal from "../components/Reveal";
 import FadeIn from "../components/FadeIn";
 import ProfileSheet from "../components/ProfileSheet";
@@ -68,9 +67,8 @@ export default function Index() {
   // fire-and-forget (no pending flag to serialize taps on) - an older
   // request's rollback/success must never clobber a newer one's result.
   const statusRunId = useRef(0);
-  // Shared between FreeDial's button and StatusHeadline so the circle and the
-  // status text crossfade in lockstep instead of drifting apart - each
-  // component drives its own scale/position, but there's only one fade.
+  // Drives FreeButton's gray -> orange crossfade; owned here so its initial
+  // value follows the hydrated isFree.
   const fade = useRef(new Animated.Value(isFree ? 1 : 0)).current;
 
   // Průvodce: klepnutí na tlačítko během kroku "kolečko" ho posune taky -
@@ -303,8 +301,6 @@ export default function Index() {
             paddingHorizontal: 16,
           }}
         >
-          <StatusHeadline fade={fade} />
-
           <FreeDial
             isFree={isFree}
             freeUntil={freeUntil}

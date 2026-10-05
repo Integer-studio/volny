@@ -17,7 +17,7 @@ import {
 /** Rezerva na stíny presetů, které přesahují za jejich box. */
 const SHADOW_ROOM = 10;
 /** Kolik svislého místa si nad/pod prstencem berou hlavička obrazovky,
- * popisek a seznam presetů - podle toho se prstenec zastropuje, aby se vše
+ * popisek s časem a seznam presetů - podle toho se prstenec zastropuje, aby se vše
  * vešlo bez rolování celé obrazovky. Seznam presetů si roluje sám ve svém
  * boxu, takže do stropu jde jen jeho pevná výška. */
 const VERTICAL_CHROME = 300 + PRESET_LIST_H;
@@ -95,8 +95,8 @@ export default function FreeDial({
   // co uživatel vidí a co se posílá na server. Výchozí hodnota je nejbližší
   // preset aspoň hodinu daleko (pravidlo z tasku 0011).
   const [target, setTarget] = useState(() => defaultTarget(new Date()));
-  // Průběžná hodnota z tažení. Zůstává tady: headline nad tlačítkem už čas
-  // nenese, takže ji nikdo jiný nepotřebuje.
+  // Průběžná hodnota z tažení. Zůstává tady: čas se vykresluje jen v tomhle
+  // komponentu, takže ji nikdo jiný nepotřebuje.
   const [preview, setPreview] = useState<Date | null>(null);
 
   const wasFree = useRef(isFree);
@@ -180,6 +180,22 @@ export default function FreeDial({
       className="items-center w-full"
       onLayout={(e) => setAvail(e.nativeEvent.layout.width)}
     >
+      {/* Jediný slot pro čas i délku, stejný v obou stavech, a zároveň
+          nadpis obrazovky - samostatný nadpis "Nemám volno / Jsem volný"
+          zmizel, stav nese barva tlačítka a předsazené "zbývá". Čas stojí
+          nad prstencem, protože je to hodnota, kterou prstenec nastavuje:
+          prst při tažení zakrývá spodek prstence, ne horní okraj. */}
+      <View className="items-center mb-3">
+        <Text className="text-gray-900 text-2xl font-bold">
+          Volný do {formatTime(shown)}
+          {isTomorrow(shown, now) ? " (zítra)" : ""}
+        </Text>
+        <Text className="text-gray-400 text-sm mt-0.5">
+          {isFree ? "zbývá " : ""}
+          {formatDuration(minutesUntil(shown, now))}
+        </Text>
+      </View>
+
       <View ref={ringTarget} collapsable={false}>
         <TimeRing
           target={safeTarget}
@@ -200,22 +216,6 @@ export default function FreeDial({
             />
           </View>
         </TimeRing>
-      </View>
-
-      {/* Jediný slot pro čas i délku, stejný v obou stavech. Dřív se
-          absolutní čas stěhoval (při zadávání sem, za běhu do headline) a
-          tentýž řádek znamenal jednou "co nastavím" a jednou "kolik zbývá" -
-          právě to působilo nekonzistentně. Význam teď nese jen předsazené
-          slovo, místo ani typografie se nemění. */}
-      <View className="items-center mt-2">
-        <Text className="text-gray-900 text-lg font-semibold">
-          Volný do {formatTime(shown)}
-          {isTomorrow(shown, now) ? " (zítra)" : ""}
-        </Text>
-        <Text className="text-gray-400 text-sm mt-0.5">
-          {isFree ? "zbývá " : ""}
-          {formatDuration(minutesUntil(shown, now))}
-        </Text>
       </View>
 
       {/* Kotvy pod prstencem. Když volno naskočí, tenhle blok zmizí a jeho

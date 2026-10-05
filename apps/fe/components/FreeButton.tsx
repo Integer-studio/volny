@@ -12,8 +12,7 @@ import { useReduceMotion } from "../hooks/useReduceMotion";
 type Props = {
   isFree: boolean;
   onPress: () => void;
-  /** Shared with StatusHeadline so the circle and the status text crossfade
-   * in lockstep instead of drifting apart. */
+  /** Owned by app/index.tsx so its initial value follows the hydrated state. */
   fade: Animated.Value;
   /** True once the in-flight status write has been pending for a while
    * (see app/index.tsx's useDeferredPending) - disables the button and
