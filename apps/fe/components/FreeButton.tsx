@@ -5,6 +5,7 @@ import {
   Easing,
   Image,
   Pressable,
+  View,
 } from "react-native";
 import PartyPopper from "lucide-react-native/icons/party-popper";
 import { haptic, HapticEvent } from "../lib/haptics";
@@ -155,19 +156,25 @@ export default function FreeButton({
             překryje. Černobílá fotka je předpečená v assetu, protože
             `filter` ve stylu RN na iOS nefunguje. */}
         {lubomirMode ? (
-          <Image
-            source={require("../assets/images/volny-off.png")}
-            // Menší než kruh a posazená ke spodnímu okraji, aby ramena
-            // navazovala na hranu kruhu a hlava se neořezávala.
+          // Menší než kruh a posazená ke spodnímu okraji, aby ramena
+          // navazovala na hranu kruhu a hlava se neořezávala. Rozměry
+          // v px - aspectRatio u absolutně pozicovaného Image na webu
+          // nefunguje.
+          <View
             style={{
               position: "absolute",
-              bottom: 0,
-              left: "11%",
-              width: "78%",
-              aspectRatio: 419 / 364,
+              width: "100%",
+              height: "100%",
+              justifyContent: "flex-end",
+              alignItems: "center",
             }}
-            resizeMode="contain"
-          />
+          >
+            <Image
+              source={require("../assets/images/volny-off.png")}
+              style={{ width: size * 0.78, height: (size * 0.78 * 364) / 419 }}
+              resizeMode="contain"
+            />
+          </View>
         ) : (
           <PartyPopper color="#9CA3AF" size={size * 0.42} strokeWidth={1.75} />
         )}
