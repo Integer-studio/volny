@@ -155,7 +155,7 @@ export function setUnauthorizedHandler(fn: (() => void) | null) {
   onUnauthorized = fn;
 }
 
-async function getToken() {
+export async function getToken() {
   if (currentToken) return currentToken;
   try {
     currentToken = await Storage.getItem('userToken');
@@ -169,7 +169,7 @@ async function getToken() {
 // POST /auth/refresh instead of one each.
 let refreshInFlight: Promise<string | null> | null = null;
 
-async function tryRefreshAccessToken(): Promise<string | null> {
+export async function tryRefreshAccessToken(): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
 
   refreshInFlight = (async () => {

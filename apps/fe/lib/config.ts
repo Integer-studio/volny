@@ -8,3 +8,6 @@
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ??
   'https://volny-be.ashysky-0141c791.germanywestcentral.azurecontainerapps.io/api';
+
+/** SignalR hub for realtime refetch signals (task 0001), next to /api on the same host. */
+export const HUB_URL = API_URL.replace(/\/api\/?$/, '') + '/hubs/realtime';

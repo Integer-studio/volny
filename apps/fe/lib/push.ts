@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import { FIREBASE_VAPID_KEY, FIREBASE_WEB_CONFIG, isFirebaseWebConfigured } from './firebaseWebConfig';
+import { isRealtimeConnected } from './realtimeStatus';
 
 /**
  * CROSS-REPO CONTRACT — the backend must send `channelId: "default"`
@@ -45,6 +46,7 @@ export function needsWebNotificationPrompt(): boolean {
 export type PushPayload =
   | { type: 'friend_request'; suggesterId?: string | number }
   | { type: 'friend_accepted'; friendId?: string | number }
+  | { type: 'friend_added_via_qr'; friendId?: string | number }
   | { type: 'friend_imfree'; freeTimeId?: string | number };
 
 /**
@@ -58,6 +60,7 @@ export function routeForPushPayload(data: Partial<PushPayload> | undefined): voi
   switch (data?.type) {
     case 'friend_request':
     case 'friend_accepted':
+    case 'friend_added_via_qr':
       // /search is the "Přátelé" screen; it refetches on focus, so the
       // relevant request/friend appears immediately.
       router.push('/search');
@@ -78,18 +81,38 @@ function getProjectId(): string | undefined {
   );
 }
 
+const REALTIME_COVERED_TYPES: ReadonlySet<string> = new Set<PushPayload['type']>([
+  'friend_request',
+  'friend_accepted',
+  'friend_added_via_qr',
+  'friend_imfree',
+]);
+
+/**
+ * True for a push that arrives in the foreground while the realtime hub is
+ * connected and already updated the UI (live list/badge, plus a toast for
+ * friend requests) - showing a system notification on top would duplicate it.
+ */
+export function isCoveredByRealtime(data: Partial<PushPayload> | undefined): boolean {
+  return !!data?.type && REALTIME_COVERED_TYPES.has(data.type) && isRealtimeConnected();
+}
+
 /**
  * SDK 57: `shouldShowAlert` is deprecated — use shouldShowBanner / shouldShowList.
  * Safe to call at module scope; on web the native module resolves to a no-op stub.
  */
 export function configureNotificationHandler(): void {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
+    // Only called for notifications received while the app is foregrounded.
+    handleNotification: async notification => {
+      const show = !isCoveredByRealtime(notification.request.content.data as Partial<PushPayload> | undefined);
+      return {
+        shouldPlaySound: show,
+        shouldSetBadge: show,
+        shouldShowBanner: show,
+        shouldShowList: show,
+      };
+    },
   });
 }
 
@@ -207,6 +230,7 @@ export function listenForForegroundFcmMessages(): () => void {
       const messaging = getMessaging(app);
       unsubscribe = onMessage(messaging, payload => {
         const data = payload.data as (Partial<PushPayload> & { title?: string; body?: string }) | undefined;
+        if (isCoveredByRealtime(data)) return;
         const notification = new Notification(data?.title || 'Volný', { body: data?.body || '' });
         notification.onclick = () => {
           window.focus();
