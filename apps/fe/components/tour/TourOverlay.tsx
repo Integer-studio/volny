@@ -7,6 +7,7 @@ import { useTour } from './TourProvider';
 import { COACH_STEPS, type TourScreen } from './steps';
 import TipCard from './TipCard';
 import { EMBER, SCRIM } from './colors';
+import { isOnboardingStep } from '../../lib/tour';
 
 type Box = { x: number; y: number; w: number; h: number };
 type Hole = { box: Box; shape: 'circle' | 'rect'; radius: number };
@@ -21,17 +22,45 @@ const CARD_MAX_W = 360;
  * measureInWindow za sekundu a jen dokud nápověda běží. */
 const REMEASURE_MS = 250;
 
+/** Délka přejezdu výřezu z jednoho cíle na druhý. */
+const GLIDE_MS = 260;
+
+// Ztmavení se plynule rozsvítí jen poprvé za průvodce. Při přechodech mezi
+// kroky a obrazovkami už musí být tmavé hned, jinak by obrazovka mezi
+// nápovědami problikla nezatemněná.
+let everShown = false;
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+function lerpHole(from: Hole, to: Hole, t: number): Hole {
+  return {
+    box: {
+      x: lerp(from.box.x, to.box.x, t),
+      y: lerp(from.box.y, to.box.y, t),
+      w: lerp(from.box.w, to.box.w, t),
+      h: lerp(from.box.h, to.box.h, t),
+    },
+    shape: t < 0.5 ? from.shape : to.shape,
+    radius: lerp(from.radius, to.radius, t),
+  };
+}
+
 /**
  * Ztmavení obrazovky s výřezem nad cílem + karta s nápovědou (task 0019).
  *
  * Vykresluje se zvlášť na každé obrazovce (`screen`), ne jednou v kořeni:
  * modální obrazovky stacku by jinak mohly ležet nad ním. Klepnutí uvnitř
  * výřezu propadnou na skutečné UI, zbytek obrazovky je zablokovaný.
+ *
+ * Ztmavení drží i ve chvílích, kdy tahle obrazovka zrovna nápovědu nemá,
+ * ale průvodce běží jinde: obrazovka pod otevírající se modální obrazovkou
+ * a modální obrazovka, která se po "Rozumím" zavírá. Přesně tam dřív
+ * problikla nezatemněná.
  */
 export default function TourOverlay({ screen }: { screen: TourScreen }) {
   const { step, advance, skip, getTarget } = useTour();
   const config = step ? COACH_STEPS[step] : undefined;
   const active = !!config && config.screen === screen;
+  const coaching = step != null && !isOnboardingStep(step);
 
   const [focused, setFocused] = useState(false);
   useFocusEffect(
@@ -41,13 +70,26 @@ export default function TourOverlay({ screen }: { screen: TourScreen }) {
     }, []),
   );
 
+  // Obrazovka se po "Rozumím" zavírá - další krok už patří jiné obrazovce,
+  // ale tahle má zůstat ztmavená, dokud nezmizí.
+  const [leaving, setLeaving] = useState(false);
+  useEffect(() => {
+    if (!focused) setLeaving(false);
+  }, [focused]);
+
+  const showHole = active && focused && !leaving;
+  // Bez fokusu ji kryje jiná obrazovka (typicky modální, která právě
+  // vyjíždí) - ztmavení necháváme, ať po návratu nic neproblikne. Když se
+  // ale uživatel na obrazovku vrátí a krok na ní není, ztmavení zmizí, ať
+  // tu nezůstane zablokovaný.
+  const dimmed = showHole || leaving || (coaching && !focused);
+
   const rootRef = useRef<View>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [hole, setHole] = useState<Hole | null>(null);
 
   useEffect(() => {
-    setHole(null);
-    if (!active || !focused || !config) return;
+    if (!showHole || !config) return;
 
     let alive = true;
     const measure = () => {
@@ -69,6 +111,7 @@ export default function TourOverlay({ screen }: { screen: TourScreen }) {
           const radius = config.shape === 'circle' ? box.w / 2 : RECT_RADIUS;
           setHole(prev =>
             prev &&
+            prev.shape === config.shape &&
             Math.abs(prev.box.x - box.x) < 0.5 &&
             Math.abs(prev.box.y - box.y) < 0.5 &&
             Math.abs(prev.box.w - box.w) < 0.5 &&
@@ -86,26 +129,86 @@ export default function TourOverlay({ screen }: { screen: TourScreen }) {
       alive = false;
       clearInterval(t);
     };
-  }, [active, focused, config, getTarget]);
+  }, [showHole, config, getTarget]);
 
   const reduceMotion = useReduceMotion();
-  const appear = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
-  const visible = active && focused && !!hole && !!size;
+
+  // Výřez, jak je právě nakreslený. Při změně kroku přejede ze starého cíle
+  // na nový; běžné přeměření (rolování, Reveal) se přebírá rovnou.
+  const [drawn, setDrawn] = useState<Hole | null>(null);
+  const drawnRef = useRef<Hole | null>(null);
+  const drawnStep = useRef(step);
+  const glide = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!hole) return;
+    const from = drawnRef.current;
+    const stepChanged = drawnStep.current !== step;
+    drawnStep.current = step;
+    const land = (h: Hole) => {
+      drawnRef.current = h;
+      setDrawn(h);
+    };
+    if (!from || !stepChanged || reduceMotion) {
+      land(hole);
+      return;
+    }
+    glide.stopAnimation();
+    glide.setValue(0);
+    const id = glide.addListener(({ value }) => land(lerpHole(from, hole, value)));
+    Animated.timing(glide, {
+      toValue: 1,
+      duration: GLIDE_MS,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: false,
+    }).start(() => land(hole));
+    return () => glide.removeListener(id);
+  }, [hole]);
+
+  // Celé ztmavení: rozsvícení jen poprvé, zhasnutí vždy plynulé (konec
+  // průvodce, otevření listu s ukázkovým přítelem).
+  const scrim = useRef(new Animated.Value(0)).current;
+  const [rendered, setRendered] = useState(false);
+  useEffect(() => {
+    if (dimmed) {
+      setRendered(true);
+      if (everShown || reduceMotion) {
+        scrim.setValue(1);
+      } else {
+        scrim.setValue(0);
+        Animated.timing(scrim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+      }
+      everShown = true;
+      return;
+    }
+    Animated.timing(scrim, { toValue: 0, duration: reduceMotion ? 120 : 200, useNativeDriver: true }).start(
+      ({ finished }) => {
+        if (finished) setRendered(false);
+      },
+    );
+  }, [dimmed]);
+
+  // Karta se při každém kroku prolne s novým textem, zatímco výřez přejíždí.
+  const card = useRef(new Animated.Value(0)).current;
+  const cardReady = showHole && !!hole;
+  useEffect(() => {
+    if (!cardReady) {
+      card.setValue(0);
+      return;
+    }
+    card.setValue(0);
+    Animated.timing(card, {
+      toValue: 1,
+      duration: reduceMotion ? 120 : 180,
+      delay: reduceMotion ? 0 : 80,
+      useNativeDriver: true,
+    }).start();
+  }, [cardReady, step]);
 
   // Jediný ambientní pohyb celého průvodce: pomalé "dýchání" lemu výřezu,
   // které opakuje motiv prstence. Při omezeném pohybu zůstane lem statický.
+  const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!visible) {
-      appear.setValue(0);
-      return;
-    }
-    Animated.timing(appear, {
-      toValue: 1,
-      duration: reduceMotion ? 120 : 220,
-      useNativeDriver: true,
-    }).start();
-    if (reduceMotion) {
+    if (!cardReady || reduceMotion) {
       pulse.setValue(0);
       return;
     }
@@ -119,7 +222,9 @@ export default function TourOverlay({ screen }: { screen: TourScreen }) {
     );
     loop.start();
     return () => loop.stop();
-  }, [visible, step, reduceMotion]);
+  }, [cardReady, reduceMotion]);
+
+  const cut = showHole ? drawn : null;
 
   return (
     <View
@@ -129,61 +234,71 @@ export default function TourOverlay({ screen }: { screen: TourScreen }) {
       style={StyleSheet.absoluteFill}
       onLayout={e => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
     >
-      {visible && hole && size && config && step && (
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: appear }]} pointerEvents="box-none">
+      {rendered && size && (
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { opacity: scrim }]}
+          pointerEvents={dimmed ? 'box-none' : 'none'}
+        >
           <View pointerEvents="none" style={StyleSheet.absoluteFill}>
             <Svg width={size.w} height={size.h}>
-              <Path d={scrimPath(size, hole)} fill={SCRIM} fillRule="evenodd" />
+              <Path d={scrimPath(size, cut)} fill={SCRIM} fillRule="evenodd" />
             </Svg>
           </View>
 
-          <Blockers size={size} box={hole.box} />
+          <Blockers size={size} box={cut?.box ?? null} />
 
-          <Animated.View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              left: hole.box.x,
-              top: hole.box.y,
-              width: hole.box.w,
-              height: hole.box.h,
-              borderRadius: hole.radius,
-              borderWidth: 2,
-              borderColor: EMBER,
-              opacity: reduceMotion ? 0.9 : pulse.interpolate({ inputRange: [0, 1], outputRange: [0.95, 0] }),
-              transform: reduceMotion
-                ? []
-                : [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, hole.shape === 'circle' ? 1.08 : 1.04] }) }],
-            }}
-          />
+          {cut && cardReady && (
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: cut.box.x,
+                top: cut.box.y,
+                width: cut.box.w,
+                height: cut.box.h,
+                borderRadius: cut.radius,
+                borderWidth: 2,
+                borderColor: EMBER,
+                opacity: reduceMotion ? 0.9 : pulse.interpolate({ inputRange: [0, 1], outputRange: [0.95, 0] }),
+                transform: reduceMotion
+                  ? []
+                  : [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, cut.shape === 'circle' ? 1.08 : 1.04] }) }],
+              }}
+            />
+          )}
 
-          <PlacedCard
-            size={size}
-            box={hole.box}
-            step={step}
-            title={config.title}
-            body={config.body}
-            action={config.action}
-            gap={config.cardGap ?? CARD_GAP}
-            onAction={() => {
-              advance(step);
-              if (config.backAfter && router.canGoBack()) router.back();
-            }}
-            onSkip={skip}
-          />
+          {cardReady && hole && config && step && (
+            <Animated.View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { opacity: card }]}>
+              <PlacedCard
+                size={size}
+                box={hole.box}
+                step={step}
+                title={config.title}
+                body={config.body}
+                action={config.action}
+                gap={config.cardGap ?? CARD_GAP}
+                onAction={() => {
+                  if (config.backAfter && router.canGoBack()) {
+                    setLeaving(true);
+                    router.back();
+                  }
+                  advance(step);
+                }}
+                onSkip={skip}
+              />
+            </Animated.View>
+          )}
         </Animated.View>
       )}
     </View>
   );
 }
 
-function scrimPath(size: { w: number; h: number }, hole: Hole): string {
+/** Kruh i zaoblený obdélník jako jeden tvar (kruh = čtverec s poloměrem w/2), aby šel výřez plynule přelít z jednoho do druhého. */
+function scrimPath(size: { w: number; h: number }, hole: Hole | null): string {
   const outer = `M0 0H${size.w}V${size.h}H0Z`;
+  if (!hole) return outer;
   const { x, y, w, h } = hole.box;
-  if (hole.shape === 'circle') {
-    const r = w / 2;
-    return `${outer} M${x} ${y + r} a${r} ${r} 0 1 0 ${w} 0 a${r} ${r} 0 1 0 ${-w} 0Z`;
-  }
   const r = Math.min(hole.radius, w / 2, h / 2);
   return (
     `${outer} M${x + r} ${y}H${x + w - r}a${r} ${r} 0 0 1 ${r} ${r}V${y + h - r}` +
@@ -191,9 +306,10 @@ function scrimPath(size: { w: number; h: number }, hole: Hole): string {
   );
 }
 
-/** Čtyři pruhy kolem výřezu, které pohltí klepnutí mimo cíl. */
-function Blockers({ size, box }: { size: { w: number; h: number }; box: Box }) {
+/** Čtyři pruhy kolem výřezu, které pohltí klepnutí mimo cíl. Bez výřezu blokuje celou plochu. */
+function Blockers({ size, box }: { size: { w: number; h: number }; box: Box | null }) {
   const swallow = { onStartShouldSetResponder: () => true };
+  if (!box) return <View {...swallow} style={StyleSheet.absoluteFill} />;
   const top = Math.max(0, box.y);
   const bottom = Math.min(size.h, box.y + box.h);
   return (
