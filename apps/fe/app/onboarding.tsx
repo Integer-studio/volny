@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, Text, View, useWind
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
+import Check from 'lucide-react-native/icons/check';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
 import { fieldError, errorMessage } from '../lib/errors';
@@ -14,6 +15,7 @@ import { isOnboardingStep, type TourStep } from '../lib/tour';
 import { useTour } from '../components/tour/TourProvider';
 import { EMBER, PAPER } from '../components/tour/colors';
 import FormField from '../components/FormField';
+import FadeIn from '../components/FadeIn';
 import InstallVideo from '../components/onboarding/InstallVideo';
 import { useToast } from '../components/Toast';
 
@@ -93,19 +95,64 @@ export default function Onboarding() {
       )}
 
       {screen !== 'intro' && (
-        <Pressable
-          onPress={() => {
+        <SkipTour
+          top={insets.top + 24}
+          onSkip={() => {
             skip();
             router.replace('/');
           }}
-          accessibilityRole="button"
-          hitSlop={8}
-          className="absolute right-6"
-          style={{ top: insets.top + 24 }}
-        >
-          <Text className="text-[#2B2724]/50 text-sm">Přeskočit průvodce</Text>
-        </Pressable>
+        />
       )}
+    </View>
+  );
+}
+
+/**
+ * "Přeskočit průvodce" na dvě klepnutí - stejně jako v kartách nápověd
+ * (components/tour/TipCard.tsx). Potvrzení vyjede jako malá karta pod
+ * odkazem, výchozí volbou je pokračovat.
+ */
+function SkipTour({ top, onSkip }: { top: number; onSkip: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (!confirming) {
+    return (
+      <Pressable
+        onPress={() => setConfirming(true)}
+        accessibilityRole="button"
+        hitSlop={4}
+        className="absolute right-6"
+        style={{ top }}
+      >
+        <Text className="text-[#2B2724]/50 text-sm">Přeskočit průvodce</Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <View
+      accessibilityLiveRegion="polite"
+      className="absolute right-4 left-4 bg-[#FCFBF8] rounded-[20px] border border-[#E7E3DC] px-[18px] pt-4 pb-3 max-w-[380px] self-end"
+      style={{ top: top - 8, elevation: 6, shadowColor: '#2B2724', shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } }}
+    >
+      <Text className="text-[#2B2724] text-[15px] leading-[22px] font-semibold">Opravdu přeskočit průvodce?</Text>
+      <Text className="text-[#2B2724]/70 text-[14px] leading-5 mt-0.5">Spustit ho můžeš znovu v nastavení.</Text>
+      <View className="flex-row items-center justify-end gap-2 mt-2.5">
+        <Pressable
+          onPress={() => setConfirming(false)}
+          accessibilityRole="button"
+          className="rounded-full px-[18px] py-[9px] bg-[#EE6C4D] active:opacity-80"
+        >
+          <Text className="text-white font-semibold text-[15px]">Pokračovat</Text>
+        </Pressable>
+        <Pressable
+          onPress={onSkip}
+          accessibilityRole="button"
+          className="rounded-full px-[14px] py-[9px] border border-[#E7E3DC] active:bg-[#E7E3DC]/40"
+        >
+          <Text className="text-[#2B2724]/70 text-[15px]">Přeskočit</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -311,7 +358,8 @@ function InstallStep({
     setAskingNotif(false);
     const perm = typeof Notification !== 'undefined' ? Notification.permission : 'denied';
     setNotifState(perm === 'granted' ? 'granted' : 'denied');
-    if (variant === 'notifyOnly' && perm === 'granted') onNext();
+    // Chvíli nechat vidět potvrzení, ať přechod dál nepůsobí jako chyba.
+    if (variant === 'notifyOnly' && perm === 'granted') setTimeout(onNext, 700);
   };
 
   const install = async () => {
@@ -359,7 +407,9 @@ function InstallStep({
               Zapni si oznámení. A když si Volný přidáš na plochu, budeš ho mít po ruce jako aplikaci.
             </Text>
             <View className="gap-3 mt-8">
-              {notifState !== 'granted' && (
+              {notifState === 'granted' ? (
+                <NotificationsOn />
+              ) : (
                 <PrimaryButton
                   label={notifState === 'denied' ? 'Oznámení jsou zablokovaná' : 'Zapnout oznámení'}
                   onPress={enableNotifications}
@@ -367,7 +417,6 @@ function InstallStep({
                   disabled={notifState === 'denied'}
                 />
               )}
-              {notifState === 'granted' && <Text className="text-[#2B2724] text-base">✓ Oznámení máš zapnutá.</Text>}
               {installPrompt ? (
                 <Pressable
                   onPress={install}
@@ -378,7 +427,7 @@ function InstallStep({
                 </Pressable>
               ) : (
                 <Text className="text-gray-500 text-sm leading-5">
-                  Na plochu si ho přidáš v menu prohlížeče ⋮ → Přidat na plochu.
+                  Na plochu si ho přidáš přes menu prohlížeče (tři tečky) a volbu Přidat na plochu.
                 </Text>
               )}
             </View>
@@ -391,6 +440,8 @@ function InstallStep({
               <Text className="text-gray-500 text-sm leading-5">
                 Oznámení jsou v prohlížeči zablokovaná. Povolit je můžeš v nastavení webu.
               </Text>
+            ) : notifState === 'granted' ? (
+              <NotificationsOn />
             ) : (
               <PrimaryButton label="Zapnout oznámení" onPress={enableNotifications} loading={askingNotif} />
             )}
@@ -410,6 +461,27 @@ function InstallStep({
         </Text>
       </Pressable>
     </ScrollView>
+  );
+}
+
+/**
+ * Potvrzení na místě tlačítka "Zapnout oznámení": stejná výška i zaoblení,
+ * takže se tlačítko v klidu promění a nic pod ním neposkočí. Klidné
+ * papírové pozadí místo akcentu - už to není výzva k akci.
+ */
+function NotificationsOn() {
+  return (
+    <FadeIn>
+      <View
+        accessibilityLiveRegion="polite"
+        className="flex-row items-center justify-center gap-2.5 py-4 rounded-2xl bg-[#FCFBF8] border border-[#E7E3DC]"
+      >
+        <View className="w-6 h-6 rounded-full bg-[#EE6C4D] items-center justify-center">
+          <Check size={14} color="#fff" strokeWidth={3} />
+        </View>
+        <Text className="text-[#2B2724] font-semibold text-lg">Oznámení máš zapnutá</Text>
+      </View>
+    </FadeIn>
   );
 }
 

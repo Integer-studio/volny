@@ -9,6 +9,8 @@ import { useAutosaveField } from '../hooks/useAutosaveField';
 import { useSlowActionNotice } from '../hooks/useSlowActionNotice';
 import { validatePhone, validateInstagram } from '../lib/validators';
 import HapticLab from '../components/HapticLab';
+import { router } from 'expo-router';
+import { useTour } from '../components/tour/TourProvider';
 
 function validateUsername(v: string): string | null {
   if (v.length < 3 || v.length > 50) return 'Uživatelské jméno musí mít 3-50 znaků.';
@@ -27,6 +29,7 @@ function validatePassword(v: string): string | null {
 export default function Settings() {
   const { me, refreshMe, signOut } = useAuth();
   const { show } = useToast();
+  const { goTo } = useTour();
 
   const nameField = useAutosaveField({
     initial: me?.name ?? '',
@@ -170,6 +173,23 @@ export default function Settings() {
       />
 
       <HapticLab />
+
+      {/* Návrat do průvodce (task 0019) - pro ty, kdo ho přeskočili nebo ho
+          chtějí projít znovu. Začíná nápovědami nad hlavní obrazovkou;
+          kontakt je výš v tomhle nastavení a krok s plochou by tu nedával
+          smysl. */}
+      <Text className="text-gray-400 text-xs font-bold tracking-widest mb-3">PRŮVODCE</Text>
+      <Pressable
+        onPress={() => {
+          goTo('ring');
+          if (router.canGoBack()) router.back();
+          else router.replace('/');
+        }}
+        accessibilityRole="button"
+        className="border border-gray-200 py-3 rounded-xl items-center active:bg-gray-50 mb-10"
+      >
+        <Text className="text-gray-800 font-medium">Spustit průvodce znovu</Text>
+      </Pressable>
 
       <Text className="text-gray-400 text-xs font-bold tracking-widest mb-3">ZMĚNA HESLA</Text>
       <FormField label="Současné heslo" value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry autoComplete="current-password" textContentType="password" error={passwordErrors.current} />
