@@ -43,6 +43,7 @@ doby před zavedením priorit je uvedena orientačně.
 | 0011 | Přichycení (snap) času na nejbližší preset     | todo        | 1        | [0011-snap-casu-na-preset.md](./0011-snap-casu-na-preset.md)         |
 | 0012 | "Kde jsem" políčko (volný text)                | todo        | 3        | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md)               |
 | 0014 | Lepší always-on backend                        | todo        | 1        | [0014-always-on-backend.md](./0014-always-on-backend.md)             |
+| 0021 | Toggle ve skupině: sdílet nemoc a kontakt      | todo        | 2        | [0021-skupina-toggle-nemoc-a-kontakt.md](./0021-skupina-toggle-nemoc-a-kontakt.md) |
 
 ## Hotové úkoly
 
