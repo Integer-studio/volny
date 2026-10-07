@@ -45,6 +45,7 @@ public class AuthController : ControllerBase
             Instagram = dto.Instagram
         };
         _db.Users.Add(user);
+        _db.Presets.AddRange(DefaultPresets.For(user));
 
         try
         {

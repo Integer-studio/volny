@@ -205,6 +205,36 @@ Notes: Frontend must always include `q` when calling this endpoint.
 
 ---
 
+## 4b) Presets (task 0009)
+
+Uživatelovy denní kotvy pro "volný do ...". Jsou soukromé - vždy jen
+vlastní, žádný `userId` parametr. `minute` je minuta dne (0-1439, násobek
+15) v místním čase bez časové zóny; FE ji přepočítá na nejbližší budoucí
+výskyt. `icon` je klíč z pevné sady (`DefaultPresets.IconKeys`, stejná jako
+`PRESET_ICONS` na FE). Nový uživatel dostane 5 výchozích presetů.
+
+`PresetDto`: `{ "presetID": 1, "name": "Poledne", "icon": "sun", "minute": 720 }`
+
+### GET /api/presets
+- Auth: required. `200` -> `PresetDto[]` seřazené podle `minute`.
+
+### POST /api/presets
+- Body: `{ "name": "Oběd", "icon": "utensils", "minute": 750 }`
+- `201` -> `PresetDto`. `400` při neplatném vstupu, `409` když už jiný preset
+  stojí na stejné `minute`.
+
+### PUT /api/presets/{id}
+- Body jako POST. `200` -> `PresetDto`. `404` pro cizí/neexistující, `409`
+  jako u POST.
+
+### DELETE /api/presets/{id}
+- `204`, `404` pro cizí/neexistující.
+
+### POST /api/presets/reset
+- Nahradí všechny presety uživatele výchozími. `200` -> `PresetDto[]`.
+
+---
+
 ## 5) Friend suggestions (requests)
 
 > All suggestion DTOs include both ID and display name to help frontend rendering.

@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<FriendSuggestion> FriendSuggestions { get; set; } = null!;
     public DbSet<Group> Groups { get; set; } = null!;
     public DbSet<GroupMember> GroupMembers { get; set; } = null!;
+    public DbSet<Preset> Presets { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -94,6 +95,16 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Group).WithMany(g => g.Members).HasForeignKey(e => e.GroupID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.UserID);
+        });
+
+        modelBuilder.Entity<Preset>(entity =>
+        {
+            entity.Property(e => e.Name).HasMaxLength(30).IsRequired();
+            entity.Property(e => e.Icon).HasMaxLength(32).IsRequired();
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Cascade);
+            // Two presets at the same time would sit on the same spot of the
+            // ring, so the FE blocks it and this backs that up.
+            entity.HasIndex(e => new { e.UserID, e.Minute }).IsUnique();
         });
 
         // SQLite stores DateTime as TEXT and EF materializes it as
