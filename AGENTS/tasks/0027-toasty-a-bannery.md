@@ -1,6 +1,6 @@
 # 0027 — Toasty pod modaly, umístění toastu a banneru
 
-- **Stav:** in progress
+- **Stav:** done
 - **Priorita:** 2
 - **Datum vytvoření:** 2026-10-07
 

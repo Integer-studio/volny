@@ -41,9 +41,7 @@ doby před zavedením priorit je uvedena orientačně.
 | 0010 | Vlastní čas (manuální zadání)                  | todo        | 3        | [0010-vlastni-cas.md](./0010-vlastni-cas.md)                         |
 | 0012 | "Kde jsem" políčko (volný text)                | todo        | 3        | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md)               |
 | 0014 | Lepší always-on backend                        | todo        | 1        | [0014-always-on-backend.md](./0014-always-on-backend.md)             |
-| 0023 | Zpětná vazba při posílání žádostí o přátelství | in progress | 1        | [0023-feedback-zadosti-o-pratelstvi.md](./0023-feedback-zadosti-o-pratelstvi.md) |
 | 0026 | Prázdné stavy místo načítání nebo chyby        | todo        | 1        | [0026-prazdne-stavy-vs-nacitani.md](./0026-prazdne-stavy-vs-nacitani.md) |
-| 0027 | Toasty pod modaly, umístění toastu a banneru   | in progress | 2        | [0027-toasty-a-bannery.md](./0027-toasty-a-bannery.md) |
 | 0028 | Přihlášení a registrace: zpětná vazba a chyby  | todo        | 1        | [0028-prihlaseni-a-registrace-ux.md](./0028-prihlaseni-a-registrace-ux.md) |
 | 0029 | Nastavení a oznámení: autosave a povolení      | todo        | 2        | [0029-nastaveni-a-oznameni-ux.md](./0029-nastaveni-a-oznameni-ux.md) |
 | 0030 | Potvrzení a busy stavy u destruktivních akcí   | todo        | 2        | [0030-potvrzeni-a-busy-stavy.md](./0030-potvrzeni-a-busy-stavy.md) |
@@ -102,3 +100,5 @@ Doporučené pořadí: 0 → A → B → C (0014 paralelně) → D → E → F �
 | 0022 | Pozvánka do skupiny jako sheet (přijmout/odmítnout + sdílení)   | done | 2        | [0022-pozvanka-do-skupiny-sheet.md](./0022-pozvanka-do-skupiny-sheet.md)             |
 | 0024 | Mizející rychlá volba (presety)                | done | 1        | [0024-mizejici-presety.md](./0024-mizejici-presety.md) |
 | 0025 | Souběh zápisů stavu volna a falešné chyby      | done | 1        | [0025-soubeh-zapisu-stavu-volna.md](./0025-soubeh-zapisu-stavu-volna.md) |
+| 0023 | Zpětná vazba při posílání žádostí o přátelství | done | 1        | [0023-feedback-zadosti-o-pratelstvi.md](./0023-feedback-zadosti-o-pratelstvi.md) |
+| 0027 | Toasty pod modaly, umístění toastu a banneru   | done | 2        | [0027-toasty-a-bannery.md](./0027-toasty-a-bannery.md) |

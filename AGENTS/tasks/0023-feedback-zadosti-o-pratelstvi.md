@@ -1,6 +1,6 @@
 # 0023 — Zpětná vazba při posílání žádostí o přátelství
 
-- **Stav:** in progress
+- **Stav:** done
 - **Priorita:** 1
 - **Datum vytvoření:** 2026-10-07
 
