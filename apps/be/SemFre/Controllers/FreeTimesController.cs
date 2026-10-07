@@ -17,17 +17,17 @@ public class FreeTimesController : ControllerBase
     private readonly AutoMapper.IMapper _mapper;
     private readonly IAccessValidator _access;
     private readonly IConnectionService _connections;
-    private readonly NotificationQueue _notifyQueue;
     private readonly IRealtimeNotifier _realtime;
+    private readonly FreeTimeActivator _activator;
 
-    public FreeTimesController(AppDbContext db, AutoMapper.IMapper mapper, IAccessValidator access, IConnectionService connections, NotificationQueue notifyQueue, IRealtimeNotifier realtime)
+    public FreeTimesController(AppDbContext db, AutoMapper.IMapper mapper, IAccessValidator access, IConnectionService connections, IRealtimeNotifier realtime, FreeTimeActivator activator)
     {
         _realtime = realtime;
         _db = db;
         _mapper = mapper;
         _access = access;
         _connections = connections;
-        _notifyQueue = notifyQueue;
+        _activator = activator;
     }
 
     [HttpGet]
@@ -80,15 +80,15 @@ public class FreeTimesController : ControllerBase
         _db.FreeTimes.Add(ft);
         await _db.SaveChangesAsync();
 
-        var res = _mapper.Map<FreeTimeDto>(ft);
-
-        // Only notify friends if the user is free right now, not for a future slot.
+        // A slot starting now notifies right away. A planned one (task 0008) only
+        // refreshes connections' "Později" list - the push goes out at StartTime
+        // from FreeTimeActivationService.
         if (start <= DateTime.UtcNow)
-        {
-            await NotifyConnectionsImFreeAsync(userId.Value, res.FreeTimeID);
+            await _activator.ActivateAsync(ft);
+        else
             await _realtime.FreeChangedAsync(userId.Value);
-        }
 
+        var res = _mapper.Map<FreeTimeDto>(ft);
         return CreatedAtAction(nameof(Get), new { id = res.FreeTimeID }, res);
     }
 
@@ -104,59 +104,11 @@ public class FreeTimesController : ControllerBase
         var ft = new FreeTime { UserID = userId.Value, StartTime = start, EndTime = end };
         _db.FreeTimes.Add(ft);
         await _db.SaveChangesAsync();
+        await _activator.ActivateAsync(ft);
 
         var res = _mapper.Map<FreeTimeDto>(ft);
 
-        await NotifyConnectionsImFreeAsync(userId.Value, res.FreeTimeID);
-        await _realtime.FreeChangedAsync(userId.Value);
-
         return CreatedAtAction(nameof(Get), new { id = res.FreeTimeID }, res);
-    }
-
-    private async Task NotifyConnectionsImFreeAsync(int userId, int freeTimeId)
-    {
-        var me = await _db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.UserID == userId);
-        var connections = await _connections.GetConnectionsAsync(userId);
-        if (connections.Count == 0) return;
-
-        // Only tell connections who are ALSO free right now - same "who is free"
-        // query as ConnectionsController.Free (GET /api/connections/free), otherwise
-        // every friend gets pinged regardless of whether hanging out is even possible.
-        var connectionIds = connections.Select(c => c.UserID).ToList();
-        var now = DateTime.UtcNow;
-        var freeUserIds = (await _db.FreeTimes.AsNoTracking()
-            .Where(f => connectionIds.Contains(f.UserID) && f.StartTime <= now && f.EndTime > now)
-            .Select(f => f.UserID)
-            .Distinct()
-            .ToListAsync())
-            .ToHashSet();
-
-        foreach (var c in connections.Where(c => freeUserIds.Contains(c.UserID)))
-        {
-            var data = new Dictionary<string, string> { { "type", "friend_imfree" }, { "freeTimeId", freeTimeId.ToString() } };
-            string title;
-            if (c.IsFriend || c.SharedGroups.Count == 0)
-            {
-                title = "Kamarád má teď volno";
-            }
-            else
-            {
-                title = c.SharedGroups[0].Name;
-                data["sharedGroupId"] = c.SharedGroups[0].GroupID.ToString();
-                data["sharedGroupName"] = c.SharedGroups[0].Name;
-            }
-
-            await _notifyQueue.EnqueueAsync(new QueuedNotification
-            {
-                RecipientUserId = c.UserID,
-                Message = new NotificationMessage
-                {
-                    Title = title,
-                    Body = $"{me?.Name} (@{me?.Username}) má teď volno.",
-                    Data = data
-                }
-            });
-        }
     }
 
     [HttpPut("{id:int}")]
@@ -170,11 +122,24 @@ public class FreeTimesController : ControllerBase
         if (ft.UserID != userId) return Forbid();
 
         var start = dto.StartTime ?? ft.StartTime;
-        var end = dto.EndTime ?? start.Date.AddDays(1).AddSeconds(-1);
+        var end = dto.EndTime ?? ft.EndTime;
         if (end < start) return BadRequest(new { message = "EndTime must be after StartTime" });
 
+        var now = DateTime.UtcNow;
         ft.StartTime = start;
         ft.EndTime = end;
+
+        // Dragging the start into the future turns a running slot back into a
+        // planned one, so connections get "má teď volno" again at the new start.
+        if (start > now) ft.NotifiedAt = null;
+
+        // Pulling a planned start back to now starts it right away instead of
+        // waiting up to one FreeTimeActivationService tick.
+        if (start <= now && ft.NotifiedAt == null)
+        {
+            await _activator.ActivateAsync(ft);
+            return NoContent();
+        }
 
         await _db.SaveChangesAsync();
         await _realtime.FreeChangedAsync(userId.Value);

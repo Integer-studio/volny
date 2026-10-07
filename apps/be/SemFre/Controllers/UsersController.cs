@@ -58,6 +58,15 @@ public class UsersController : ControllerBase
         {
             dto.ActiveFreeTime = new ActiveFreeTimeDto { FreeSince = active.FreeSince, FreeUntil = active.FreeUntil };
         }
+
+        // Planned free time (task 0008), so the ring can redraw the planned arc
+        // after an app restart. Only the nearest one - the FE keeps one slot at a time.
+        var upcoming = await _db.FreeTimes.AsNoTracking()
+            .Where(f => f.UserID == user.UserID && f.StartTime > now)
+            .OrderBy(f => f.StartTime)
+            .Select(f => new ActiveFreeTimeDto { FreeSince = f.StartTime, FreeUntil = f.EndTime })
+            .FirstOrDefaultAsync();
+        dto.UpcomingFreeTime = upcoming;
         return dto;
     }
 

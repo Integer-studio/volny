@@ -11,6 +11,9 @@ type Props = {
   angle: number;
   /** Aktuální úhel handle - podle blízkosti se marker uhne nebo vytratí. */
   handleAngle: number;
+  /** Úhel handle začátku volna (task 0008), pokud je na prstenci - marker
+   * reaguje na ten z obou, který je blíž. */
+  startHandleAngle?: number;
   /** Střed prstence (shodné x i y). */
   center: number;
   /** Klidový poloměr markeru. */
@@ -47,6 +50,7 @@ type Props = {
 export default function RingMarker({
   angle,
   handleAngle,
+  startHandleAngle,
   center,
   radius,
   size,
@@ -58,7 +62,12 @@ export default function RingMarker({
   children,
 }: Props) {
   const reduceMotion = useReduceMotion();
-  const gap = Math.abs(normalizeDelta(angle - handleAngle));
+  const gap = Math.min(
+    Math.abs(normalizeDelta(angle - handleAngle)),
+    startHandleAngle === undefined
+      ? Infinity
+      : Math.abs(normalizeDelta(angle - startHandleAngle)),
+  );
   // Sinová náběžná hrana - marker se rozjede s předstihem a nikde necukne.
   // Při potlačených animacích se neuhýbá ani nemizí: marker se hýbe průběžně
   // s tažením, takže by to byl přesně ten druh pohybu, kterému se má vyhnout.

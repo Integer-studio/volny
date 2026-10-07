@@ -82,6 +82,8 @@ export type UserDto = {
   instagram?: string | null;
   createdAt?: string;
   activeFreeTime?: { freeSince: string; freeUntil: string } | null;
+  /** Nejbližší naplánované volno, které ještě nezačalo (task 0008). */
+  upcomingFreeTime?: { freeSince: string; freeUntil: string } | null;
 };
 
 export type FreeTimeDto = {
@@ -106,6 +108,19 @@ export type FreeEntry = {
   freeUntil: Date;
   via: ConnectionSource[];
 };
+
+function toFreeEntry(r: FreeConnectionDto): FreeEntry {
+  return {
+    user: toUserSummary(r.user),
+    freeSince: parseServerDate(r.freeSince),
+    freeUntil: parseServerDate(r.freeUntil),
+    via: r.via.map(v => ({
+      kind: v.kind as 'friend' | 'group',
+      groupId: v.groupID?.toString(),
+      groupName: v.groupName,
+    })),
+  };
+}
 
 type FriendDto = { user: UserSummaryDto; establishedAt: string };
 type FriendRequestDto = { user: UserSummaryDto; suggestedAt: string };
@@ -524,61 +539,70 @@ export const api = {
 
   async getFreeNow(): Promise<FreeEntry[]> {
     const rows: FreeConnectionDto[] = await request('/connections/free');
-    return rows.map(r => ({
-      user: toUserSummary(r.user),
-      freeSince: parseServerDate(r.freeSince),
-      freeUntil: parseServerDate(r.freeUntil),
-      via: r.via.map(v => ({
-        kind: v.kind as 'friend' | 'group',
-        groupId: v.groupID?.toString(),
-        groupName: v.groupName,
-      })),
-    }));
+    return rows.map(toFreeEntry);
   },
 
   /**
-   * Aktivní záznam volna, tedy ten, do kterého padá `now`. Sdílené mezi
-   * ukončením a prodloužením - `GET /users/me` u `activeFreeTime` nevrací id,
-   * takže se musí dohledat ze seznamu.
+   * Naplánovaná volna přátel a spoluhráčů ze skupin, která začnou do 24 h
+   * (task 0008). `freeSince` je tu začátek v budoucnu - "bude volný od 18:00".
    */
-  async getActiveFreeTime(): Promise<FreeTimeDto | null> {
+  async getFreeLater(): Promise<FreeEntry[]> {
+    const rows: FreeConnectionDto[] = await request('/connections/upcoming');
+    return rows.map(toFreeEntry);
+  },
+
+  /**
+   * Vlastní volno, které ještě neskončilo - běžící, nebo naplánované do
+   * budoucna. Sdílené mezi ukončením a úpravou - `GET /users/me` id nevrací,
+   * takže se musí dohledat ze seznamu. Appka drží jen jedno volno naráz, takže
+   * při víc záznamech (starší klient) vyhrává ten nejdřív začínající.
+   */
+  async getMyFreeTime(): Promise<FreeTimeDto | null> {
     const myTimes: FreeTimeDto[] = await request('/freetimes');
-    const now = new Date();
+    const now = Date.now();
     return (
-      myTimes.find((ft) => {
-        const start = new Date(ft.startTime);
-        const end = new Date(ft.endTime);
-        return now >= start && now < end;
-      }) ?? null
+      myTimes
+        .filter((ft) => parseServerDate(ft.endTime).getTime() > now)
+        .sort(
+          (a, b) =>
+            parseServerDate(a.startTime).getTime() - parseServerDate(b.startTime).getTime(),
+        )[0] ?? null
     );
   },
 
   /**
-   * Změní konec už běžícího volna. Jde přes `PUT /freetimes/{id}`, ne přes
-   * `POST /freetimes` (což dělá `setMyStatus`): POST na backendu vždy zakládá
-   * NOVÝ záznam, takže by vzniklo druhé překrývající se volno a přátelům by
-   * podruhé odešla notifikace "má teď volno". `StartTime` se schválně
-   * neposílá - backend si nechá původní, takže volno neztratí svůj začátek.
+   * Změní už založené volno (běžící i naplánované). Jde přes
+   * `PUT /freetimes/{id}`, ne přes `POST /freetimes` (což dělá `setMyStatus`):
+   * POST na backendu vždy zakládá NOVÝ záznam, takže by vzniklo druhé
+   * překrývající se volno a přátelům by podruhé odešla notifikace "má teď volno".
    *
-   * Když už žádné volno neběží (mezitím vypršelo nebo ho ukončilo jiné
+   * Bez `start` si backend nechá původní začátek - běžící volno tak neztratí,
+   * odkdy trvá. Začátek v budoucnu vrací volno do plánu; začátek "teď" ho
+   * na backendu hned spustí.
+   *
+   * Když už žádné volno není (mezitím vypršelo nebo ho ukončilo jiné
    * zařízení), založí se místo toho nové - jinak by se změna tiše zahodila.
    */
-  async extendMyStatus(until: Date): Promise<void> {
-    const active = await this.getActiveFreeTime();
-    if (!active) {
-      await this.setMyStatus(true, until);
+  async updateMyStatus(until: Date, start?: Date): Promise<void> {
+    const mine = await this.getMyFreeTime();
+    if (!mine) {
+      await this.setMyStatus(true, until, start);
       return;
     }
-    await request(`/freetimes/${active.freeTimeID}`, {
+    await request(`/freetimes/${mine.freeTimeID}`, {
       method: 'PUT',
       idempotent: true,
-      body: JSON.stringify({ endTime: until.toISOString() }),
+      body: JSON.stringify({
+        ...(start ? { startTime: start.toISOString() } : {}),
+        endTime: until.toISOString(),
+      }),
     });
   },
 
-  async setMyStatus(isFree: boolean, until?: Date): Promise<void> {
+  /** `start` v budoucnu volno jen naplánuje - přátelům ho ohlásí backend, až začne. */
+  async setMyStatus(isFree: boolean, until?: Date, start?: Date): Promise<void> {
     if (isFree && until) {
-      const startTime = new Date().toISOString();
+      const startTime = (start ?? new Date()).toISOString();
       const endTime = until.toISOString();
       await request('/freetimes', {
         method: 'POST',
@@ -587,9 +611,9 @@ export const api = {
     } else if (isFree) {
       await request('/freetimes/imfree', { method: 'POST' });
     } else {
-      const active = await this.getActiveFreeTime();
-      if (active) {
-        await request(`/freetimes/${active.freeTimeID}`, { method: 'DELETE', idempotent: true });
+      const mine = await this.getMyFreeTime();
+      if (mine) {
+        await request(`/freetimes/${mine.freeTimeID}`, { method: 'DELETE', idempotent: true });
       }
     }
   },

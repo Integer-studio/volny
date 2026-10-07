@@ -14,10 +14,10 @@ import SettingsIcon from "lucide-react-native/icons/settings";
 import UserPlus from "lucide-react-native/icons/user-plus";
 import Users from "lucide-react-native/icons/users";
 import ArrowRight from "lucide-react-native/icons/arrow-right";
-import { api, FreeEntry } from "../lib/api";
+import { api, FreeEntry, UserDto } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { parseServerDate } from "../lib/date";
-import { formatTime } from "../lib/time";
+import { formatTime, isTomorrow } from "../lib/time";
 import { useNow } from "../hooks/useNow";
 import UserRow from "../components/UserRow";
 import GroupBadge from "../components/GroupBadge";
@@ -60,16 +60,19 @@ export default function Index() {
   // reload shows the real server state instead of always resetting to "not
   // free" - the previous version held this as local-only state with no
   // hydration at all.
-  const [isFree, setIsFree] = useState(!!me?.activeFreeTime);
-  const [freeUntil, setFreeUntil] = useState<Date | null>(
-    me?.activeFreeTime ? parseServerDate(me.activeFreeTime.freeUntil) : null,
-  );
+  //
+  // `isFree` = volno je založené: běží, nebo je naplánované dopředu (task
+  // 0008). Naplánované má `freeFrom` v budoucnu; běžící `null`.
+  const initial = statusFromMe(me);
+  const [isFree, setIsFree] = useState(initial.isFree);
+  const [freeFrom, setFreeFrom] = useState<Date | null>(initial.start);
+  const [freeUntil, setFreeUntil] = useState<Date | null>(initial.until);
   // Zápis stavu je optimistický a tapy se neblokují, takže se requesty
   // neposílají jeden za každé ťuknutí. Drží se poslední potvrzený stav ze
   // serveru a poslední chtěný stav z UI a syncStatus() mezi nimi po jednom
   // requestu dorovnává (viz task 0025). Dvojťuk nebo tažení prstence během
   // POSTu tak nikdy nepošle souběžné requesty ani druhé volno.
-  const confirmedStatus = useRef<FreeState>({ isFree, until: freeUntil });
+  const confirmedStatus = useRef<FreeState>(initial);
   const desiredStatus = useRef<FreeState | null>(null);
   const syncing = useRef(false);
   // Drives FreeButton's gray -> orange crossfade; owned here so its initial
@@ -99,16 +102,34 @@ export default function Index() {
 
   useEffect(() => {
     if (!me) return;
-    const server: FreeState = me.activeFreeTime
-      ? { isFree: true, until: parseServerDate(me.activeFreeTime.freeUntil) }
-      : { isFree: false, until: null };
+    const server = statusFromMe(me);
     // Během dorovnávání je server jen mezistav - UI drží chtěný stav a
     // syncStatus si potvrzený stav vede sám.
     if (syncing.current) return;
     confirmedStatus.current = server;
     setIsFree(server.isFree);
+    setFreeFrom(server.start);
     setFreeUntil(server.until);
-  }, [me?.activeFreeTime?.freeUntil]);
+  }, [
+    me?.activeFreeTime?.freeUntil,
+    me?.upcomingFreeTime?.freeSince,
+    me?.upcomingFreeTime?.freeUntil,
+  ]);
+
+  // Naplánované volno začne samo (backend ho přátelům ohlásí) - lokálně se
+  // jen přepne na běžící a dotáhne se stav ze serveru.
+  useEffect(() => {
+    if (!freeFrom) return;
+    const ms = freeFrom.getTime() - Date.now();
+    const t = setTimeout(() => {
+      setFreeFrom(null);
+      if (isActive(confirmedStatus.current)) {
+        confirmedStatus.current = { ...confirmedStatus.current, start: null };
+      }
+      refreshMe().catch(() => {});
+    }, Math.max(0, ms));
+    return () => clearTimeout(t);
+  }, [freeFrom]);
 
   // Local expiry so the header doesn't keep claiming "Jsem Volný" past the
   // window's end while the app stays open with no user action to trigger a refetch.
@@ -117,11 +138,13 @@ export default function Index() {
     const ms = freeUntil.getTime() - Date.now();
     if (ms <= 0) {
       setIsFree(false);
+      setFreeFrom(null);
       setFreeUntil(null);
       return;
     }
     const t = setTimeout(() => {
       setIsFree(false);
+      setFreeFrom(null);
       setFreeUntil(null);
     }, ms);
     return () => clearTimeout(t);
@@ -133,6 +156,8 @@ export default function Index() {
   // Počítá se i z rozměrů, ne jen při rolování - na malé obrazovce je seznam
   // pod ohybem hned od začátku (task 0024).
   const [canScrollMore, setCanScrollMore] = useState(false);
+  // Viditelná výška rolované plochy - podle ní si FreeDial velikost prstence.
+  const [viewportH, setViewportH] = useState<number | undefined>(undefined);
   const scrollMetrics = useRef({ offset: 0, viewport: 0, content: 0 });
   const updateCanScrollMore = (patch: Partial<typeof scrollMetrics.current>) => {
     const m = Object.assign(scrollMetrics.current, patch);
@@ -171,8 +196,36 @@ export default function Index() {
   const refreshIntervalMs = useRefreshInterval();
   useAutoRefresh(freeList.reload, { intervalMs: refreshIntervalMs, enabled: isFree });
   useRealtimeRefetch(["FreeChanged"], () => {
-    if (isFree) freeList.reload();
+    if (isFree) {
+      freeList.reload();
+      laterList.reload();
+    }
   });
+
+  // Kdo bude volný později (task 0008) - naplánovaná volna, která ještě
+  // nezačala. Sekce se ukazuje jen když v ní někdo je: prázdné "nikdo" by
+  // vedle seznamu "Kdo je také volný" jen zabíralo místo.
+  const laterList = useAsyncData<FreeEntry[]>(
+    () => api.getFreeLater(),
+    [isFree],
+    {
+      enabled: isFree,
+      cacheKey: "freeLater",
+      revive: (raw) =>
+        (raw as any[]).map((r) => ({
+          ...r,
+          freeSince: new Date(r.freeSince),
+          freeUntil: new Date(r.freeUntil),
+        })) as FreeEntry[],
+    },
+  );
+  useAutoRefresh(laterList.reload, { intervalMs: refreshIntervalMs, enabled: isFree });
+  const freeNowIds = new Set(friends.map((f) => f.user.id));
+  // Komu plán už začal, ten patří do horního seznamu - realtime signál ze
+  // serveru ho tam přesune, ale lokálně se nečeká.
+  const later = (laterList.data ?? []).filter(
+    (f) => f.freeSince.getTime() > now.getTime() && !freeNowIds.has(f.user.id),
+  );
 
   const connections = useAsyncData(
     () => Promise.all([api.getAllFriends(), api.getGroups()]),
@@ -234,9 +287,9 @@ export default function Index() {
    * zrovna zmáčkl:
    * - konec volna → `DELETE`;
    * - volno, když žádné neběží → `POST /freetimes` (nové volno, notifikace);
-   * - jiný konec běžícího volna → `PUT` přes `extendMyStatus`. `POST` by na
-   *   backendu založil druhé překrývající se volno a přátelům by podruhé
-   *   odešla notifikace "má teď volno".
+   * - jiný začátek nebo konec založeného volna → `PUT` přes `updateMyStatus`.
+   *   `POST` by na backendu založil druhé překrývající se volno a přátelům by
+   *   podruhé odešla notifikace "má teď volno".
    *
    * Zapnutí a hned vypnutí během prvního requestu tedy pošle POST a DELETE
    * za sebou, nikdy souběžně.
@@ -254,8 +307,10 @@ export default function Index() {
       const have = confirmedStatus.current;
       try {
         if (!want.isFree) await api.setMyStatus(false);
-        else if (!isActive(have)) await api.setMyStatus(true, want.until ?? undefined);
-        else if (want.until) await api.extendMyStatus(want.until);
+        else if (!isActive(have))
+          await api.setMyStatus(true, want.until ?? undefined, want.start ?? undefined);
+        else if (want.until)
+          await api.updateMyStatus(want.until, startChange(have, want));
         confirmedStatus.current = want;
       } catch (e) {
         // Mezitím přišla novější volba - zkusí se rovnou ta.
@@ -271,6 +326,7 @@ export default function Index() {
     if (failure) {
       const back = confirmedStatus.current;
       setIsFree(back.isFree);
+      setFreeFrom(back.start);
       setFreeUntil(back.until);
       show(errorMessage(failure, "Nepodařilo se uložit stav."), "error");
       return;
@@ -281,10 +337,15 @@ export default function Index() {
     refreshMe().catch(() => {});
   };
 
-  const applyStatus = (nextFree: boolean, until: Date | null) => {
+  const applyStatus = (
+    nextFree: boolean,
+    until: Date | null,
+    start: Date | null = null,
+  ) => {
     setIsFree(nextFree);
+    setFreeFrom(start);
     setFreeUntil(until);
-    desiredStatus.current = { isFree: nextFree, until };
+    desiredStatus.current = { isFree: nextFree, start, until };
     syncStatus();
   };
 
@@ -353,9 +414,10 @@ export default function Index() {
               content: contentSize.height,
             });
           }}
-          onLayout={(e) =>
-            updateCanScrollMore({ viewport: e.nativeEvent.layout.height })
-          }
+          onLayout={(e) => {
+            setViewportH(e.nativeEvent.layout.height);
+            updateCanScrollMore({ viewport: e.nativeEvent.layout.height });
+          }}
           onContentSizeChange={(_w, h) => updateCanScrollMore({ content: h })}
           scrollEventThrottle={16}
           bounces={false}
@@ -374,14 +436,17 @@ export default function Index() {
         >
           <FreeDial
             isFree={isFree}
+            freeFrom={freeFrom}
             freeUntil={freeUntil}
             fade={fade}
             pending={showLoading}
             now={now}
-            onConfirm={(until) => applyStatus(true, until)}
-            onChangeEnd={(until) => applyStatus(true, until)}
+            onConfirm={(until, start) => applyStatus(true, until, start)}
+            onChangeSlot={(start, until) => applyStatus(true, until, start)}
             onEnd={() => applyStatus(false, null)}
             onPick={() => advance("ring")}
+            // Odečtený horní padding obsahu (`paddingTop: 12`).
+            availableHeight={viewportH != null ? viewportH - 12 : undefined}
           />
 
           <Reveal
@@ -464,6 +529,23 @@ export default function Index() {
                 </Text>
               </FadeIn>
             )}
+
+            {later.length > 0 && (
+              <FadeIn>
+                <Text className="text-gray-400 font-medium text-xs tracking-widest uppercase mt-6 mb-2">
+                  Později
+                </Text>
+                {later.map((entry) => (
+                  <UserRow
+                    key={entry.user.id}
+                    user={entry.user}
+                    subtitle={`Od ${withDay(entry.freeSince, now)} do ${withDay(entry.freeUntil, now)}`}
+                    badge={<GroupBadge via={entry.via} />}
+                    onPress={() => setProfileId(entry.user.id)}
+                  />
+                ))}
+              </FadeIn>
+            )}
           </Reveal>
         </ScrollView>
 
@@ -485,17 +567,51 @@ export default function Index() {
   );
 }
 
-type FreeState = { isFree: boolean; until: Date | null };
+/** `start` je naplánovaný začátek v budoucnu (task 0008); `null` = od teď / už běží. */
+type FreeState = { isFree: boolean; start: Date | null; until: Date | null };
 
-/** Volno, které na serveru opravdu ještě běží (ne jen dosud nevypršelé lokálně). */
+function statusFromMe(me: UserDto | null | undefined): FreeState {
+  if (me?.activeFreeTime) {
+    return { isFree: true, start: null, until: parseServerDate(me.activeFreeTime.freeUntil) };
+  }
+  if (me?.upcomingFreeTime) {
+    return {
+      isFree: true,
+      start: parseServerDate(me.upcomingFreeTime.freeSince),
+      until: parseServerDate(me.upcomingFreeTime.freeUntil),
+    };
+  }
+  return { isFree: false, start: null, until: null };
+}
+
+/**
+ * Volno, které na serveru opravdu ještě je - běžící nebo naplánované (ne jen
+ * dosud nevypršelé lokálně).
+ */
 function isActive(s: FreeState): boolean {
   return s.isFree && (s.until == null || s.until.getTime() > Date.now());
 }
 
+const sameTime = (a: Date | null, b: Date | null) =>
+  (a?.getTime() ?? null) === (b?.getTime() ?? null);
+
 function sameStatus(a: FreeState, b: FreeState): boolean {
   if (!a.isFree) return !isActive(b);
-  return isActive(b) && a.until?.getTime() === b.until?.getTime();
+  return isActive(b) && sameTime(a.until, b.until) && sameTime(a.start, b.start);
 }
+
+/**
+ * Jaký začátek poslat v `PUT`. Beze změny nic - backend si nechá původní a
+ * běžící volno neztratí, odkdy trvá. Naplánovaný začátek stažený na "teď"
+ * se posílá jako teď, aby ho backend hned spustil.
+ */
+function startChange(have: FreeState, want: FreeState): Date | undefined {
+  if (sameTime(have.start, want.start)) return undefined;
+  return want.start ?? new Date();
+}
+
+const withDay = (d: Date, now: Date) =>
+  formatTime(d) + (isTomorrow(d, now) ? " (zítra)" : "");
 
 function EmptyStateLink({
   label,

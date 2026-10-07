@@ -14,6 +14,13 @@ public class FreeTime
 
     public DateTime EndTime { get; set; }
 
+    /// <summary>
+    /// When connections were told "má teď volno" for this slot. Null means a
+    /// planned slot that hasn't started yet (or was pushed back into the future
+    /// again) - FreeTimeActivationService picks those up once StartTime passes.
+    /// </summary>
+    public DateTime? NotifiedAt { get; set; }
+
     // Navigation
     public User? User { get; set; }
 }

@@ -134,6 +134,10 @@ else
 builder.Services.AddSingleton<SemFre.Services.INotificationService, SemFre.Services.NotificationServiceDispatcher>();
 builder.Services.AddHostedService<SemFre.Background.NotificationBackgroundService>();
 
+// Planned free time (task 0008): notifies connections once a slot's StartTime passes.
+builder.Services.AddScoped<SemFre.Services.FreeTimeActivator>();
+builder.Services.AddHostedService<SemFre.Background.FreeTimeActivationService>();
+
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key missing");
 var issuer = builder.Configuration["Jwt:Issuer"];
@@ -227,12 +231,19 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(
-                  "https://thankful-forest-019ea4310.6.azurestaticapps.net",
-                  "https://volny.intstudio.cz",
-                  "http://localhost:8081")
-              .AllowAnyHeader()
-              .AllowAnyMethod());
+    {
+        // Lokální vývoj z jiného zařízení v síti (dev web na http://<IP>:8081)
+        // má origin podle IP, kterou nejde vyjmenovat předem - v Development
+        // se proto pustí jakýkoli origin. Produkce zůstává na seznamu.
+        if (builder.Environment.IsDevelopment())
+            policy.SetIsOriginAllowed(_ => true);
+        else
+            policy.WithOrigins(
+                "https://thankful-forest-019ea4310.6.azurestaticapps.net",
+                "https://volny.intstudio.cz",
+                "http://localhost:8081");
+        policy.AllowAnyHeader().AllowAnyMethod();
+    });
 });
 
 var app = builder.Build();

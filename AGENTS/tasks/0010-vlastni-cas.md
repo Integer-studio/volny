@@ -1,6 +1,6 @@
 # 0010 — Vlastní čas (manuální zadání mimo presety)
 
-- **Stav:** todo
+- **Stav:** done
 - **Priorita:** 3 (polish/nice-to-have)
 - **Datum vytvoření:** 2026-09-06
 
@@ -16,13 +16,13 @@ později.
 
 ## Kritéria splnění
 
-- [ ] Doplňková volba "vlastní čas na minuty" dostupná vedle presetů/
+- [x] Doplňková volba "vlastní čas na minuty" dostupná vedle presetů/
       15minutového kroku z nového UI ([0007](./0007-nove-zadavani-casu.md))
       — např. přepnutí z kroku 15 min na volný `DateTimePicker` (Expo)
       nebo rozšíření slideru na granularitu 1 minuta.
-- [ ] Datová vrstva nevyžaduje změnu — BE `DateTime` (UTC) podporuje
+- [x] Datová vrstva nevyžaduje změnu — BE `DateTime` (UTC) podporuje
       libovolnou přesnost už dnes (viz zjištění v [0007](./0007-nove-zadavani-casu.md)).
-- [ ] UI jasně odlišuje "rychlá volba/presety" od "přesný vlastní čas"
+- [x] UI jasně odlišuje "rychlá volba/presety" od "přesný vlastní čas"
       (např. samostatné tlačítko/přepínač), aby běžný uživatel nemusel
       řešit minuty, pokud nechce.
 
@@ -39,3 +39,11 @@ potřeba samostatný vstup (např. `DateTimePicker`), který snap obejde.
 Vzniklo jako součást dávky nových tasků 2026-09-06, rozvedeno v [0015](./0015-rozvedeni-novych-tasku.md).
 Úzce souvisí s [0011](./0011-snap-casu-na-preset.md) (přichycení vlastního
 času k nejbližšímu presetu) a [0009](./0009-user-presety.md).
+
+**Hotovo 2026-10-07** (spolu s [0008](./0008-scheduled-zacatek-volna.md)).
+Klepnutí na popisek s časem nad prstencem otevře `TimeEditSheet`: kolečka
+`TimeWheel` po 1 minutě, řádky **Od** (Teď / Později) a **Do**. Den se
+odvodí jako nejbližší výskyt (dnes/zítra), hlídá se 24 h a nejkratší volno
+15 min. Uložená hodnota obchází čtvrthodinový snap (`clampToWindow` místo
+`clampTarget` ve `FreeDial`), takže 22:31 zůstane 22:31. Na prstenci se
+dál snapuje jen při puštění handle.

@@ -41,7 +41,11 @@ const HEADER_H = 26;
  * výšku, samotný horní limit na předkovi ho neomezí a naroste na obsah. */
 const BOX_H = ROW_H * VISIBLE_ROWS + PEEK;
 
-export const PRESET_LIST_H = BOX_H + HEADER_H;
+/** Kolik ze seznamu musí být vidět nad ohybem: nadpis, jeden řádek a kus
+ * dalšího. Zbytek může na nízké obrazovce zajet pod hranu - prstenec má
+ * přednost (task 0024 dřív vtěsnával celý seznam a prstenec na webu v
+ * mobilu kvůli tomu spadl na minimum). */
+export const PRESET_PEEK_H = HEADER_H + ROW_H + PEEK;
 
 type Props = {
   presets: Preset[];
