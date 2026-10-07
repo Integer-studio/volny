@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Switch } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Copy from 'lucide-react-native/icons/copy';
 import Share2 from 'lucide-react-native/icons/share-2';
@@ -29,7 +29,12 @@ export default function GroupDetail() {
     cacheKey: `group:${id}`,
     revive: (raw) => {
       const g = raw as GroupDetailModel;
-      return { ...g, members: g.members.map(m => ({ ...m, joinedAt: new Date(m.joinedAt) })) };
+      return {
+        ...g,
+        // Cache z doby před taskem 0021 pole nemá; výchozí stav na BE je zapnuto.
+        sharesWithGroup: g.sharesWithGroup ?? true,
+        members: g.members.map(m => ({ ...m, joinedAt: new Date(m.joinedAt) })),
+      };
     },
   });
 
@@ -39,6 +44,8 @@ export default function GroupDetail() {
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [qrVisible, setQrVisible] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
+  // Optimistická hodnota přepínače sdílení; null = ber to, co přišlo z BE.
+  const [sharing, setSharing] = useState<boolean | null>(null);
 
   const nameField = useAutosaveField({
     initial: group.data?.name ?? '',
@@ -102,6 +109,19 @@ export default function GroupDetail() {
       show('Nepodařilo se vygenerovat nový odkaz.', 'error');
     } finally {
       setRegenerating(false);
+    }
+  };
+
+  const sharesWithGroup = sharing ?? data.sharesWithGroup;
+
+  const handleSharingChange = async (value: boolean) => {
+    setSharing(value);
+    try {
+      await api.setGroupSharing(id, value);
+      setReloadTick(t => t + 1);
+    } catch {
+      setSharing(!value);
+      show('Změna sdílení se nezdařila.', 'error');
     }
   };
 
@@ -175,6 +195,27 @@ export default function GroupDetail() {
           </Pressable>
         )}
       </View>
+
+      {/* Task 0021: jeden přepínač pro volno i kontakt, vzájemný - přes
+          skupinu se dva členové vidí jen když ho mají zapnutý oba. */}
+      <Text className="text-gray-400 text-xs font-bold tracking-widest mb-3">SDÍLENÍ</Text>
+      <View className="flex-row items-center justify-between mb-2">
+        <Text className="text-gray-800 font-medium flex-1 mr-3">Sdílet volno a kontakt se skupinou</Text>
+        <Switch
+          value={sharesWithGroup}
+          onValueChange={handleSharingChange}
+          trackColor={{ false: '#E5E7EB', true: '#EE6C4D' }}
+          thumbColor="#fff"
+          // Viz settings.tsx - barva zapnutého jezdce na react-native-web.
+          {...({ activeThumbColor: '#fff' } as object)}
+          accessibilityLabel="Sdílet volno a kontakt se skupinou"
+        />
+      </View>
+      <Text className="text-gray-400 text-xs mb-8">
+        {sharesWithGroup
+          ? 'Členové skupiny vidí, kdy máš volno, dostávají o tom upozornění a vidí tvůj telefon a Instagram, i když nejste přátelé. Funguje to vzájemně - ty vidíš totéž u členů, kteří sdílení mají zapnuté taky.'
+          : 'Členové skupiny nevidí tvoje volno ani kontakt a ty nevidíš jejich (pokud nejste přátelé). Ve skupině ale zůstáváš.'}
+      </Text>
 
       <Text className="text-gray-400 text-xs font-bold tracking-widest mb-3">
         ČLENOVÉ ({data.memberCount})

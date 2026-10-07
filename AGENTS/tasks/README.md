@@ -43,7 +43,6 @@ doby před zavedením priorit je uvedena orientačně.
 | 0011 | Přichycení (snap) času na nejbližší preset     | todo        | 1        | [0011-snap-casu-na-preset.md](./0011-snap-casu-na-preset.md)         |
 | 0012 | "Kde jsem" políčko (volný text)                | todo        | 3        | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md)               |
 | 0014 | Lepší always-on backend                        | todo        | 1        | [0014-always-on-backend.md](./0014-always-on-backend.md)             |
-| 0021 | Toggle ve skupině: sdílet volno a kontakt     | todo        | 2        | [0021-skupina-toggle-volno-a-kontakt.md](./0021-skupina-toggle-volno-a-kontakt.md) |
 
 ## Hotové úkoly
 
@@ -61,3 +60,4 @@ doby před zavedením priorit je uvedena orientačně.
 | 0018 | Haptika prstencového zadávání času                                | done | 2        | [0018-haptika-prstence.md](./0018-haptika-prstence.md)                               |
 | 0019 | Interaktivní onboarding po registraci                             | done | 1        | [0019-onboarding-po-registraci.md](./0019-onboarding-po-registraci.md)               |
 | 0020 | Mazání účtu                                                       | done | 1        | [0020-mazani-uctu.md](./0020-mazani-uctu.md)                                         |
+| 0021 | Toggle ve skupině: sdílet volno a kontakt                         | done | 2        | [0021-skupina-toggle-volno-a-kontakt.md](./0021-skupina-toggle-volno-a-kontakt.md)   |
