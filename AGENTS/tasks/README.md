@@ -51,6 +51,7 @@ doby před zavedením priorit je uvedena orientačně.
 | 0029 | Nastavení a oznámení: autosave a povolení      | todo        | 2        | [0029-nastaveni-a-oznameni-ux.md](./0029-nastaveni-a-oznameni-ux.md) |
 | 0030 | Potvrzení a busy stavy u destruktivních akcí   | todo        | 2        | [0030-potvrzeni-a-busy-stavy.md](./0030-potvrzeni-a-busy-stavy.md) |
 | 0031 | Přístupnost a texty                            | todo        | 3        | [0031-pristupnost-a-texty.md](./0031-pristupnost-a-texty.md) |
+| 0032 | Dark mode                                      | todo        | 3        | [0032-dark-mode.md](./0032-dark-mode.md) |
 
 ## Hotové úkoly
 

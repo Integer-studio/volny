@@ -44,3 +44,10 @@ naplánovaného volna musí po uložení zavolat
 `IRealtimeNotifier.FreeChangedAsync(userId)`, jinak se aktivace přátelům
 v otevřené appce projeví až fallback pollingem (5 min). Dnes
 `FreeTimesController.Create` pro budoucí start realtime signál neposílá.
+
+**Návrh UI (2026-10-07):** budoucí začátek by se mohl zadávat vizuálně
+druhým handlem na prstenci z [0007](./0007-nove-zadavani-casu.md). Dnes
+oblouk začíná pevně na `teď`. Na jeho začátek by přibyl handle, který jde
+odtáhnout dopředu, a oblouk by pak vedl od začátku do konce volna. Kód je
+v `apps/fe/components/TimeRing/index.tsx` a `scale.ts`. Pozor, že rozsah
+prstence je dnes max. 16 h, takže na limit 24 h dopředu nestačí.
