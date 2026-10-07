@@ -1,6 +1,6 @@
 # 0009 — User-based nastavení presetů (jméno, ikonka, přidávání/odebírání)
 
-- **Stav:** in progress
+- **Stav:** done
 - **Priorita:** 2 (důležité, ale nebrání releasu)
 - **Datum vytvoření:** 2026-09-06
 
@@ -65,8 +65,8 @@ Kód:
   scroll-snap samo (a po utichnutí se dorovná).
 
 Ověřeno na webu (Expo web + lokální BE): úprava, přidání, duplicitní čas,
-smazání a vrácení, reset, prázdný stav, presety na prstenci. **Zbývá
-ověřit na Androidu a iOS** (hlavně kolečka a haptiku).
+smazání a vrácení, reset, prázdný stav, presety na prstenci. Na Androidu
+a iOS ručně neověřeno - task uzavřen bez toho (2026-10-07).
 
 ## Poznámky
 
