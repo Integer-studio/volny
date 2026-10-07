@@ -40,6 +40,7 @@ doby před zavedením priorit je uvedena orientačně.
 | 0008 | Scheduled začátek volna (max. den dopředu)     | todo        | 2        | [0008-scheduled-zacatek-volna.md](./0008-scheduled-zacatek-volna.md) |
 | 0010 | Vlastní čas (manuální zadání)                  | todo        | 3        | [0010-vlastni-cas.md](./0010-vlastni-cas.md)                         |
 | 0012 | "Kde jsem" políčko (volný text)                | todo        | 3        | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md)               |
+| 0014 | Lepší always-on backend                        | todo        | 1        | [0014-always-on-backend.md](./0014-always-on-backend.md)             |
 | 0028 | Přihlášení a registrace: zpětná vazba a chyby  | todo        | 1        | [0028-prihlaseni-a-registrace-ux.md](./0028-prihlaseni-a-registrace-ux.md) |
 | 0029 | Nastavení a oznámení: autosave a povolení      | todo        | 2        | [0029-nastaveni-a-oznameni-ux.md](./0029-nastaveni-a-oznameni-ux.md) |
 | 0030 | Potvrzení a busy stavy u destruktivních akcí   | todo        | 2        | [0030-potvrzeni-a-busy-stavy.md](./0030-potvrzeni-a-busy-stavy.md) |
@@ -63,7 +64,7 @@ Doporučené pořadí: 0 → A → B → C (0014 paralelně) → D → E → F �
   "nikdo") a 0030 (potvrzení odebrání přítele, sheet pozvánky přítele)
   + labely ikonových tlačítek z 0031. Hlavně `app/search.tsx`,
   `ProfileSheet`, `FriendSuggestionsController`, `UsersController`.
-- **C. Studený backend:** 0014 (BE infra, samostatný PR) + login/boot část
+- **C. Studený backend:** 0014 (BE infra, samostatný PR — odloženo) + login/boot část
   0028 + zbytek 0026 (hlavní obrazovka, skupiny, pozvánky).
 - **D. Účet a nastavení:** formulář a session z 0028 + autosave z 0029 +
   sjednocené texty z 0031 (uživatelské jméno, "zabrané/obsazené",
@@ -100,5 +101,4 @@ Doporučené pořadí: 0 → A → B → C (0014 paralelně) → D → E → F �
 | 0025 | Souběh zápisů stavu volna a falešné chyby      | done | 1        | [0025-soubeh-zapisu-stavu-volna.md](./0025-soubeh-zapisu-stavu-volna.md) |
 | 0023 | Zpětná vazba při posílání žádostí o přátelství | done | 1        | [0023-feedback-zadosti-o-pratelstvi.md](./0023-feedback-zadosti-o-pratelstvi.md) |
 | 0027 | Toasty pod modaly, umístění toastu a banneru   | done | 2        | [0027-toasty-a-bannery.md](./0027-toasty-a-bannery.md) |
-| 0014 | Lepší always-on backend                        | done | 1        | [0014-always-on-backend.md](./0014-always-on-backend.md)             |
 | 0026 | Prázdné stavy místo načítání nebo chyby        | done | 1        | [0026-prazdne-stavy-vs-nacitani.md](./0026-prazdne-stavy-vs-nacitani.md) |
