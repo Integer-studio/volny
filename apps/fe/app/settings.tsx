@@ -27,30 +27,40 @@ function validatePassword(v: string): string | null {
 }
 
 export default function Settings() {
-  const { me, refreshMe, signOut, deleteAccount } = useAuth();
+  const { me, applyMe, signOut, deleteAccount } = useAuth();
   const { show } = useToast();
+  // Uložení doběhlé po zavření nastavení: pole už není vidět, takže toast.
+  const onDetachedError = (message: string) => show(message, 'error');
+  // `me` rovnou z odpovědi PUT /users/me - dřív se po uložení volal ještě
+  // refreshMe() a jeho selhání se hlásilo jako "Uložení se nezdařilo",
+  // přestože se uložilo.
+  const saveProfile = async (input: Parameters<typeof api.updateProfile>[0]) => {
+    const { user } = await api.updateProfile(input);
+    return user;
+  };
   const { goTo } = useTour();
   const lubomirMode = useLubomirMode();
 
   const nameField = useAutosaveField({
     initial: me?.name ?? '',
     validate: validateName,
-    save: async (value) => {
-      await api.updateProfile({ name: value });
-      await refreshMe();
-    },
+    save: (value) => saveProfile({ name: value }),
+    onSaved: applyMe,
+    onDetachedError,
     serverError: (e) => fieldError(e, 'name') ?? errorMessage(e, 'Uložení se nezdařilo.'),
   });
 
   const usernameField = useAutosaveField({
     initial: me?.username ?? '',
     validate: validateUsername,
-    save: async (value) => {
-      await api.updateProfile({ username: value });
-      await refreshMe();
-    },
+    save: (value) => saveProfile({ username: value }),
+    onSaved: applyMe,
+    onDetachedError,
+    // Přihlašovací jméno: žádné ukládání při psaní, napůl napsané jméno by
+    // se uložilo a uživatel by se jím pak musel přihlašovat.
+    debounceMs: null,
     serverError: (e) => {
-      if (e instanceof ApiError && e.status === 409) return errorMessage(e, 'Toto uživatelské jméno je již obsazené.');
+      if (e instanceof ApiError && e.status === 409) return 'Toto uživatelské jméno je už obsazené.';
       return fieldError(e, 'username') ?? errorMessage(e, 'Uložení se nezdařilo.');
     },
   });
@@ -58,20 +68,18 @@ export default function Settings() {
   const phoneField = useAutosaveField({
     initial: me?.phone ?? '',
     validate: validatePhone,
-    save: async (value) => {
-      await api.updateProfile({ phone: value });
-      await refreshMe();
-    },
+    save: (value) => saveProfile({ phone: value }),
+    onSaved: applyMe,
+    onDetachedError,
     serverError: (e) => fieldError(e, 'phone') ?? errorMessage(e, 'Uložení se nezdařilo.'),
   });
 
   const instagramField = useAutosaveField({
     initial: me?.instagram ?? '',
     validate: validateInstagram,
-    save: async (value) => {
-      await api.updateProfile({ instagram: value });
-      await refreshMe();
-    },
+    save: (value) => saveProfile({ instagram: value }),
+    onSaved: applyMe,
+    onDetachedError,
     serverError: (e) => fieldError(e, 'instagram') ?? errorMessage(e, 'Uložení se nezdařilo.'),
   });
 
@@ -158,6 +166,7 @@ export default function Settings() {
         onChangeText={nameField.onChangeText}
         onBlur={nameField.onBlur}
         autoCapitalize="words"
+        autoCorrect={false}
         autoComplete="name"
         error={nameField.error}
         state={nameField.state}
@@ -165,11 +174,15 @@ export default function Settings() {
       />
 
       <FormField
-        label="Handle"
+        label="Uživatelské jméno"
+        hint="Tímto jménem se přihlašuješ. Uloží se, až pole opustíš."
         value={usernameField.value}
         onChangeText={usernameField.onChangeText}
         onBlur={usernameField.onBlur}
+        onSubmitEditing={usernameField.onBlur}
+        returnKeyType="done"
         autoCapitalize="none"
+        autoCorrect={false}
         autoComplete="username"
         error={usernameField.error}
         state={usernameField.state}
@@ -200,6 +213,7 @@ export default function Settings() {
         onChangeText={(v) => instagramField.onChangeText(v.replace(/^@+/, ''))}
         onBlur={instagramField.onBlur}
         autoCapitalize="none"
+        autoCorrect={false}
         error={instagramField.error}
         state={instagramField.state}
         containerClassName="mb-8"

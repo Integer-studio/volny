@@ -33,12 +33,20 @@
 - [ ] Na nativu žádost o povolení až po vysvětlujícím kroku (ne přes intro).
 - [ ] Web: `requestPermission()` synchronně v click handleru. `default` ≠
       "zablokováno".
-- [ ] Jméno se ukládá až na blur / "Uložit", s poznámkou "Tímto jménem se
+- [x] Jméno se ukládá až na blur / "Uložit", s poznámkou "Tímto jménem se
       přihlašuješ".
-- [ ] Pending save se flushne při odchodu. `me` se aktualizuje z odpovědi
+- [x] Pending save se flushne při odchodu. `me` se aktualizuje z odpovědi
       `updateProfile`.
-- [ ] Sjednocené popisky a hlášky.
+- [x] Sjednocené popisky a hlášky.
 
 ## Poznámky
 
 Překrývá se s 0005 (iOS Safari web push).
+
+**2026-10-07 (skupina D):** Uživatelské jméno se ukládá jen na blur / Enter
+(`useAutosaveField` s `debounceMs: null`) s poznámkou "Tímto jménem se
+přihlašuješ". Rozepsaná změna se při odchodu z nastavení uloží a případnou
+chybu ohlásí toast. `me` se bere z odpovědi `PUT /users/me` (`applyMe`), bez
+`refreshMe`. Jméno a Instagram mají `autoCorrect={false}`. Popisek
+"Uživatelské jméno", hláška "je už obsazené" všude. Oznámení zbývají pro
+skupinu E.

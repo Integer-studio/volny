@@ -50,3 +50,9 @@ Zbytek patří do skupin B, D a F.
 hledání, QR a obnova odkazu ve skupině, zavření v `add-friend`,
 `BackButton`, oko u hesla, přepínač režimu v sign-in a scrim
 `BottomSheet`u. Sjednocený text je "Nový odkaz vygenerován".
+
+**2026-10-07 (skupina D):** `FormField` dává inputu `accessibilityLabel` z
+popisku a chybu do `accessibilityHint` a live regionu, umí `hint` a `ref`.
+`BootSplash` používá `COLD_START_MESSAGE`. Texty "Handle"/"přezdívka" →
+"uživatelské jméno", "zabrané" → "obsazené". Zbývá skupina F: plurál
+"členů" v `join/[code].tsx` a Kopírovat/Sdílet v QR sheetu skupiny.

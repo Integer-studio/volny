@@ -411,7 +411,7 @@ export default function SearchScreen() {
               )}
             </View>
             {trimmed.length < MIN_QUERY ? (
-              <Text className="text-gray-400 text-sm mt-1">Napiš aspoň {MIN_QUERY} znaky jména nebo přezdívky.</Text>
+              <Text className="text-gray-400 text-sm mt-1">Napiš aspoň {MIN_QUERY} znaky jména nebo uživatelského jména.</Text>
             ) : search.error && !searchBusy ? (
               <Pressable onPress={search.reload} accessibilityRole="button" className="bg-red-50 rounded-xl px-3 py-2">
                 <Text className="text-red-500 text-sm">Hledání se nezdařilo. Zkusit znovu</Text>

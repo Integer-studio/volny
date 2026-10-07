@@ -81,6 +81,11 @@ DTO (důležité schémata)
 - Success: `201 Created` -> `UserDto` (bez hesla)
 - Errors: `409` pokud uživatelské jméno existuje, `400` validace
 
+### GET /api/auth/username-available?username=...
+- Auth: none, rate limit 60 req/min/IP
+- Success: `200 OK` -> `{ "available": true }` (porovnání bez ohledu na velikost písmen, jako u registrace)
+- Errors: `400` prázdné jméno, `429` překročený limit
+
 ### POST /api/auth/login
 - Auth: none
 - Body:

@@ -1,11 +1,11 @@
 import "../global.css";
 import "../lib/nativewind-animated";
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
-import { Stack } from "expo-router";
+import { Stack, router, usePathname } from "expo-router";
 import { configureNotificationHandler } from "../lib/push";
 import { AuthProvider, useAuth } from "../lib/auth-context";
-import { ToastProvider } from "../components/Toast";
+import { ToastProvider, useToast } from "../components/Toast";
 import BootSplash from "../components/BootSplash";
 import TopBanners from "../components/TopBanners";
 import PushGate from "../components/PushGate";
@@ -35,8 +35,45 @@ warmUp();
 // guaranteed fallback for that case.
 export const unstable_settings = { anchor: 'index' };
 
+/**
+ * Hláška, když appka uživatele odhlásila sama (vypršelá session, smazaný
+ * účet), a po vypršení návrat na obrazovku, kde byl, jakmile se znovu
+ * přihlásí. Dřív se jen potichu ukázal login a aktuální route se ztratila.
+ */
+function useSignOutNotice() {
+  const { status, signOutReason, clearSignOutReason } = useAuth();
+  const { show } = useToast();
+  const pathname = usePathname();
+  const lastSignedInPath = useRef<string | null>(null);
+  const returnTo = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (status === 'signedIn') lastSignedInPath.current = pathname;
+  }, [status, pathname]);
+
+  useEffect(() => {
+    if (!signOutReason) return;
+    if (signOutReason === 'expired') {
+      show('Přihlášení vypršelo, přihlas se prosím znovu.', 'error');
+      returnTo.current = lastSignedInPath.current;
+    } else {
+      show('Účet byl smazán.');
+      returnTo.current = null;
+    }
+    clearSignOutReason();
+  }, [signOutReason, clearSignOutReason, show]);
+
+  useEffect(() => {
+    if (status !== 'signedIn' || !returnTo.current) return;
+    const target = returnTo.current;
+    returnTo.current = null;
+    if (target !== '/' && target !== '/sign-in') router.replace(target as never);
+  }, [status]);
+}
+
 function Navigation() {
   const { status, bootFailed, retryBoot, signOut } = useAuth();
+  useSignOutNotice();
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {

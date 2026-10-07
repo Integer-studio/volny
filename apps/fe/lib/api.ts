@@ -395,6 +395,20 @@ export const api = {
     }
   },
 
+  /**
+   * Anonymní kontrola při registraci. Dřív se tu volalo hledání uživatelů,
+   * které vyžaduje přihlášení: 401 při každém psaní spustilo refresh a
+   * logout a chyba se spolkla, takže kontrola nikdy nefungovala.
+   */
+  async isUsernameAvailable(username: string): Promise<boolean> {
+    const res = await request(`/auth/username-available?username=${encodeURIComponent(username)}`, {
+      anonymous: true,
+      allowUnauthorized: true,
+      noRetry: true,
+    });
+    return res.available === true;
+  },
+
   /** Jednorázový kód pro přenos přihlášení do aplikace na ploše iOS - viz lib/handoff.ts. */
   async createHandoff(): Promise<string> {
     const res = await request('/auth/handoff', { method: 'POST', noRetry: true });

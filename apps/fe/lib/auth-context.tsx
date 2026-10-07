@@ -7,6 +7,8 @@ import { writeTourStep } from './tour';
 import { clearHandoffCookie, pendingHandoffCode } from './handoff';
 
 export type AuthStatus = 'loading' | 'signedOut' | 'signedIn';
+/** Proč appka uživatele odhlásila sama - pro hlášku na přihlašovací obrazovce. */
+export type SignOutReason = 'expired' | 'deleted';
 
 type AuthValue = {
   status: AuthStatus;
@@ -38,6 +40,11 @@ type AuthValue = {
   // Throws (and stays signed in) when the server rejects it, e.g. wrong password.
   deleteAccount: (password: string) => Promise<void>;
   refreshMe: () => Promise<void>;
+  /** Převezme `me` z odpovědi serveru (např. PUT /users/me) bez dalšího GET. */
+  applyMe: (user: UserDto) => void;
+  /** Nastaví se při vypršení session / smazání účtu, UI ho po zobrazení vyčistí. */
+  signOutReason: SignOutReason | null;
+  clearSignOutReason: () => void;
 };
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -57,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [verified, setVerified] = useState(false);
   const [offline, setOffline] = useState(false);
   const [bootFailed, setBootFailed] = useState(false);
+  const [signOutReason, setSignOutReason] = useState<SignOutReason | null>(null);
   const alive = useRef(true);
   const userIdRef = useRef<string | null>(null);
   const backgroundTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,7 +93,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMe(null);
     setVerified(false);
     setOffline(false);
-    setStatus('signedOut');
+    // Jen z přihlášeného stavu - 401 během bootu (neplatný token) není
+    // "vypršení", uživatel ještě nic neviděl.
+    setStatus(prev => {
+      if (prev === 'signedIn') setSignOutReason('expired');
+      return 'signedOut';
+    });
   }, []);
 
   const verifyInBackground = useCallback(() => {
@@ -254,6 +267,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setMe(user);
       setVerified(true);
       setOffline(false);
+      setSignOutReason(null);
       setStatus('signedIn');
       cacheMe(user);
     },
@@ -297,6 +311,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // The server cascade already removed devices and refresh tokens, so
       // only local state is left - no unregisterPushToken / logout calls.
       if (backgroundTimer.current) clearTimeout(backgroundTimer.current);
+      setSignOutReason('deleted');
       setStatus('signedOut');
       setMe(null);
       setVerified(false);
@@ -311,6 +326,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setOffline(false);
       cacheMe(user);
     },
+    applyMe: (user) => {
+      setMe(user);
+      cacheMe(user);
+    },
+    signOutReason,
+    clearSignOutReason: () => setSignOutReason(null),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

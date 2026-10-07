@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SemFre.Data;
 using SemFre.Dtos;
@@ -28,6 +29,21 @@ public class AuthController : ControllerBase
         _tokenService = tokenService;
         _refreshTokenService = refreshTokenService;
         _access = access;
+    }
+
+    /// <summary>
+    /// Anonymní kontrola při psaní v registraci. Stejné porovnání jako
+    /// Register (bez ohledu na velikost písmen), takže "volné" tu znamená, že
+    /// registrace neskončí 409 - až na souběh s jinou registrací.
+    /// </summary>
+    [HttpGet("username-available")]
+    [EnableRateLimiting("UsernameCheck")]
+    public async Task<IActionResult> UsernameAvailable([FromQuery] string? username)
+    {
+        var trimmed = username?.Trim();
+        if (string.IsNullOrEmpty(trimmed)) return BadRequest(new { message = "Username is required" });
+        var taken = await _db.Users.AnyAsync(u => EF.Functions.Collate(u.Username, "NOCASE") == trimmed);
+        return Ok(new { available = !taken });
     }
 
     [HttpPost("register")]

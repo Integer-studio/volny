@@ -211,6 +211,17 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 20,
                 QueueLimit = 0,
             }));
+    // Anonymní kontrola volného jména při registraci - FE volá s debounce,
+    // takže 60/min/IP je pro psaní dost a hromadné zjišťování jmen brzdí.
+    options.AddPolicy("UsernameCheck", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 60,
+                QueueLimit = 0,
+            }));
 });
 
 builder.Services.AddCors(options =>

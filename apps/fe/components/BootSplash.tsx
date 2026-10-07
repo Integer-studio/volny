@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import Button from './Button';
+import { COLD_START_MESSAGE } from '../hooks/useSlowActionNotice';
 
 type Props = {
   visible: boolean;
@@ -61,7 +62,7 @@ export default function BootSplash({ visible, failed = false, onRetry, onSignOut
         <>
           {stage !== 'none' && <ActivityIndicator size="large" color="#EE6C4D" />}
           {stage === 'slow' && (
-            <Text className="text-gray-400 text-sm mt-4">Server se probouzí, chvilku to potrvá…</Text>
+            <Text className="text-gray-400 text-sm mt-4">{COLD_START_MESSAGE}</Text>
           )}
         </>
       )}

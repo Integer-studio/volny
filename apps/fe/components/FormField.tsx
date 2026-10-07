@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { forwardRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, TextInput, TextInputProps, View } from 'react-native';
 import Check from 'lucide-react-native/icons/check';
 import Eye from 'lucide-react-native/icons/eye';
@@ -14,6 +14,8 @@ type FormFieldProps = TextInputProps & {
   state?: FieldState;
   /** Fixed, non-editable text rendered inside the input's left edge (e.g. "@" for a handle field the user can't type/delete themselves). */
   prefix?: string;
+  /** Šedá poznámka pod polem (např. "Tímto jménem se přihlašuješ."). Chyba ji nahradí. */
+  hint?: string;
 };
 
 // Browser password managers (Chrome, Bitwarden, 1Password, ...) inject their
@@ -25,7 +27,10 @@ type FormFieldProps = TextInputProps & {
 // own reveal-password affordance instead.
 const showRevealToggle = Platform.OS !== 'web';
 
-export default function FormField({ label, error, containerClassName, state, prefix, secureTextEntry, ...inputProps }: FormFieldProps) {
+const FormField = forwardRef<TextInput, FormFieldProps>(function FormField(
+  { label, error, containerClassName, state, prefix, hint, secureTextEntry, ...inputProps },
+  ref,
+) {
   const [visible, setVisible] = useState(false);
   const isPassword = !!secureTextEntry;
   const showToggle = isPassword && showRevealToggle;
@@ -44,6 +49,12 @@ export default function FormField({ label, error, containerClassName, state, pre
           </Text>
         )}
         <TextInput
+          ref={ref}
+          // Popisek nad polem není s inputem nijak svázaný - čtečka by
+          // jinak přečetla jen "textové pole". Chyba jde do hintu, ať se
+          // ozve i při návratu na pole.
+          accessibilityLabel={label}
+          accessibilityHint={error ?? hint}
           className={`bg-white px-4 py-3 rounded-xl border text-base ${prefix ? 'pl-9' : ''} ${(showToggle || showStateIndicator) ? 'pr-11' : ''} ${error ? 'border-red-400' : 'border-gray-200'}`}
           secureTextEntry={isPassword && !visible}
           {...inputProps}
@@ -66,7 +77,19 @@ export default function FormField({ label, error, containerClassName, state, pre
           </View>
         )}
       </View>
-      {error ? <Text className="text-red-500 text-sm mt-1 ml-1">{error}</Text> : null}
+      {error ? (
+        <Text
+          className="text-red-500 text-sm mt-1 ml-1"
+          accessibilityLiveRegion="polite"
+          {...(Platform.OS === 'web' ? { role: 'alert' as const } : {})}
+        >
+          {error}
+        </Text>
+      ) : hint ? (
+        <Text className="text-gray-400 text-sm mt-1 ml-1">{hint}</Text>
+      ) : null}
     </View>
   );
-}
+});
+
+export default FormField;

@@ -1,5 +1,14 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, ActivityIndicator } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TextInput,
+} from "react-native";
 import { api, ApiError, isServerUnavailable, RegisteredButLoginFailedError } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useToast } from "../components/Toast";
@@ -23,6 +32,8 @@ export default function SignIn() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const usernameRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
   // Studený backend: po 4 s toast "server se probouzí", ať tlačítko
   // se spinnerem nevypadá jako zaseknuté.
   useSlowActionNotice(loading);
@@ -32,16 +43,23 @@ export default function SignIn() {
       setUsernameTaken(false);
       return;
     }
+    let cancelled = false;
     const debounce = setTimeout(async () => {
-      const users = await api.searchUsers(username).catch(() => []);
-      setUsernameTaken(
-        users.some((u) => u.username.toLowerCase() === username.toLowerCase()),
-      );
+      // Chyba kontroly (server spí, rate limit) = nic nehlásit, rozhodne
+      // až registrace sama (409).
+      const available = await api
+        .isUsernameAvailable(username.trim())
+        .catch(() => true);
+      if (!cancelled) setUsernameTaken(!available);
     }, 500);
-    return () => clearTimeout(debounce);
+    return () => {
+      cancelled = true;
+      clearTimeout(debounce);
+    };
   }, [username, isLogin]);
 
   const handleSubmit = async () => {
+    if (loading) return; // Enter během běžícího přihlášení
     setNameError(null);
     setUsernameError(null);
     setPasswordError(null);
@@ -58,7 +76,7 @@ export default function SignIn() {
       return;
     }
     if (!isLogin && usernameTaken) {
-      setUsernameError("Toto uživatelské jméno je již zabrané.");
+      setUsernameError("Toto uživatelské jméno je už obsazené.");
       return;
     }
 
@@ -73,7 +91,7 @@ export default function SignIn() {
     } catch (e) {
       if (e instanceof RegisteredButLoginFailedError) {
         // Účet existuje - další "Zaregistrovat" by skončil 409 "jméno je
-        // zabrané" na vlastní účet. Přepnout na přihlášení s vyplněnými poli.
+        // obsazené" na vlastní účet. Přepnout na přihlášení s vyplněnými poli.
         setIsLogin(true);
         show("Účet je vytvořený, přihlas se.", "success");
       } else if (isServerUnavailable(e)) {
@@ -81,7 +99,7 @@ export default function SignIn() {
         show("Server teď neodpovídá. Zkus to prosím za chvíli znovu.", "error");
       } else if (e instanceof ApiError && e.status === 409) {
         setUsernameError(
-          "Toto uživatelské jméno je již zabrané. Zvol si prosím jiné.",
+          "Toto uživatelské jméno je už obsazené. Zvol si prosím jiné.",
         );
       } else if (e instanceof ApiError && e.status === 401) {
         show("Nesprávné jméno nebo heslo.", "error");
@@ -107,83 +125,106 @@ export default function SignIn() {
   };
 
   return (
-    <View className="flex-1 bg-[#FCFBF8] justify-center px-8">
-      <Text className="text-4xl font-bold text-[#EE6C4D] mb-2">
-        {isLogin ? "Vítej zpět" : "Nová registrace"}
-      </Text>
-      <Text className="text-gray-500 mb-8">
-        {isLogin
-          ? "Přihlas se ke svému účtu."
-          : "Vytvoř si nový účet pro Volný."}
-      </Text>
-
-      {!isLogin && (
-        <FormField
-          label="Celé jméno (zobrazované)"
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-          autoComplete="name"
-          textContentType="name"
-          error={nameError}
-        />
-      )}
-
-      <FormField
-        label="Uživatelské jméno"
-        value={username}
-        onChangeText={setUsername}
-        autoCapitalize="none"
-        autoComplete="username"
-        textContentType="username"
-        error={
-          !isLogin && usernameTaken
-            ? "Uživatelské jméno je zabrané."
-            : usernameError
-        }
-      />
-
-      <FormField
-        label="Heslo"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoComplete={isLogin ? "current-password" : "new-password"}
-        textContentType={isLogin ? "password" : "newPassword"}
-        error={passwordError}
-      />
-
-      <Pressable
-        onPress={handleSubmit}
-        disabled={loading}
-        className={`bg-[#EE6C4D] py-4 rounded-xl items-center shadow-lg shadow-[#EE6C4D]/30 active:opacity-80 mt-2 ${loading ? "opacity-60" : ""}`}
+    // Na malém telefonu by klávesnice překryla "Zaregistrovat" - formulář
+    // se posouvá a odsouvá nad ni.
+    <KeyboardAvoidingView
+      className="flex-1 bg-[#FCFBF8]"
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+        contentContainerClassName="px-8 py-8"
+        keyboardShouldPersistTaps="handled"
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text className="text-white font-bold text-lg">
-            {isLogin ? "Přihlásit se" : "Zaregistrovat"}
-          </Text>
-        )}
-      </Pressable>
-
-      <Pressable
-        onPress={() => {
-          setIsLogin(!isLogin);
-          setNameError(null);
-          setUsernameError(null);
-          setPasswordError(null);
-        }}
-        accessibilityRole="button"
-        className="mt-6 items-center p-2"
-      >
-        <Text className="text-gray-500">
-          {isLogin ? "Nemáš účet? " : "Už máš účet? "}
-          <Text className="text-[#EE6C4D] font-bold">
-            {isLogin ? "Zaregistruj se" : "Přihlas se"}
-          </Text>
+        <Text className="text-4xl font-bold text-[#EE6C4D] mb-2">
+          {isLogin ? "Vítej zpět" : "Nová registrace"}
         </Text>
-      </Pressable>
-    </View>
+        <Text className="text-gray-500 mb-8">
+          {isLogin
+            ? "Přihlas se ke svému účtu."
+            : "Vytvoř si nový účet pro Volný."}
+        </Text>
+
+        {!isLogin && (
+          <FormField
+            label="Celé jméno (zobrazované)"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            autoComplete="name"
+            textContentType="name"
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={() => usernameRef.current?.focus()}
+            error={nameError}
+          />
+        )}
+
+        <FormField
+          ref={usernameRef}
+          label="Uživatelské jméno"
+          hint={isLogin ? undefined : "Tímto jménem se budeš přihlašovat."}
+          value={username}
+          onChangeText={setUsername}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="next"
+          submitBehavior="submit"
+          onSubmitEditing={() => passwordRef.current?.focus()}
+          autoComplete="username"
+          textContentType="username"
+          error={
+            !isLogin && usernameTaken
+              ? "Toto uživatelské jméno je už obsazené."
+              : usernameError
+          }
+        />
+
+        <FormField
+          ref={passwordRef}
+          label="Heslo"
+          returnKeyType="go"
+          onSubmitEditing={handleSubmit}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoComplete={isLogin ? "current-password" : "new-password"}
+          textContentType={isLogin ? "password" : "newPassword"}
+          error={passwordError}
+        />
+
+        <Pressable
+          onPress={handleSubmit}
+          disabled={loading}
+          className={`bg-[#EE6C4D] py-4 rounded-xl items-center shadow-lg shadow-[#EE6C4D]/30 active:opacity-80 mt-2 ${loading ? "opacity-60" : ""}`}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white font-bold text-lg">
+              {isLogin ? "Přihlásit se" : "Zaregistrovat"}
+            </Text>
+          )}
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            setIsLogin(!isLogin);
+            setNameError(null);
+            setUsernameError(null);
+            setPasswordError(null);
+          }}
+          accessibilityRole="button"
+          className="mt-6 items-center p-2"
+        >
+          <Text className="text-gray-500">
+            {isLogin ? "Nemáš účet? " : "Už máš účet? "}
+            <Text className="text-[#EE6C4D] font-bold">
+              {isLogin ? "Zaregistruj se" : "Přihlas se"}
+            </Text>
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

@@ -1,6 +1,6 @@
 # 0028 — Přihlášení a registrace: zpětná vazba a chyby
 
-- **Stav:** todo
+- **Stav:** done
 - **Priorita:** 1
 - **Datum vytvoření:** 2026-10-07
 
@@ -28,17 +28,17 @@
 
 ## Kritéria splnění
 
-- [ ] Anonymní `GET /auth/username-available` (nebo pre-check zrušit).
+- [x] Anonymní `GET /auth/username-available` (nebo pre-check zrušit).
       Žádný logout při psaní.
 - [x] Login: `useSlowActionNotice`, retry (`idempotent: true`), srozumitelná
       hláška pro 502/503/504/timeout.
 - [x] Boot: stav "Server neodpovídá · Zkusit znovu" místo přepnutí na login.
       Login jen po skutečném 401.
-- [ ] Toast "Přihlášení vypršelo" (ideálně i návrat na původní route).
+- [x] Toast "Přihlášení vypršelo" (ideálně i návrat na původní route).
 - [x] Register OK + login fail → přepnout na přihlášení s vyplněnými poli a
       hláškou "Účet je vytvořený, přihlas se".
-- [ ] Klávesnice a Enter fungují.
-- [ ] Toast po smazání účtu.
+- [x] Klávesnice a Enter fungují.
+- [x] Toast po smazání účtu.
 
 ## Poznámky
 
@@ -52,3 +52,10 @@ nekončí na loginu, ale v `BootSplash` se "Server neodpovídá · Zkusit znovu"
 login fail přepne na přihlášení s vyplněnými poli a hláškou. Zbývá skupina D:
 `username-available`, toast při vypršení session, klávesnice/Enter, toast
 po smazání účtu.
+
+**2026-10-07 (skupina D):** Nový anonymní `GET /api/auth/username-available`
+(rate limit 60/min/IP), registrace ho volá s debouncem místo hledání. Při
+vypršení session i po smazání účtu se ukáže toast (`useSignOutNotice` v
+`app/_layout.tsx`). Po vypršení se appka po novém přihlášení vrátí na
+původní obrazovku. Formulář je v `KeyboardAvoidingView` + `ScrollView` a
+Enter přeskakuje mezi poli a u hesla odešle.

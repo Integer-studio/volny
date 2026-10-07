@@ -9,8 +9,15 @@ type Options<T> = {
   validate?: (value: string) => string | null;
   /** Server-side error for the value just saved (e.g. from ApiError.fieldErrors). */
   serverError?: (e: unknown) => string | null;
-  debounceMs?: number;
+  /** null = žádné ukládání při psaní, jen na blur / submit (např. přihlašovací jméno). */
+  debounceMs?: number | null;
   onSaved?: (result: T) => void;
+  /**
+   * Chyba uložení, které doběhlo až po odchodu z obrazovky (pending save se
+   * při unmountu flushne). Pole už není vidět, takže ji musí ohlásit
+   * volající, typicky toastem.
+   */
+  onDetachedError?: (message: string) => void;
 };
 
 /**
@@ -20,7 +27,7 @@ type Options<T> = {
  * out-of-order responses the same way useAsyncData is (a run id ref).
  */
 export function useAutosaveField<T>(opts: Options<T>) {
-  const { initial, save, validate, serverError, debounceMs = 800, onSaved } = opts;
+  const { initial, save, validate, serverError, debounceMs = 800, onSaved, onDetachedError } = opts;
   const [value, setValue] = useState(initial);
   const [state, setState] = useState<FieldState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +43,9 @@ export function useAutosaveField<T>(opts: Options<T>) {
     return () => { alive.current = false; };
   }, []);
 
+  // Nejnovější hodnoty pro flush při unmountu (cleanup vidí jen první render).
+  const latest = useRef({ value, state, commit: (_raw: string, _detached?: boolean) => {} });
+
   // If the initial value changes from outside (e.g. `me` arrives late) and
   // the user hasn't diverged from it yet, keep the field in sync.
   useEffect(() => {
@@ -46,18 +56,29 @@ export function useAutosaveField<T>(opts: Options<T>) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
 
-  const commit = (raw: string) => {
+  const commit = (raw: string, detached = false) => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     const trimmed = raw.trim();
     if (trimmed === lastSaved.current) {
+      if (detached) return;
       setState('idle');
       setError(null);
       return;
     }
     const localErr = validate?.(trimmed) ?? null;
     if (localErr) {
+      if (detached) {
+        onDetachedError?.(localErr);
+        return;
+      }
       setState('error');
       setError(localErr);
+      return;
+    }
+    if (detached) {
+      save(trimmed)
+        .then(result => onSaved?.(result))
+        .catch(e => onDetachedError?.(serverError?.(e) ?? 'Uložení se nezdařilo.'));
       return;
     }
 
@@ -66,7 +87,11 @@ export function useAutosaveField<T>(opts: Options<T>) {
     setError(null);
     save(trimmed)
       .then(result => {
-        if (!alive.current || myRunId !== runId.current) return;
+        if (myRunId !== runId.current) return;
+        if (!alive.current) {
+          onSaved?.(result);
+          return;
+        }
         lastSaved.current = trimmed;
         setState('saved');
         if (savedTimer.current) clearTimeout(savedTimer.current);
@@ -76,7 +101,12 @@ export function useAutosaveField<T>(opts: Options<T>) {
         onSaved?.(result);
       })
       .catch(e => {
-        if (!alive.current || myRunId !== runId.current) return;
+        if (myRunId !== runId.current) return;
+        if (!alive.current) {
+          // Uložení rozběhnuté před odchodem z obrazovky.
+          onDetachedError?.(serverError?.(e) ?? 'Uložení se nezdařilo.');
+          return;
+        }
         setState('error');
         setError(serverError?.(e) ?? 'Uložení se nezdařilo.');
       });
@@ -86,10 +116,19 @@ export function useAutosaveField<T>(opts: Options<T>) {
     setValue(raw);
     setState('dirty');
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => commit(raw), debounceMs);
+    if (debounceMs != null) debounceTimer.current = setTimeout(() => commit(raw), debounceMs);
   };
 
   const onBlur = () => commit(value);
+
+  latest.current = { value, state, commit };
+
+  // Odchod z obrazovky s rozepsanou změnou (debounce ještě neběžel, nebo
+  // pole ukládá jen na blur): uložit ji, místo aby se tiše zahodila.
+  useEffect(() => () => {
+    const { value: v, state: st, commit: c } = latest.current;
+    if (st === 'dirty') c(v, true);
+  }, []);
 
   return { value, onChangeText, onBlur, state, error };
 }
