@@ -206,7 +206,9 @@ export default function PresetList({
                 accessibilityLabel={
                   editing
                     ? `Upravit preset ${p.label}, ${wallTime(p.minute)}`
-                    : `Volný do ${p.label.toLowerCase()}, ${formatTime(p.date)}`
+                    : // Čas místo skloňovaného názvu: názvy si uživatel
+                      // píše sám a "do ${label}" by dalo "do ráno".
+                      `Volný do ${formatTime(p.date)}, ${p.label}`
                 }
                 style={{ height: ROW_H }}
                 // Bez vodorovného odsazení, aby ikonka začínala tam, kde

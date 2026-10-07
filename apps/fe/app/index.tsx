@@ -64,10 +64,14 @@ export default function Index() {
   const [freeUntil, setFreeUntil] = useState<Date | null>(
     me?.activeFreeTime ? parseServerDate(me.activeFreeTime.freeUntil) : null,
   );
-  // Guards applyStatus against out-of-order responses now that it's
-  // fire-and-forget (no pending flag to serialize taps on) - an older
-  // request's rollback/success must never clobber a newer one's result.
-  const statusRunId = useRef(0);
+  // Zápis stavu je optimistický a tapy se neblokují, takže se requesty
+  // neposílají jeden za každé ťuknutí. Drží se poslední potvrzený stav ze
+  // serveru a poslední chtěný stav z UI a syncStatus() mezi nimi po jednom
+  // requestu dorovnává (viz task 0025). Dvojťuk nebo tažení prstence během
+  // POSTu tak nikdy nepošle souběžné requesty ani druhé volno.
+  const confirmedStatus = useRef<FreeState>({ isFree, until: freeUntil });
+  const desiredStatus = useRef<FreeState | null>(null);
+  const syncing = useRef(false);
   // Drives FreeButton's gray -> orange crossfade; owned here so its initial
   // value follows the hydrated isFree.
   const fade = useRef(new Animated.Value(isFree ? 1 : 0)).current;
@@ -94,13 +98,16 @@ export default function Index() {
   }, [tourStep]);
 
   useEffect(() => {
-    if (me?.activeFreeTime) {
-      setIsFree(true);
-      setFreeUntil(parseServerDate(me.activeFreeTime.freeUntil));
-    } else if (me) {
-      setIsFree(false);
-      setFreeUntil(null);
-    }
+    if (!me) return;
+    const server: FreeState = me.activeFreeTime
+      ? { isFree: true, until: parseServerDate(me.activeFreeTime.freeUntil) }
+      : { isFree: false, until: null };
+    // Během dorovnávání je server jen mezistav - UI drží chtěný stav a
+    // syncStatus si potvrzený stav vede sám.
+    if (syncing.current) return;
+    confirmedStatus.current = server;
+    setIsFree(server.isFree);
+    setFreeUntil(server.until);
   }, [me?.activeFreeTime?.freeUntil]);
 
   // Local expiry so the header doesn't keep claiming "Jsem Volný" past the
@@ -123,7 +130,14 @@ export default function Index() {
   const [pendingCount, setPendingCount] = useState(0);
   const [profileId, setProfileId] = useState<string | null>(null);
   // Zbývá pod hranou obrazovky ještě obsah? Řídí odstín u dolní hrany.
+  // Počítá se i z rozměrů, ne jen při rolování - na malé obrazovce je seznam
+  // pod ohybem hned od začátku (task 0024).
   const [canScrollMore, setCanScrollMore] = useState(false);
+  const scrollMetrics = useRef({ offset: 0, viewport: 0, content: 0 });
+  const updateCanScrollMore = (patch: Partial<typeof scrollMetrics.current>) => {
+    const m = Object.assign(scrollMetrics.current, patch);
+    setCanScrollMore(m.viewport > 0 && m.offset + m.viewport < m.content - 2);
+  };
   const now = useNow();
 
   // No spinner at all if this resolves in under 600ms (useDeferredPending,
@@ -196,45 +210,69 @@ export default function Index() {
   // flips true and the dial's button disables further taps and shows its overlay,
   // and past 4s useSlowActionNotice puts up the shared cold-start toast - a
   // cold container no longer leaves the button looking "done" with no
-  // indication the write hasn't actually landed yet. Rollback still happens
-  // on failure, but only for the most recent tap: runId makes an older
-  // (possibly slower) response's rollback/success/pending-clear a no-op once
-  // a newer one has already landed.
+  // indication the write hasn't actually landed yet.
   const [statusPending, setStatusPending] = useState(false);
   const showLoading = useDeferredPending(statusPending, 1000);
   useSlowActionNotice(statusPending);
 
   /**
-   * `mode: "extend"` posouvá konec už běžícího volna, takže musí jít přes
-   * `PUT /freetimes/{id}`, ne přes `POST` - ten na backendu vždy zakládá nový
-   * záznam, čímž by vzniklo druhé překrývající se volno a přátelům by
-   * podruhé odešla notifikace "má teď volno".
+   * Dorovná server na `desiredStatus`, jeden request po druhém. Request se
+   * volí podle potvrzeného stavu v tu chvíli, ne podle toho, co uživatel
+   * zrovna zmáčkl:
+   * - konec volna → `DELETE`;
+   * - volno, když žádné neběží → `POST /freetimes` (nové volno, notifikace);
+   * - jiný konec běžícího volna → `PUT` přes `extendMyStatus`. `POST` by na
+   *   backendu založil druhé překrývající se volno a přátelům by podruhé
+   *   odešla notifikace "má teď volno".
+   *
+   * Zapnutí a hned vypnutí během prvního requestu tedy pošle POST a DELETE
+   * za sebou, nikdy souběžně.
    */
-  const applyStatus = (
-    nextFree: boolean,
-    until: Date | null,
-    mode: "set" | "extend" = "set",
-  ) => {
-    const prevFree = isFree;
-    const prevUntil = freeUntil;
-    const runId = ++statusRunId.current;
+  const syncStatus = async () => {
+    if (syncing.current) return;
+    syncing.current = true;
+    setStatusPending(true);
+    let failure: unknown = null;
+    while (
+      desiredStatus.current &&
+      !sameStatus(desiredStatus.current, confirmedStatus.current)
+    ) {
+      const want = desiredStatus.current;
+      const have = confirmedStatus.current;
+      try {
+        if (!want.isFree) await api.setMyStatus(false);
+        else if (!isActive(have)) await api.setMyStatus(true, want.until ?? undefined);
+        else if (want.until) await api.extendMyStatus(want.until);
+        confirmedStatus.current = want;
+      } catch (e) {
+        // Mezitím přišla novější volba - zkusí se rovnou ta.
+        if (desiredStatus.current !== want) continue;
+        failure = e;
+        break;
+      }
+    }
+    desiredStatus.current = null;
+    syncing.current = false;
+    setStatusPending(false);
+
+    if (failure) {
+      const back = confirmedStatus.current;
+      setIsFree(back.isFree);
+      setFreeUntil(back.until);
+      show(errorMessage(failure, "Nepodařilo se uložit stav."), "error");
+      return;
+    }
+    // Zápis prošel. Selhání následného GET /users/me už nic nevrací ani
+    // nehlásí - uživatel na serveru stav má, a další ťuknutí by jinak
+    // založilo druhé volno.
+    refreshMe().catch(() => {});
+  };
+
+  const applyStatus = (nextFree: boolean, until: Date | null) => {
     setIsFree(nextFree);
     setFreeUntil(until);
-    setStatusPending(true);
-    (async () => {
-      try {
-        if (mode === "extend" && until) await api.extendMyStatus(until);
-        else await api.setMyStatus(nextFree, until ?? undefined);
-        if (statusRunId.current === runId) await refreshMe();
-      } catch (e) {
-        if (statusRunId.current !== runId) return;
-        setIsFree(prevFree);
-        setFreeUntil(prevUntil);
-        show(errorMessage(e, "Nepodařilo se uložit stav."), "error");
-      } finally {
-        if (statusRunId.current === runId) setStatusPending(false);
-      }
-    })();
+    desiredStatus.current = { isFree: nextFree, until };
+    syncStatus();
   };
 
   return (
@@ -296,11 +334,16 @@ export default function Index() {
           onScroll={(e) => {
             const { contentOffset, contentSize, layoutMeasurement } =
               e.nativeEvent;
-            setCanScrollMore(
-              contentOffset.y + layoutMeasurement.height <
-                contentSize.height - 2,
-            );
+            updateCanScrollMore({
+              offset: contentOffset.y,
+              viewport: layoutMeasurement.height,
+              content: contentSize.height,
+            });
           }}
+          onLayout={(e) =>
+            updateCanScrollMore({ viewport: e.nativeEvent.layout.height })
+          }
+          onContentSizeChange={(_w, h) => updateCanScrollMore({ content: h })}
           scrollEventThrottle={16}
           bounces={false}
           overScrollMode="never"
@@ -323,7 +366,7 @@ export default function Index() {
             pending={showLoading}
             now={now}
             onConfirm={(until) => applyStatus(true, until)}
-            onChangeEnd={(until) => applyStatus(true, until, "extend")}
+            onChangeEnd={(until) => applyStatus(true, until)}
             onEnd={() => applyStatus(false, null)}
             onPick={() => advance("ring")}
           />
@@ -422,6 +465,18 @@ export default function Index() {
       />
     </View>
   );
+}
+
+type FreeState = { isFree: boolean; until: Date | null };
+
+/** Volno, které na serveru opravdu ještě běží (ne jen dosud nevypršelé lokálně). */
+function isActive(s: FreeState): boolean {
+  return s.isFree && (s.until == null || s.until.getTime() > Date.now());
+}
+
+function sameStatus(a: FreeState, b: FreeState): boolean {
+  if (!a.isFree) return !isActive(b);
+  return isActive(b) && a.until?.getTime() === b.until?.getTime();
 }
 
 function EmptyStateLink({

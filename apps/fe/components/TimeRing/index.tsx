@@ -54,6 +54,9 @@ const PRESET_SIZE = 37;
 const PRESET_ICON_SIZE = 18;
 /** Kam preset uhne, když ho handle dohání. Dál by vylezl z plochy. */
 const PRESET_DODGE_PX = 18;
+/** Jak velký kus okna (podíl `range`) za jeho koncem se preset připnutý na
+ * konec dráhy vytrácí. */
+const PRESET_EDGE_FADE = 0.15;
 /** Čísla hodin leží zvenčí těsně za dráhou - nechává se jen tolik místa, aby
  * je v klidu nedrhl handle. Když handle přijede, číslo se stejně vytrácí. */
 const HOUR_RADIUS = 160;
@@ -737,13 +740,18 @@ export default function TimeRing({
           do gesta prstence. */}
       {presets.map((p) => {
         const off = dateToOffset(p.date, now);
-        // Mimo aktuální okno kolečko nakreslit nejde. V seznamu pod prstencem
-        // je preset dostupný vždycky, takže se tím o nic nepřichází.
-        if (off <= 0 || off > range) return null;
+        // Za koncem okna se kolečko připne na konec dráhy a plynule zmizí,
+        // jak se okno zužuje - dřív mizelo a naskakovalo skokem (task 0024).
+        // `range` se animuje po snímcích, takže přechod vyjde plynule sám.
+        // V seznamu pod prstencem je preset dostupný vždycky.
+        const fadeZone = range * PRESET_EDGE_FADE;
+        const visibility = clamp((range + fadeZone - off) / fadeZone, 0, 1);
+        if (off <= 0 || visibility <= 0) return null;
         return (
           <RingMarker
             key={p.id}
-            angle={offsetToAngle(off, range)}
+            angle={offsetToAngle(Math.min(off, range), range)}
+            visibility={visibility}
             handleAngle={angle}
             center={c}
             radius={r}
@@ -751,7 +759,7 @@ export default function TimeRing({
             avoid="dodge"
             dodgePx={PRESET_DODGE_PX * k}
             onPress={() => settleTo(p.date)}
-            accessibilityLabel={`Volný do ${p.label.toLowerCase()}`}
+            accessibilityLabel={`Volný do ${formatTime(p.date)}, ${p.label}`}
           >
             <View
               style={{

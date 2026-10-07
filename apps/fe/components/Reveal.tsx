@@ -33,6 +33,10 @@ export default function Reveal({
   const translateY = useRef(new Animated.Value(visible ? 0 : 10)).current;
   const reduceMotion = useReduceMotion();
   const isFirst = useRef(true);
+  // Aktuální `visible` pro callback exit animace - ten doběhne až po 160 ms
+  // a mezitím se obsah mohl vrátit.
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
 
   useEffect(() => {
     if (isFirst.current) {
@@ -43,6 +47,10 @@ export default function Reveal({
     }
 
     if (visible) {
+      // Zastavit běžící exit. Jinak by doběhl s `finished: true` během
+      // zpoždění vstupu a obsah odmountoval, i když má být vidět (task
+      // 0024 - mizející presety po rychlém rollbacku nebo dvojťuku).
+      opacity.stopAnimation();
       setRendered(true);
       const run = () => {
         Animated.parallel([
@@ -71,7 +79,7 @@ export default function Reveal({
         duration: reduceMotion ? 120 : EXIT_MS,
         useNativeDriver: true,
       }).start(({ finished }) => {
-        if (!finished) return;
+        if (!finished || visibleRef.current) return;
         setRendered(false);
         // Reset for the next entrance's slide-up - doing this only after
         // the exit fade completes (not synchronously here) means the

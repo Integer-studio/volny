@@ -1,6 +1,6 @@
 # 0025 — Souběh zápisů stavu volna a falešné chyby
 
-- **Stav:** todo
+- **Stav:** in progress
 - **Priorita:** 1
 - **Datum vytvoření:** 2026-10-07
 
@@ -22,8 +22,19 @@
 
 ## Kritéria splnění
 
-- [ ] Chyba `refreshMe` po úspěšném zápisu nevede k rollbacku ani toastu.
-- [ ] Zápisy stavu jsou serializované (fronta), nebo jsou tlačítko, prstenec
+- [x] Chyba `refreshMe` po úspěšném zápisu nevede k rollbacku ani toastu.
+- [x] Zápisy stavu jsou serializované (fronta), nebo jsou tlačítko, prstenec
       a presety během zápisu zablokované. Vizuální optimismus zůstane.
 - [ ] Ověřeno na pomalé síti (throttling): žádné duplicitní volno ani
       notifikace.
+
+## Poznámky
+
+**2026-10-07 (skupina A):** `applyStatus` v `app/index.tsx` už neposílá
+request za každé ťuknutí. Drží poslední potvrzený stav ze serveru a
+poslední chtěný stav z UI. `syncStatus()` mezi nimi dorovnává po jednom
+requestu a request volí podle potvrzeného stavu: `DELETE`, `POST`, nebo
+`PUT` přes `extendMyStatus`. Dvojťuk tak pošle POST a DELETE za sebou.
+Tažení během POSTu skončí PUTem, ne druhým POSTem. Rollback jde na
+potvrzený stav a `refreshMe` po úspěšném zápisu už nic nevrací. Zbývá
+ověřit s throttlingem.

@@ -139,20 +139,24 @@ export function resolvePresets(now: Date, defs: PresetDef[]): Preset[] {
 
 /** Preset, který se nabídne jako výchozí, musí být aspoň takhle daleko. */
 const DEFAULT_MIN_OFFSET = 60;
-/** Když žádný preset není dost daleko, nabídne se tenhle odstup. */
+/** Preset dál než tohle se jako výchozí nenabídne - ve 23:40 by jinak padl
+ * až na ráno, tedy osm hodin volna. */
+const DEFAULT_MAX_OFFSET = 6 * 60;
+/** Když žádný preset není v rozumné vzdálenosti, nabídne se tenhle odstup. */
 const DEFAULT_FALLBACK_OFFSET = 120;
 
 /**
  * Výchozí nabízený čas: nejbližší preset, který je aspoň hodinu daleko - ne
  * prostě nejbližší preset, protože "volný do oběda" v 11:50 nikomu nepomůže
- * (pravidlo z tasku 0011). Když se žádný takový nenajde (třeba půl hodiny
- * před půlnocí), vrátí se prostě dvě hodiny od teď.
+ * (pravidlo z tasku 0011). Když je takový preset dál než 6 h (třeba ve
+ * 23:40, kdy další je až ráno) nebo žádný není, vrátí se prostě dvě hodiny
+ * od teď.
  */
 export function defaultTarget(now: Date, defs: PresetDef[]): Date {
   const preset = resolvePresets(now, defs).find(
     (p) => p.offset >= DEFAULT_MIN_OFFSET,
   );
-  if (preset) return preset.date;
+  if (preset && preset.offset <= DEFAULT_MAX_OFFSET) return preset.date;
   return snapToQuarter(
     new Date(now.getTime() + DEFAULT_FALLBACK_OFFSET * 60_000),
   );

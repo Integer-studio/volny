@@ -194,9 +194,12 @@ export default function FreeDial({
           nad prstencem, protože je to hodnota, kterou prstenec nastavuje:
           prst při tažení zakrývá spodek prstence, ne horní okraj. */}
       <View className="items-center mb-3">
+        {/* Otazník, dokud volno neběží - noví uživatelé jinak brali
+            "Volný do 16:00" za hotovou věc (task 0031). */}
         <Text className="text-gray-900 text-2xl font-bold">
           Volný do {formatTime(shown)}
           {isTomorrow(shown, now) ? " (zítra)" : ""}
+          {isFree ? "!" : "?"}
         </Text>
         <Text className="text-gray-400 text-sm mt-0.5">
           {isFree ? "zbývá " : ""}
@@ -219,6 +222,11 @@ export default function FreeDial({
               onPress={handlePress}
               fade={fade}
               pending={pending}
+              accessibilityLabel={
+                isFree
+                  ? "Ukončit volno"
+                  : `Označit se jako volný do ${formatTime(safeTarget)}`
+              }
               size={buttonSize}
               pressHaptic={isFree ? "cancel" : "confirm"}
             />

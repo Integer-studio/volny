@@ -39,12 +39,11 @@ doby před zavedením priorit je uvedena orientačně.
 | 0007 | Nové zadávání času                             | in progress | 1        | [0007-nove-zadavani-casu.md](./0007-nove-zadavani-casu.md)           |
 | 0008 | Scheduled začátek volna (max. den dopředu)     | todo        | 2        | [0008-scheduled-zacatek-volna.md](./0008-scheduled-zacatek-volna.md) |
 | 0010 | Vlastní čas (manuální zadání)                  | todo        | 3        | [0010-vlastni-cas.md](./0010-vlastni-cas.md)                         |
-| 0011 | Přichycení (snap) času na nejbližší preset     | todo        | 1        | [0011-snap-casu-na-preset.md](./0011-snap-casu-na-preset.md)         |
 | 0012 | "Kde jsem" políčko (volný text)                | todo        | 3        | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md)               |
 | 0014 | Lepší always-on backend                        | todo        | 1        | [0014-always-on-backend.md](./0014-always-on-backend.md)             |
 | 0023 | Zpětná vazba při posílání žádostí o přátelství | todo        | 1        | [0023-feedback-zadosti-o-pratelstvi.md](./0023-feedback-zadosti-o-pratelstvi.md) |
-| 0024 | Mizející rychlá volba (presety)                | todo        | 1        | [0024-mizejici-presety.md](./0024-mizejici-presety.md) |
-| 0025 | Souběh zápisů stavu volna a falešné chyby      | todo        | 1        | [0025-soubeh-zapisu-stavu-volna.md](./0025-soubeh-zapisu-stavu-volna.md) |
+| 0024 | Mizející rychlá volba (presety)                | in progress | 1        | [0024-mizejici-presety.md](./0024-mizejici-presety.md) |
+| 0025 | Souběh zápisů stavu volna a falešné chyby      | in progress | 1        | [0025-soubeh-zapisu-stavu-volna.md](./0025-soubeh-zapisu-stavu-volna.md) |
 | 0026 | Prázdné stavy místo načítání nebo chyby        | todo        | 1        | [0026-prazdne-stavy-vs-nacitani.md](./0026-prazdne-stavy-vs-nacitani.md) |
 | 0027 | Toasty pod modaly, umístění toastu a banneru   | in progress | 2        | [0027-toasty-a-bannery.md](./0027-toasty-a-bannery.md) |
 | 0028 | Přihlášení a registrace: zpětná vazba a chyby  | todo        | 1        | [0028-prihlaseni-a-registrace-ux.md](./0028-prihlaseni-a-registrace-ux.md) |
@@ -93,6 +92,7 @@ Doporučené pořadí: 0 → A → B → C (0014 paralelně) → D → E → F �
 | 0004 | Web push notifikace                                               | done | —        | [0004-web-push-notifikace.md](./0004-web-push-notifikace.md)                         |
 | 0006 | Nepovinný telefon a IG při registraci + disclaimer o viditelnosti | done | 1        | [0006-nepovinny-telefon-ig-registrace.md](./0006-nepovinny-telefon-ig-registrace.md) |
 | 0009 | User-based nastavení presetů (jméno, ikonka, přidávání/odebírání) | done | 2        | [0009-user-presety.md](./0009-user-presety.md)                                       |
+| 0011 | Přichycení (snap) času na nejbližší preset                        | done | 1        | [0011-snap-casu-na-preset.md](./0011-snap-casu-na-preset.md)                         |
 | 0013 | Lubomír mode on/off (vypnutý stav bez obrázků)                    | done | 1        | [0013-lubomir-mode.md](./0013-lubomir-mode.md)                                       |
 | 0015 | Rozvedení zadání nových tasků (0006–0014, 0016)                   | done | 1        | [0015-rozvedeni-novych-tasku.md](./0015-rozvedeni-novych-tasku.md)                   |
 | 0016 | Sessions nevydrží dostatečně dlouho (JWT bez refresh tokenu)      | done | 1        | [0016-sessions-nevydrzi-po-scaledownu.md](./0016-sessions-nevydrzi-po-scaledownu.md) |

@@ -21,6 +21,8 @@ type Props = {
    * (see app/index.tsx's useDeferredPending) - disables the button and
    * shows a loading overlay so a slow request can't be mistaken for done. */
   pending: boolean;
+  /** Popisek pro čtečku - rodič do něj dá i čas, který tlačítko potvrdí. */
+  accessibilityLabel: string;
   /** Průměr kruhu v px. Menší varianta se používá uvnitř TimeRing, aby se
    * tlačítko nedotýkalo prstence. */
   size?: number;
@@ -44,6 +46,7 @@ export default function FreeButton({
   onPress,
   fade,
   pending,
+  accessibilityLabel,
   size = 256,
   pressHaptic,
 }: Props) {
@@ -148,7 +151,8 @@ export default function FreeButton({
         onPressOut={handlePressOut}
         disabled={pending}
         accessibilityRole="button"
-        accessibilityLabel={isFree ? "Ukončit volno" : "Označit se jako volný"}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityState={{ disabled: pending, busy: pending }}
         style={{ width: size, height: size }}
         className="rounded-full justify-center items-center overflow-hidden bg-gray-100"
       >

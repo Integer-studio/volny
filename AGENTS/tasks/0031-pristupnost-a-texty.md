@@ -33,3 +33,15 @@
       0009).
 - [ ] Opravené plurály a sjednocené texty.
 - [ ] `useNow` zarovnaný na minutu a obnovený na `AppState` `active`.
+
+## Poznámky
+
+**2026-10-07 (skupina A), hotové části:**
+- Popisky presetů pro čtečku jsou "Volný do 21:00, Večer" místo
+  skloňování. Názvy si uživatel píše sám, takže 2. pád by nešel zaručit.
+- Nadpis `FreeDial` je "Volný do 16:00?", dokud volno neběží, a za běhu
+  "Volný do 16:00!".
+- Hlavní tlačítko má v popisku čas a `accessibilityState` `busy`.
+- `useNow` tiká zarovnaně na minutu a obnoví se při návratu do appky.
+
+Zbytek patří do skupin B, D a F.

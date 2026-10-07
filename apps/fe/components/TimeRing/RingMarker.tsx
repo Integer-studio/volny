@@ -27,6 +27,9 @@ type Props = {
   avoid: "dodge" | "fade" | "none";
   /** O kolik pixelů se marker odsune při `avoid: "dodge"`. */
   dodgePx?: number;
+  /** Vlastní průhlednost (0-1) nad rámec reakce na handle - u presetu na
+   * kraji okna prstence. Pod polovinou marker nejde zmáčknout. */
+  visibility?: number;
   onPress?: () => void;
   accessibilityLabel?: string;
   children: React.ReactNode;
@@ -49,6 +52,7 @@ export default function RingMarker({
   size,
   avoid,
   dodgePx = 0,
+  visibility = 1,
   onPress,
   accessibilityLabel,
   children,
@@ -78,10 +82,10 @@ export default function RingMarker({
     height: size,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    opacity: avoid === "fade" ? 1 - nearness : 1,
+    opacity: (avoid === "fade" ? 1 - nearness : 1) * visibility,
   };
 
-  if (!onPress) {
+  if (!onPress || visibility < 0.5) {
     return (
       <View style={style} pointerEvents="none">
         {children}

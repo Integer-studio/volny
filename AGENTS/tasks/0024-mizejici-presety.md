@@ -1,6 +1,6 @@
 # 0024 — Mizející rychlá volba (presety)
 
-- **Stav:** todo
+- **Stav:** in progress
 - **Priorita:** 1
 - **Datum vytvoření:** 2026-10-07
 
@@ -33,13 +33,22 @@
 
 ## Kritéria splnění
 
-- [ ] `Reveal`: při zobrazení zastavit běžící exit (`stopAnimation`/run id)
+- [x] `Reveal`: při zobrazení zastavit běžící exit (`stopAnimation`/run id)
       a v exit callbacku ověřit, že `visible` je pořád `false`.
-- [ ] Ikony mimo okno prstence se plynule skryjí/objeví (nebo se připnou na
+- [x] Ikony mimo okno prstence se plynule skryjí/objeví (nebo se připnou na
       konec dráhy).
-- [ ] `canScrollMore` se počítá i v `onContentSizeChange`/`onLayout`.
+- [x] `canScrollMore` se počítá i v `onContentSizeChange`/`onLayout`.
 - [ ] Ověřeno: offline ťuknutí na "volný" a dvojťuk — rychlá volba zůstane.
 
 ## Poznámky
 
 Souvisí s 0025 (dvojťuk a souběh zápisů) a 0011 (snap na preset).
+
+**2026-10-07 (skupina A):**
+- `Reveal` při zobrazení zastaví běžící exit a exit callback kontroluje
+  aktuální `visible`.
+- Ikony za koncem okna prstence se připnou na konec dráhy a vytrácejí se
+  podle `range` (`PRESET_EDGE_FADE`).
+- `canScrollMore` v `app/index.tsx` se počítá i z `onLayout` a
+  `onContentSizeChange`.
+- Zbývá ověřit offline ťuknutí a dvojťuk.

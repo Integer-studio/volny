@@ -1,6 +1,6 @@
 # 0011 — Přichycení (snap) vlastního času k nejbližšímu presetu
 
-- **Stav:** todo
+- **Stav:** done
 - **Priorita:** 1 (musí být hotové před veřejným releasem — součást implementace [0007](./0007-nove-zadavani-casu.md))
 - **Datum vytvoření:** 2026-09-06
 
@@ -21,15 +21,15 @@ není co snapovat.
 
 ## Kritéria splnění
 
-- [ ] Při otevření appky se výchozí navrhovaný čas nastaví na nejbližší
+- [x] Při otevření appky se výchozí navrhovaný čas nastaví na nejbližší
       preset (z [0009](./0009-user-presety.md)) splňující podmínku, že je
       vzdálený od teď alespoň 1 hodinu — ne prostě na úplně nejbližší
       preset.
-- [ ] Nová funkce vedle `hourOffset`/`nextHour` v `apps/fe/lib/time.ts`
+- [x] Nová funkce vedle `hourOffset`/`nextHour` v `apps/fe/lib/time.ts`
       implementující pravidlo "nejbližší preset, ale ≥ 1h od teď".
-- [ ] Vedle snapnutého presetu je vždy dostupná i akce pro zadání
+- [x] Vedle snapnutého presetu je vždy dostupná i akce pro zadání
       vlastního času (viz [0010](./0010-vlastni-cas.md)).
-- [ ] [0009](./0009-user-presety.md) (existence konfigurovatelných
+- [x] [0009](./0009-user-presety.md) (existence konfigurovatelných
       presetů) je prerekvizita — tento task nelze dokončit dřív.
 
 ## Poznámky
@@ -49,3 +49,7 @@ Má to jednu hranu, která se možná bude chtít změnit: ve 23:40 je půlnoc j
 "+2 h".
 
 Vzniklo jako součást dávky nových tasků 2026-09-06, rozvedeno v [0015](./0015-rozvedeni-novych-tasku.md).
+
+**Uzavřeno 2026-10-07 (skupina A):** Rozhodnuto o fallbacku. Když je
+nejbližší preset ≥ 1 h od teď dál než 6 h (`DEFAULT_MAX_OFFSET`), nabídne
+se teď + 2 h. Ve 23:40 tedy výchozí čas padne na 1:45, ne na ráno.
