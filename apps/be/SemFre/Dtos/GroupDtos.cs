@@ -21,6 +21,12 @@ public class GroupSharingUpdateDto
 public class GroupJoinDto
 {
     public string Code { get; set; } = null!;
+    /// <summary>
+    /// Initial GroupMember.SharesWithGroup, chosen in the invite sheet. Defaults
+    /// to true so clients that don't send it keep the old behavior. Ignored
+    /// when the caller is already a member.
+    /// </summary>
+    public bool SharesWithGroup { get; set; } = true;
 }
 
 public class GroupSummaryDto

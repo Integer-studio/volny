@@ -696,11 +696,11 @@ export const api = {
     return preview;
   },
 
-  async joinGroup(code: string): Promise<GroupDetail> {
+  async joinGroup(code: string, sharesWithGroup = true): Promise<GroupDetail> {
     // Safe to mark idempotent: the backend reports alreadyMember rather than
     // erroring on a repeat join, so a retried request after an ambiguous
     // timeout can't create a duplicate membership.
-    const detail: GroupDetailDto = await request('/groups/join', { method: 'POST', body: JSON.stringify({ code }), idempotent: true });
+    const detail: GroupDetailDto = await request('/groups/join', { method: 'POST', body: JSON.stringify({ code, sharesWithGroup }), idempotent: true });
     return toGroupDetail(detail, currentUserId);
   },
 };

@@ -5,6 +5,16 @@ const TTL_MS = 24 * 60 * 60 * 1000;
 
 type Stored = { code: string; ts: number };
 
+// PendingInviteGate is mounted once for the whole signed-in session, so a
+// link opened while already signed in (app/join/[code].tsx stashes the code
+// and goes home) has to wake it up explicitly.
+const listeners = new Set<() => void>();
+
+export function onPendingInviteSet(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => { listeners.delete(cb); };
+}
+
 // Defends against `${code}` template interpolation turning a JS `undefined`
 // (e.g. a route param read before the router has resolved it) into the
 // literal string "undefined" - which is truthy and would otherwise get
@@ -20,6 +30,7 @@ export async function setPendingInvite(code: string): Promise<void> {
   } catch {
     // best-effort - the join screen itself still works without this
   }
+  listeners.forEach(cb => cb());
 }
 
 export async function getPendingInvite(): Promise<string | null> {

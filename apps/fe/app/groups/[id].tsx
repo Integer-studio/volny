@@ -16,6 +16,7 @@ import FadeIn from '../../components/FadeIn';
 import { shareInvite, copyInviteLink, buildInviteUrl } from '../../lib/invite-link';
 import { fieldError, errorMessage } from '../../lib/errors';
 import { useAutosaveField } from '../../hooks/useAutosaveField';
+import { groupSharingHint } from '../../lib/group-sharing';
 
 function validateGroupName(v: string): string | null {
   return v.length < 1 || v.length > 100 ? 'Název musí mít 1-100 znaků.' : null;
@@ -212,9 +213,7 @@ export default function GroupDetail() {
         />
       </View>
       <Text className="text-gray-400 text-xs mb-8">
-        {sharesWithGroup
-          ? 'Členové skupiny vidí, kdy máš volno, dostávají o tom upozornění a vidí tvůj telefon a Instagram, i když nejste přátelé. Funguje to vzájemně - ty vidíš totéž u členů, kteří sdílení mají zapnuté taky.'
-          : 'Členové skupiny nevidí tvoje volno ani kontakt a ty nevidíš jejich (pokud nejste přátelé). Ve skupině ale zůstáváš.'}
+        {groupSharingHint(sharesWithGroup)}
       </Text>
 
       <Text className="text-gray-400 text-xs font-bold tracking-widest mb-3">

@@ -216,7 +216,7 @@ public class GroupsController : ControllerBase
         var existing = await _db.GroupMembers.AnyAsync(m => m.GroupID == group.GroupID && m.UserID == userId);
         if (!existing)
         {
-            _db.GroupMembers.Add(new GroupMember { GroupID = group.GroupID, UserID = userId.Value });
+            _db.GroupMembers.Add(new GroupMember { GroupID = group.GroupID, UserID = userId.Value, SharesWithGroup = dto.SharesWithGroup });
             await _db.SaveChangesAsync();
             await _realtime.FreeChangedForAsync(await MemberIdsAsync(group.GroupID));
         }
