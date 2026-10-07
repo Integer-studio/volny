@@ -7,6 +7,7 @@ import TimeRing, { BUTTON_RATIO, RING_BASE } from "./TimeRing";
 import { clampTarget } from "./TimeRing/scale";
 import { useTourTarget } from "./tour/TourProvider";
 import { defaultTarget, resolvePresets } from "./TimeRing/presets";
+import { usePresets } from "../hooks/usePresets";
 import {
   formatDuration,
   formatTime,
@@ -72,6 +73,13 @@ export default function FreeDial({
   const ringTarget = useTourTarget("ring");
   const buttonTarget = useTourTarget("button");
 
+  const manage = usePresets();
+  // Pro časovač níž, který výchozí čas počítá až za dvě minuty - musí vzít
+  // presety platné v tu chvíli, ne ty z doby nastavení časovače.
+  const defsRef = useRef(manage.presets);
+  defsRef.current = manage.presets;
+  const [editing, setEditing] = useState(false);
+
   // Prstenec je navržený na `RING_BASE`; na menších obrazovkách se celý
   // poměrově zmenší, včetně tlačítka uprostřed.
   //
@@ -94,7 +102,7 @@ export default function FreeDial({
   // Cíl se drží jako absolutní čas ("do 15:00"), ne jako délka - to je i to,
   // co uživatel vidí a co se posílá na server. Výchozí hodnota je nejbližší
   // preset aspoň hodinu daleko (pravidlo z tasku 0011).
-  const [target, setTarget] = useState(() => defaultTarget(new Date()));
+  const [target, setTarget] = useState(() => defaultTarget(new Date(), manage.presets));
   // Průběžná hodnota z tažení. Zůstává tady: čas se vykresluje jen v tomhle
   // komponentu, takže ji nikdo jiný nepotřebuje.
   const [preview, setPreview] = useState<Date | null>(null);
@@ -119,17 +127,19 @@ export default function FreeDial({
     wasFree.current = isFree;
     setPreview(null);
     clearReset();
+    // Úpravy presetů patří k zadávání času; za běhu volna je seznam schovaný.
+    setEditing(false);
 
     if (isFree) {
       if (freeUntil) setTarget(freeUntil);
       return;
     }
     if (!cameFromFree) {
-      setTarget(defaultTarget(new Date()));
+      setTarget(defaultTarget(new Date(), defsRef.current));
       return;
     }
     resetTimer.current = setTimeout(
-      () => setTarget(defaultTarget(new Date())),
+      () => setTarget(defaultTarget(new Date(), defsRef.current)),
       KEEP_AFTER_END_MS,
     );
   }, [isFree, freeUntil?.getTime()]);
@@ -142,11 +152,9 @@ export default function FreeDial({
   // odpočet zkreslil.
   const committed = isFree ? (freeUntil ?? safeTarget) : safeTarget;
   const shown = preview ?? committed;
-  // Schválně bez memoizace: mapování pár kotev je zanedbatelné, zato memo
-  // klíčované jen na `now` neumí poznat, že se změnil sám seznam kotev
-  // v `TimeRing/presets.ts` - po Fast Refreshi (a při každé jeho budoucí
-  // výměně za data z 0009) by vracelo starou hodnotu, dokud netikne minuta.
-  const presets = resolvePresets(now);
+  // Schválně bez memoizace: mapování pár kotev je zanedbatelné a memo by
+  // muselo hlídat i změny seznamu z editoru.
+  const presets = resolvePresets(now, manage.presets);
 
   // Tlačítko má za běhu volna jediný význam - ukončit. Posunutý konec se
   // ukládá už puštěním handle, takže není co druhotně potvrzovat.
@@ -229,6 +237,9 @@ export default function FreeDial({
           // náhled, presety by při tažení přes ně problikávaly jako zvolené.
           selected={safeTarget}
           onSelect={handleChange}
+          editing={editing}
+          onEditingChange={setEditing}
+          manage={manage}
         />
       </Reveal>
     </View>

@@ -3,6 +3,7 @@ import { getExpoPushTokenAsync, getFcmWebTokenAsync, isPushSupported, isWebPushS
 import * as Storage from './storage';
 import { parseServerDate } from './date';
 import { API_URL } from './config';
+import type { PresetDef } from '../components/TimeRing/presets';
 
 function toCamelCase(key: string): string {
   // ASP.NET ModelState keys are PascalCase property names ("Password") or a
@@ -67,6 +68,13 @@ export type FreeTimeDto = {
   startTime: string;
   endTime: string;
 };
+
+type PresetDto = { presetID: number; name: string; icon: string; minute: number };
+export type PresetInput = { name: string; icon: string; minute: number };
+
+function toPresetDef(p: PresetDto): PresetDef {
+  return { id: String(p.presetID), name: p.name, icon: p.icon, minute: p.minute };
+}
 
 export type ConnectionSource = { kind: 'friend' | 'group'; groupId?: string; groupName?: string };
 
@@ -540,6 +548,29 @@ export const api = {
         await request(`/freetimes/${active.freeTimeID}`, { method: 'DELETE', idempotent: true });
       }
     }
+  },
+
+  // Presety (task 0009) - vždy jen vlastní, backend jiné nevydá.
+  async getPresets(): Promise<PresetDef[]> {
+    const rows: PresetDto[] = await request('/presets');
+    return rows.map(toPresetDef);
+  },
+
+  async createPreset(input: PresetInput): Promise<PresetDef> {
+    return toPresetDef(await request('/presets', { method: 'POST', body: JSON.stringify(input) }));
+  },
+
+  async updatePreset(id: string, input: PresetInput): Promise<PresetDef> {
+    return toPresetDef(await request(`/presets/${id}`, { method: 'PUT', idempotent: true, body: JSON.stringify(input) }));
+  },
+
+  async deletePreset(id: string): Promise<void> {
+    await request(`/presets/${id}`, { method: 'DELETE', idempotent: true });
+  },
+
+  async resetPresets(): Promise<PresetDef[]> {
+    const rows: PresetDto[] = await request('/presets/reset', { method: 'POST' });
+    return rows.map(toPresetDef);
   },
 
   async searchUsers(query: string): Promise<UserSummary[]> {

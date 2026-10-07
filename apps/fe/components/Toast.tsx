@@ -1,12 +1,14 @@
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
-import { Animated, Text } from 'react-native';
+import { Animated, Pressable, Text, View } from 'react-native';
 
 type Tone = 'success' | 'error';
-type ToastState = { message: string; tone: Tone } | null;
+/** A single follow-up the user can take from the toast, e.g. "Vrátit" after a delete. */
+export type ToastAction = { label: string; onPress: () => void };
+type ToastState = { message: string; tone: Tone; action?: ToastAction } | null;
 
 type ToastValue = {
   /** durationMs: null makes the toast sticky (no auto-hide) - call hide() to dismiss it. */
-  show: (message: string, tone?: Tone, durationMs?: number | null) => void;
+  show: (message: string, tone?: Tone, durationMs?: number | null, action?: ToastAction) => void;
   /**
    * onlyIfMessage: if given, only actually dismisses when the toast
    * currently shown still has that exact message - guards against a sticky
@@ -34,9 +36,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     Animated.timing(anim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => setToast(null));
   }, [anim]);
 
-  const show = useCallback((message: string, tone: Tone = 'success', durationMs: number | null = 3000) => {
+  const show = useCallback((message: string, tone: Tone = 'success', durationMs: number | null = 3000, action?: ToastAction) => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    setToast({ message, tone });
+    setToast({ message, tone, action });
     anim.setValue(0);
     Animated.timing(anim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
     if (durationMs !== null) {
@@ -51,7 +53,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {toast && (
         <Animated.View
-          pointerEvents="none"
+          // Only a toast with an action takes touches - a plain one must
+          // never block the screen underneath it.
+          pointerEvents={toast.action ? 'box-none' : 'none'}
           style={{
             position: 'absolute',
             left: 16,
@@ -65,7 +69,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             className={toast.tone === 'error' ? 'bg-red-500' : 'bg-gray-900'}
             style={{ borderRadius: 16, paddingVertical: 12, paddingHorizontal: 16 }}
           >
-            <Text className="text-white text-center font-medium">{toast.message}</Text>
+            {toast.action ? (
+              <View className="flex-row items-center justify-between">
+                <Text className="text-white font-medium flex-1 mr-3">{toast.message}</Text>
+                <Pressable
+                  onPress={() => {
+                    toast.action?.onPress();
+                    hide();
+                  }}
+                  accessibilityRole="button"
+                  hitSlop={12}
+                >
+                  <Text className="text-[#EE6C4D] font-bold">{toast.action.label}</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Text className="text-white text-center font-medium">{toast.message}</Text>
+            )}
           </Animated.View>
         </Animated.View>
       )}

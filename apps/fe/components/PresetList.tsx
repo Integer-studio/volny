@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -8,8 +8,15 @@ import {
   View,
 } from "react-native";
 import Check from "lucide-react-native/icons/check";
+import ChevronRight from "lucide-react-native/icons/chevron-right";
+import Plus from "lucide-react-native/icons/plus";
+import RotateCcw from "lucide-react-native/icons/rotate-ccw";
 import BottomFade from "./BottomFade";
-import { Preset } from "./TimeRing/presets";
+import PresetEditSheet from "./PresetEditSheet";
+import { useToast } from "./Toast";
+import { Preset, PresetDef } from "./TimeRing/presets";
+import type { PresetsApi } from "../hooks/usePresets";
+import { errorMessage } from "../lib/errors";
 import { formatDuration, formatTime, isTomorrow, minutesUntil } from "../lib/time";
 import { cn } from "../lib/utils";
 
@@ -42,7 +49,19 @@ type Props = {
   /** Aktuální hodnota prstence - podle ní se zvýrazní odpovídající preset. */
   selected: Date;
   onSelect: (target: Date) => void;
+  /** Režim úprav - drží ho `FreeDial`, aby ho mohl zavřít při zapnutí volna. */
+  editing: boolean;
+  onEditingChange: (editing: boolean) => void;
+  manage: PresetsApi;
 };
+
+/** Jak dlouho čeká druhé klepnutí na "Obnovit výchozí", než se zruší. */
+const CONFIRM_RESET_MS = 4000;
+
+/** Čas presetu jako na hodinách ("8:00"), bez vazby na den. */
+function wallTime(minute: number): string {
+  return `${Math.floor(minute / 60)}:${String(minute % 60).padStart(2, "0")}`;
+}
 
 /**
  * Denní kotvy pod prstencem, svisle a ve stejném duchu jako seznam volných
@@ -54,12 +73,22 @@ type Props = {
  * přesně to, co nové UI nahrazuje.
  *
  * Roluje se jen tenhle box, ne celá obrazovka - proto pevný strop výšky.
- * Zbytek obrazovky tak zůstává na místě, i kdyby presetů byla řada. Až přijde
- * jejich editace a přidávání (task 0009), přibudou sem řádky/akce a strop se
- * nemusí hýbat; data se berou z `TimeRing/presets.ts`, který je pro tu výměnu
- * jediné místo.
+ * Zbytek obrazovky tak zůstává na místě, i kdyby presetů byla řada.
+ *
+ * Úpravy (task 0009) se dělají přímo tady, ne v nastavení: "Upravit" přepne
+ * tentýž seznam do režimu úprav, kde klepnutí na řádek otevře editor místo
+ * nastavení prstence. Řádky zůstávají na místě, mění se jen podtitul a
+ * značka vpravo - nic neposkočí.
  */
-export default function PresetList({ presets, now, selected, onSelect }: Props) {
+export default function PresetList({
+  presets,
+  now,
+  selected,
+  onSelect,
+  editing,
+  onEditingChange,
+  manage,
+}: Props) {
   // Odstín u dolní hrany má smysl jen když se dá rolovat a zbývá kam - jinak
   // by slíbil obsah, který tam není.
   const [more, setMore] = useState(false);
@@ -69,16 +98,88 @@ export default function PresetList({ presets, now, selected, onSelect }: Props) 
     setMore(contentOffset.y + layoutMeasurement.height < contentSize.height - 2);
   };
 
-  if (presets.length === 0) return null;
+  const { show } = useToast();
+  // `undefined` = editor zavřený, `null` = nový preset.
+  const [editingPreset, setEditingPreset] = useState<PresetDef | null | undefined>(undefined);
+  // Každé otevření editoru je nová instance - viz PresetEditSheet.
+  const [sheetKey, setSheetKey] = useState(0);
+  const openEditor = (def: PresetDef | null) => {
+    setSheetKey((k) => k + 1);
+    setEditingPreset(def);
+  };
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    if (!confirmReset) return;
+    const t = setTimeout(() => setConfirmReset(false), CONFIRM_RESET_MS);
+    return () => clearTimeout(t);
+  }, [confirmReset]);
+
+  useEffect(() => {
+    if (!editing) setConfirmReset(false);
+  }, [editing]);
+
+  const empty = presets.length === 0;
+  // Prázdný seznam nabízí přidání rovnou, bez přepínání do úprav - jinak by
+  // pod nadpisem nebylo nic, na co klepnout.
+  const showAdd = editing || empty;
+
+  const handleDelete = (def: PresetDef) => {
+    setEditingPreset(undefined);
+    manage.remove(def).then(
+      () =>
+        show(`Preset ${def.name} smazán.`, "success", 5000, {
+          label: "Vrátit",
+          onPress: () => {
+            manage.restore(def).catch((e) =>
+              show(errorMessage(e, "Preset se nepodařilo vrátit."), "error"),
+            );
+          },
+        }),
+      (e) => show(errorMessage(e, "Preset se nepodařilo smazat."), "error"),
+    );
+  };
+
+  const handleReset = async () => {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      return;
+    }
+    setConfirmReset(false);
+    setResetting(true);
+    try {
+      await manage.reset();
+      show("Presety obnoveny.");
+    } catch (e) {
+      show(errorMessage(e, "Presety se nepodařilo obnovit."), "error");
+    } finally {
+      setResetting(false);
+    }
+  };
 
   return (
     <View className="w-full">
       {/* Hlavička stojí na stejné levé hraně jako řádky pod ní i jako
           hlavička seznamu přátel. Odsazení od okraje obrazovky řeší
           `paddingHorizontal` obrazovky, druhé odsazení tady bylo navíc. */}
-      <Text className="text-gray-400 font-medium text-xs tracking-widest uppercase mb-2">
-        Rychlá volba
-      </Text>
+      <View className="flex-row items-center justify-between mb-2">
+        <Text className="text-gray-400 font-medium text-xs tracking-widest uppercase">
+          Presety
+        </Text>
+        {/* Bez serverových id (výchozí náhrada, offline) není co upravovat. */}
+        {manage.ready && !empty && (
+          <Pressable
+            onPress={() => onEditingChange(!editing)}
+            accessibilityRole="button"
+            hitSlop={10}
+          >
+            <Text className="text-[#EE6C4D] font-medium text-sm">
+              {editing ? "Hotovo" : "Upravit"}
+            </Text>
+          </Pressable>
+        )}
+      </View>
 
       <View style={{ height: BOX_H }}>
         <ScrollView
@@ -90,14 +191,19 @@ export default function PresetList({ presets, now, selected, onSelect }: Props) 
           onContentSizeChange={(_w, h) => setMore(h > BOX_H + 2)}
         >
           {presets.map((p) => {
-            const active = p.date.getTime() === selected.getTime();
+            // V režimu úprav se nic nezvýrazňuje - klepnutí tu nevybírá.
+            const active = !editing && p.date.getTime() === selected.getTime();
             return (
               <Pressable
                 key={p.id}
-                onPress={() => onSelect(p.date)}
+                onPress={() => (editing ? openEditor(p) : onSelect(p.date))}
                 accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={`Volný do ${p.label.toLowerCase()}, ${formatTime(p.date)}`}
+                accessibilityState={editing ? undefined : { selected: active }}
+                accessibilityLabel={
+                  editing
+                    ? `Upravit preset ${p.label}, ${wallTime(p.minute)}`
+                    : `Volný do ${p.label.toLowerCase()}, ${formatTime(p.date)}`
+                }
                 style={{ height: ROW_H }}
                 // Bez vodorovného odsazení, aby ikonka začínala tam, kde
                 // v seznamu přátel začíná avatar (UserRow) - jinak by se
@@ -129,23 +235,93 @@ export default function PresetList({ presets, now, selected, onSelect }: Props) 
                     {p.label}
                   </Text>
                   <Text className="text-gray-400 text-sm leading-tight">
-                    {formatTime(p.date)}
-                    {isTomorrow(p.date, now) ? " zítra" : ""}
-                    {"  ·  "}
-                    {formatDuration(minutesUntil(p.date, now))}
+                    {editing ? (
+                      wallTime(p.minute)
+                    ) : (
+                      <>
+                        {formatTime(p.date)}
+                        {isTomorrow(p.date, now) ? " zítra" : ""}
+                        {"  ·  "}
+                        {formatDuration(minutesUntil(p.date, now))}
+                      </>
+                    )}
                   </Text>
                 </View>
 
-                {active && <Check size={18} color={ORANGE} strokeWidth={2.5} />}
+                {editing ? (
+                  <ChevronRight size={18} color="#9CA3AF" strokeWidth={2} />
+                ) : (
+                  active && <Check size={18} color={ORANGE} strokeWidth={2.5} />
+                )}
               </Pressable>
             );
           })}
+
+          {showAdd && (
+            <Pressable
+              onPress={() => openEditor(null)}
+              disabled={!manage.ready}
+              accessibilityRole="button"
+              style={{ height: ROW_H }}
+              className="flex-row items-center active:bg-gray-50 border-b border-gray-50"
+            >
+              <View className="w-9 h-9 rounded-full items-center justify-center mr-3 border border-dashed border-gray-300">
+                <Plus size={18} color={ORANGE} strokeWidth={2} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[#EE6C4D] font-medium text-base leading-tight">
+                  Přidat preset
+                </Text>
+                {empty && !editing && (
+                  <Text className="text-gray-400 text-sm leading-tight">
+                    Čas, do kterého bývá volno nejčastěji
+                  </Text>
+                )}
+              </View>
+            </Pressable>
+          )}
+
+          {editing && (
+            <Pressable
+              onPress={handleReset}
+              disabled={resetting}
+              accessibilityRole="button"
+              style={{ height: ROW_H }}
+              className="flex-row items-center active:opacity-60"
+            >
+              <View className="w-9 h-9 items-center justify-center mr-3">
+                <RotateCcw size={16} color={confirmReset ? "#EF4444" : "#9CA3AF"} strokeWidth={2} />
+              </View>
+              <Text
+                className={cn(
+                  "text-sm font-medium",
+                  confirmReset ? "text-red-500" : "text-gray-400",
+                )}
+              >
+                {confirmReset
+                  ? "Klepni znovu - vlastní presety se smažou"
+                  : "Obnovit výchozí presety"}
+              </Text>
+            </Pressable>
+          )}
         </ScrollView>
 
         {/* Vykouknutý řádek říká, že dole něco je; odstín říká, že to
             pokračuje dál. */}
         <BottomFade visible={more} />
       </View>
+
+      <PresetEditSheet
+        key={sheetKey}
+        visible={editingPreset !== undefined}
+        preset={editingPreset ?? null}
+        all={manage.presets}
+        onClose={() => setEditingPreset(undefined)}
+        onSave={(input) =>
+          editingPreset ? manage.update(editingPreset.id, input) : manage.create(input)
+        }
+        onDelete={handleDelete}
+      />
     </View>
   );
 }
