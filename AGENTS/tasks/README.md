@@ -38,7 +38,7 @@ doby před zavedením priorit je uvedena orientačně.
 | 0005 | Web push notifikace pro iOS (Safari)           | in progress | 1        | [0005-ios-safari-web-push.md](./0005-ios-safari-web-push.md)         |
 | 0007 | Nové zadávání času                             | in progress | 1        | [0007-nove-zadavani-casu.md](./0007-nove-zadavani-casu.md)           |
 | 0008 | Scheduled začátek volna (max. den dopředu)     | todo        | 2        | [0008-scheduled-zacatek-volna.md](./0008-scheduled-zacatek-volna.md) |
-| 0009 | User-based nastavení presetů                   | todo        | 2        | [0009-user-presety.md](./0009-user-presety.md)                       |
+| 0009 | User-based nastavení presetů                   | in progress | 2        | [0009-user-presety.md](./0009-user-presety.md)                       |
 | 0010 | Vlastní čas (manuální zadání)                  | todo        | 3        | [0010-vlastni-cas.md](./0010-vlastni-cas.md)                         |
 | 0011 | Přichycení (snap) času na nejbližší preset     | todo        | 1        | [0011-snap-casu-na-preset.md](./0011-snap-casu-na-preset.md)         |
 | 0012 | "Kde jsem" políčko (volný text)                | todo        | 3        | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md)               |

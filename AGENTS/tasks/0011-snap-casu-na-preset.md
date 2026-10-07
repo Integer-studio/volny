@@ -40,8 +40,8 @@ v `apps/fe/components/TimeRing/presets.ts` (ne v `lib/time.ts`, jak čekala
 kritéria — patří k presetům, ne k obecné práci s časem) a prstenec s ním
 startuje. Vlastní čas mimo presety je dostupný pořád, tažením prstence.
 
-Zbývá jen napojit to na uživatelské presety z [0009](./0009-user-presety.md)
-místo pevného seznamu kotev.
+Napojení na uživatelské presety z [0009](./0009-user-presety.md) je hotové
+(2026-10-07): `defaultTarget(now, presets)` bere seznam z `hooks/usePresets.ts`.
 
 Má to jednu hranu, která se možná bude chtít změnit: ve 23:40 je půlnoc jen
 20 minut daleko, takže se přeskočí a výchozí padne na oběd druhý den, tedy

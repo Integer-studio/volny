@@ -60,8 +60,8 @@ Kód je v `apps/fe/components/`:
   zónu, aby běžné zadání nepřeskočilo o čtvrthodinu.
 - `TimeRing/RingMarker.tsx` — cokoli, co stojí na prstenci a musí ustoupit
   handle: ikonky presetů (uhýbají) i čísla hodin (vytrácejí se).
-- `TimeRing/presets.ts` — denní kotvy (oběd/po práci/večer/půlnoc) a pravidlo
-  pro výchozí čas.
+- `TimeRing/presets.ts` — denní kotvy a pravidlo pro výchozí čas. Kotvy si
+  od 2026-10-07 nastavuje uživatel ([0009](./0009-user-presety.md)).
 - `FreeDial.tsx` — složení prstence, tlačítka a popisku.
 
 Z `apps/fe/app/index.tsx` tím odešel `BottomSheet` se sliderem i řádek čtyř

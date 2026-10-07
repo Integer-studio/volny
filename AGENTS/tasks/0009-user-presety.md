@@ -1,6 +1,6 @@
 # 0009 — User-based nastavení presetů (jméno, ikonka, přidávání/odebírání)
 
-- **Stav:** todo
+- **Stav:** in progress
 - **Priorita:** 2 (důležité, ale nebrání releasu)
 - **Datum vytvoření:** 2026-09-06
 
@@ -17,23 +17,56 @@ v `apps/fe/app/index.tsx`. Jde tedy o zavedení zcela nové entity.
 
 ## Kritéria splnění
 
-- [ ] Nová entita "preset" (jméno, ikonka, hodnota/offset, pořadí)
+- [x] Nová entita "preset" (jméno, ikonka, hodnota/offset, pořadí)
       nahrazuje natvrdo dané pole `[1, 2, 3, 5]` v `apps/fe/app/index.tsx`.
-- [ ] Uživatel může presety přidávat, přejmenovávat, měnit ikonku a mazat.
-- [ ] Ikonky se vybírají ze stávající sady používané v appce
+- [x] Uživatel může presety přidávat, přejmenovávat, měnit ikonku a mazat.
+- [x] Ikonky se vybírají ze stávající sady používané v appce
       (`lucide-react-native`, viz `SettingsIcon`, `UserPlus`, `Users` v
       `index.tsx`), ne z nového icon systému.
-- [ ] Nové UI pro zadávání času ([0007](./0007-nove-zadavani-casu.md))
+- [x] Nové UI pro zadávání času ([0007](./0007-nove-zadavani-casu.md))
       čte presety z této nové entity.
 
 **Rozhodnuto:** presety se ukládají persistentně na backendu (nová
 tabulka/entita a endpointy, analogicky k `FreeTime`), ne jen lokálně na
 zařízení — kvůli synchronizaci mezi zařízeními (web/mobil).
 
-- [ ] Nový BE model/DTO/endpoint pro presety (CRUD — vytvoření, úprava,
+- [x] Nový BE model/DTO/endpoint pro presety (CRUD — vytvoření, úprava,
       smazání, výpis vlastních presetů uživatele), vázaný na `UserID`
       stejně jako `FreeTime`.
-- [ ] Nová DB migrace pro tabulku presetů.
+- [x] Nová DB migrace pro tabulku presetů.
+
+## Implementace (2026-10-07, větev `feature/user-presety`)
+
+UX rozhodnuté s Tondou:
+
+- Úpravy přímo na hlavní obrazovce, ne v nastavení: "Upravit" u nadpisu
+  seznamu presetů ho přepne do režimu úprav (řádek → editor, "Přidat
+  preset", "Obnovit výchozí presety" na dvě klepnutí, "Hotovo").
+- Čas po čtvrthodinách přes dvě otočná kolečka (hodina, minuta).
+- Ikonky z vybrané sady ~20 lucide ikon, bez hledání.
+- Smazání hned, s "Vrátit" v toastu. Dva presety na stejný čas nejdou
+  (chyba v editoru, na BE unikátní index + 409).
+- Bez limitu počtu a bez ručního řazení - seznam je dál řazený podle toho,
+  co přijde nejdřív.
+- V UI vždy "preset", nikdy "rychlá volba".
+
+Kód:
+
+- BE: `Models/Preset.cs` (minuta dne, ne hodina), `PresetsController`
+  (CRUD + `POST /api/presets/reset`), výchozí presety a povolené ikonky
+  v `Services/DefaultPresets.cs`. Migrace `AddPresets` osadila výchozí
+  presety všem stávajícím uživatelům; nový je dostane při registraci.
+  Prázdný seznam tedy vždy znamená "smazal si je", žádné líné osazování.
+- FE: `hooks/usePresets.ts` (data + cache), `PresetList.tsx` (režim úprav),
+  `PresetEditSheet.tsx`, `TimeWheel.tsx`, `Toast` umí akci. `ANCHORS`
+  v `TimeRing/presets.ts` nahradil `DEFAULT_PRESETS` (náhrada před prvním
+  načtením) a `PRESET_ICONS` (klíče musí sedět s BE).
+- RNW nepřekládá `snapToInterval` na CSS, takže kolečko na webu zapíná
+  scroll-snap samo (a po utichnutí se dorovná).
+
+Ověřeno na webu (Expo web + lokální BE): úprava, přidání, duplicitní čas,
+smazání a vrácení, reset, prázdný stav, presety na prstenci. **Zbývá
+ověřit na Androidu a iOS** (hlavně kolečka a haptiku).
 
 ## Poznámky
 
