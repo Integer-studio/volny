@@ -47,7 +47,7 @@ export default function GroupInviteSheet({ code, preview, onDecline, onJoined }:
   };
 
   return (
-    <BottomSheet visible={code != null && preview != null} onClose={onDecline}>
+    <BottomSheet visible={code != null && preview != null} onClose={onDecline} dismissable={!joining}>
       {preview && (
         <>
           <View className="items-center mb-6">

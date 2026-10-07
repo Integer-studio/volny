@@ -28,7 +28,7 @@
 
 ## Kritéria splnění
 
-- [ ] Všechna ikonová tlačítka mají label a roli.
+- [x] Všechna ikonová tlačítka mají label a roli.
 - [ ] Genitivní popisky presetů (ideálně jako pole v datech presetů, viz
       0009).
 - [ ] Opravené plurály a sjednocené texty.
@@ -45,3 +45,8 @@
 - `useNow` tiká zarovnaně na minutu a obnoví se při návratu do appky.
 
 Zbytek patří do skupin B, D a F.
+
+**2026-10-07 (skupina B):** Label a roli dostala ikonová tlačítka v
+hledání, QR a obnova odkazu ve skupině, zavření v `add-friend`,
+`BackButton`, oko u hesla, přepínač režimu v sign-in a scrim
+`BottomSheet`u. Sjednocený text je "Nový odkaz vygenerován".

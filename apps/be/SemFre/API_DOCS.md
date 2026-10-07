@@ -116,9 +116,11 @@ Jednorázový kód pro přenos přihlášení ze Safari do aplikace přidané na
 ## 2) Users
 
 ### GET /api/users?q={q}
-- Auth: optional
-- Query: `q` (required) — substring match in `username` OR `name`.
-- Success: `200 OK` -> `UserDto[]`
+- Auth: required
+- Query: `q` (required) — substring match in `username` OR `name`. Shorter
+  than 2 characters (after trim) returns `[]`.
+- Success: `200 OK` -> `UserSearchResultDto[]` (max 20, ordered by username):
+  `UserSummaryDto` + `relation`: `none` | `friend` | `outgoing` | `incoming`.
 - Error: `400` when `q` omitted (to prevent listing all users)
 
 Notes: Frontend must always include `q` when calling this endpoint.
@@ -243,7 +245,9 @@ výskyt. `icon` je klíč z pevné sady (`DefaultPresets.IconKeys`, stejná jako
 - Auth: required
 - Body: integer `suggestedId` (plain integer in body)
 - Creates friend request. `201` -> `FriendSuggestionDto` (IDs + names)
-- Errors: `400` self-request, `409` already exists
+- If the other user already sent me a request, accepts it instead:
+  `200` -> `{ accepted: true, friend: FriendDto }`
+- Errors: `400` self-request, `409` already exists / already friends
 
 ### GET /api/friendsuggestions/outgoing
 - Auth: required

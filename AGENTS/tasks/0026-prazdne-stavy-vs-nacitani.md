@@ -38,3 +38,11 @@ přišel o přátele/skupiny.
 - [ ] Hlavní obrazovka nefetchuje ani nepřepisuje cache, když uživatel není
       volný.
 - [ ] Pozvánky: "neplatná" jen při 404, jinak chyba s retry.
+
+## Poznámky
+
+**2026-10-07 (skupina B):** Hledání má spinner už během psaní a debounce,
+chybu s "Zkusit znovu", nápovědu pod 2 znaky a "Nikoho takového jsme
+nenašli." až po doběhnutí. Seznam přátel v hledání rozlišuje načítání,
+chybu, prázdno a data. Zbytek (hlavní obrazovka, skupiny, pozvánky) patří
+do skupiny C.

@@ -1,6 +1,6 @@
 # 0024 — Mizející rychlá volba (presety)
 
-- **Stav:** in progress
+- **Stav:** done
 - **Priorita:** 1
 - **Datum vytvoření:** 2026-10-07
 
@@ -38,7 +38,7 @@
 - [x] Ikony mimo okno prstence se plynule skryjí/objeví (nebo se připnou na
       konec dráhy).
 - [x] `canScrollMore` se počítá i v `onContentSizeChange`/`onLayout`.
-- [ ] Ověřeno: offline ťuknutí na "volný" a dvojťuk — rychlá volba zůstane.
+- [x] Ověřeno: offline ťuknutí na "volný" a dvojťuk — rychlá volba zůstane.
 
 ## Poznámky
 

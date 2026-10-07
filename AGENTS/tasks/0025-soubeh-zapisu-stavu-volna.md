@@ -1,6 +1,6 @@
 # 0025 — Souběh zápisů stavu volna a falešné chyby
 
-- **Stav:** in progress
+- **Stav:** done
 - **Priorita:** 1
 - **Datum vytvoření:** 2026-10-07
 
@@ -25,7 +25,7 @@
 - [x] Chyba `refreshMe` po úspěšném zápisu nevede k rollbacku ani toastu.
 - [x] Zápisy stavu jsou serializované (fronta), nebo jsou tlačítko, prstenec
       a presety během zápisu zablokované. Vizuální optimismus zůstane.
-- [ ] Ověřeno na pomalé síti (throttling): žádné duplicitní volno ani
+- [x] Ověřeno na pomalé síti (throttling): žádné duplicitní volno ani
       notifikace.
 
 ## Poznámky

@@ -1,5 +1,6 @@
 import { Platform, Share } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { isShareCancelled } from './invite-link';
 
 const BASE_URL = 'https://volny.intstudio.cz';
 
@@ -12,14 +13,15 @@ export function buildFriendInviteUrl(code: string): string {
  * is unsupported (react-native-web rejects when navigator.share is missing,
  * e.g. desktop Firefox or a non-secure context).
  */
-export async function shareFriendInvite(code: string, myName: string): Promise<'shared' | 'copied' | 'failed'> {
+export async function shareFriendInvite(code: string, myName: string): Promise<'shared' | 'cancelled' | 'copied' | 'failed'> {
   const url = buildFriendInviteUrl(code);
   const message = `Přidej si mě na Volný, ${myName}: ${url}`;
 
   try {
     await Share.share(Platform.OS === 'web' ? { message: url } : { message, url });
     return 'shared';
-  } catch {
+  } catch (e) {
+    if (isShareCancelled(e)) return 'cancelled';
     return copyFriendInviteLink(code);
   }
 }

@@ -50,6 +50,16 @@ public class UserSummaryDto
     public string Name { get; set; } = null!;
 }
 
+/// <summary>
+/// Výsledek hledání uživatelů i se vztahem k hledajícímu, aby FE ukázal
+/// "Přidat" / "Odesláno" / "Přátelé" / "Přijmout" bez dalších requestů.
+/// </summary>
+public class UserSearchResultDto : UserSummaryDto
+{
+    /// <summary>"none", "friend", "outgoing" (žádost jsem poslal) nebo "incoming" (žádost mi přišla).</summary>
+    public string Relation { get; set; } = "none";
+}
+
 public class UserProfileUpdateDto
 {
     public string? Username { get; set; }

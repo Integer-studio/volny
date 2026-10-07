@@ -8,6 +8,15 @@ export function buildInviteUrl(code: string): string {
 }
 
 /**
+ * Uživatel sdílecí dialog zavřel. Web (navigator.share) to hlásí jako
+ * `AbortError` - není to chyba a nemá to spadnout do kopírování s toastem
+ * "Odkaz zkopírován.".
+ */
+export function isShareCancelled(e: unknown): boolean {
+  return e instanceof Error && e.name === "AbortError";
+}
+
+/**
  * Tries the native/web share sheet first; falls back to clipboard if sharing
  * is unsupported (react-native-web rejects when navigator.share is missing,
  * e.g. desktop Firefox or a non-secure context).
@@ -15,7 +24,7 @@ export function buildInviteUrl(code: string): string {
 export async function shareInvite(
   code: string,
   groupName: string,
-): Promise<"shared" | "copied" | "failed"> {
+): Promise<"shared" | "cancelled" | "copied" | "failed"> {
   const url = buildInviteUrl(code);
   const message = `Přidej se ke skupině „${groupName}“ ve Volném: ${url}`;
 
@@ -24,7 +33,8 @@ export async function shareInvite(
       Platform.OS === "web" ? { message: url } : { message, url },
     );
     return "shared";
-  } catch {
+  } catch (e) {
+    if (isShareCancelled(e)) return "cancelled";
     return copyInviteLink(code);
   }
 }

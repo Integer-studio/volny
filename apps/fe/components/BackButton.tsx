@@ -20,6 +20,8 @@ export default function BackButton() {
       onPress={() => (router.canGoBack() ? router.back() : router.replace(homeRoute))}
       className="p-2"
       hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel="Zpět"
     >
       <ChevronLeft size={26} color="#000" />
     </Pressable>

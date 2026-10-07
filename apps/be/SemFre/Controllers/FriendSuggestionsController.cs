@@ -36,6 +36,19 @@ public class FriendSuggestionsController : ControllerBase
         if (await _db.FriendSuggestions.AnyAsync(fs => fs.SuggesterID == suggesterId && fs.SuggestedID == suggestedId))
             return Conflict(new { message = "Suggestion already exists" });
 
+        var (lo, hi) = suggesterId < suggestedId ? (suggesterId.Value, suggestedId) : (suggestedId, suggesterId.Value);
+        if (await _db.FriendPairs.AnyAsync(fp => fp.Friend1ID == lo && fp.Friend2ID == hi))
+            return Conflict(new { message = "Already friends" });
+
+        // Ten druhý mi už žádost poslal - místo zrcadlové žádosti ji rovnou
+        // přijmout, oba o sebe stojí.
+        var reverse = await _db.FriendSuggestions.SingleOrDefaultAsync(fs => fs.SuggesterID == suggestedId && fs.SuggestedID == suggesterId);
+        if (reverse != null)
+        {
+            var friendDto = await AcceptSuggestionAsync(reverse);
+            return Ok(new { accepted = true, friend = friendDto });
+        }
+
         var s = new FriendSuggestion { SuggesterID = suggesterId.Value, SuggestedID = suggestedId };
         _db.FriendSuggestions.Add(s);
         await _db.SaveChangesAsync();
@@ -137,6 +150,19 @@ public class FriendSuggestionsController : ControllerBase
             return Conflict(new { message = "Already friends" });
         }
 
+        return CreatedAtAction(null, await AcceptSuggestionAsync(s));
+    }
+
+    /// <summary>
+    /// Udělá z autora a adresáta žádosti přátele a žádost smaže. Sdílené
+    /// přijetím i protisměrnou žádostí v Create.
+    /// </summary>
+    private async Task<FriendDto> AcceptSuggestionAsync(FriendSuggestion s)
+    {
+        var suggesterId = s.SuggesterID;
+        var suggestedId = s.SuggestedID;
+        var (a, b) = suggesterId < suggestedId ? (suggesterId, suggestedId) : (suggestedId, suggesterId);
+
         var pair = new FriendPair { Friend1ID = a, Friend2ID = b };
         _db.FriendPairs.Add(pair);
         _db.FriendSuggestions.Remove(s);
@@ -147,7 +173,7 @@ public class FriendSuggestionsController : ControllerBase
             .ToDictionaryAsync(u => u.UserID);
 
         var suggesterUser = users.GetValueOrDefault(suggesterId);
-        var accepter = users.GetValueOrDefault(suggestedId.Value);
+        var accepter = users.GetValueOrDefault(suggestedId);
 
         var friendDto = new FriendDto
         {
@@ -162,14 +188,14 @@ public class FriendSuggestionsController : ControllerBase
             {
                 Title = "Žádost o přátelství přijata",
                 Body = $"{accepter?.Name} (@{accepter?.Username}) přijal(a) tvou žádost o přátelství.",
-                Data = new Dictionary<string, string> { { "type", "friend_accepted" }, { "friendId", suggestedId.Value.ToString() } }
+                Data = new Dictionary<string, string> { { "type", "friend_accepted" }, { "friendId", suggestedId.ToString() } }
             }
         });
 
         await _realtime.FriendsChangedAsync(a, b);
         await _realtime.ConnectionsChangedAsync(a, b);
 
-        return CreatedAtAction(null, friendDto);
+        return friendDto;
     }
 
     [HttpPost("reject")]

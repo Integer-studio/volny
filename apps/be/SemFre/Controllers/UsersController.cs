@@ -61,17 +61,51 @@ public class UsersController : ControllerBase
         return dto;
     }
 
+    /// <summary>Kratší dotaz nic nehledá - "a" by vypsalo skoro celý adresář uživatelů.</summary>
+    private const int SearchMinLength = 2;
+    private const int SearchLimit = 20;
+
     [HttpGet]
     public async Task<IActionResult> Search([FromQuery] string? q = null)
     {
         if (string.IsNullOrWhiteSpace(q)) return BadRequest(new { message = "Query parameter 'q' is required for searching users." });
-
         var currentUserId = _access.GetCurrentUserId(User);
+        if (currentUserId == null) return Unauthorized();
+
+        q = q.Trim();
+        if (q.Length < SearchMinLength) return Ok(Array.Empty<UserSearchResultDto>());
 
         var users = await _db.Users.AsNoTracking()
             .Where(u => u.UserID != currentUserId && (EF.Functions.Like(u.Username, $"%{q}%") || EF.Functions.Like(u.Name, $"%{q}%")))
+            .OrderBy(u => u.Username)
+            .Take(SearchLimit)
             .ToListAsync();
-        return Ok(_mapper.Map<IEnumerable<UserSummaryDto>>(users));
+
+        var ids = users.Select(u => u.UserID).ToList();
+        var me = currentUserId.Value;
+        var friendIds = await _db.FriendPairs.AsNoTracking()
+            .Where(fp => (fp.Friend1ID == me && ids.Contains(fp.Friend2ID)) || (fp.Friend2ID == me && ids.Contains(fp.Friend1ID)))
+            .Select(fp => fp.Friend1ID == me ? fp.Friend2ID : fp.Friend1ID)
+            .ToListAsync();
+        var outgoingIds = await _db.FriendSuggestions.AsNoTracking()
+            .Where(fs => fs.SuggesterID == me && ids.Contains(fs.SuggestedID))
+            .Select(fs => fs.SuggestedID)
+            .ToListAsync();
+        var incomingIds = await _db.FriendSuggestions.AsNoTracking()
+            .Where(fs => fs.SuggestedID == me && ids.Contains(fs.SuggesterID))
+            .Select(fs => fs.SuggesterID)
+            .ToListAsync();
+
+        return Ok(users.Select(u => new UserSearchResultDto
+        {
+            UserID = u.UserID,
+            Username = u.Username,
+            Name = u.Name,
+            Relation = friendIds.Contains(u.UserID) ? "friend"
+                : incomingIds.Contains(u.UserID) ? "incoming"
+                : outgoingIds.Contains(u.UserID) ? "outgoing"
+                : "none",
+        }));
     }
 
     [HttpGet("{id:int}")]

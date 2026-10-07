@@ -79,7 +79,13 @@ export default function AddFriend() {
   return (
     <View className="flex-1 bg-[#FCFBF8] items-center justify-center px-8">
       {status === 'signedIn' && (
-        <Pressable onPress={dismiss} className="absolute top-4 right-4 p-2" hitSlop={8}>
+        <Pressable
+          onPress={dismiss}
+          className="absolute top-4 right-4 p-2"
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Zavřít"
+        >
           <X size={22} color="#888" />
         </Pressable>
       )}

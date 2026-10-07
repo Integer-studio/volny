@@ -43,6 +43,11 @@ export class ApiError extends Error {
 }
 
 export type UserSummary = { id: string; username: string; name: string };
+/** Vztah k uživateli z hledání: přítel, žádost odeslaná mnou, žádost od něj. */
+export type UserRelation = 'none' | 'friend' | 'outgoing' | 'incoming';
+export type UserSearchResult = UserSummary & { relation: UserRelation };
+/** Výsledek "+": nová žádost, nebo rovnou přátelství (on už žádost poslal mně). */
+export type AddFriendResult = 'requested' | 'accepted';
 
 type UserSummaryDto = { userID: number; username: string; name: string };
 function toUserSummary(d: UserSummaryDto): UserSummary {
@@ -573,10 +578,28 @@ export const api = {
     return rows.map(toPresetDef);
   },
 
-  async searchUsers(query: string): Promise<UserSummary[]> {
+  async searchUsers(query: string): Promise<UserSearchResult[]> {
     if (!query.trim()) return [];
-    const users: UserSummaryDto[] = await request(`/users?q=${encodeURIComponent(query)}`);
-    return users.map(toUserSummary);
+    const users: (UserSummaryDto & { relation: UserRelation })[] = await request(`/users?q=${encodeURIComponent(query)}`);
+    return users.map(u => ({ ...toUserSummary(u), relation: u.relation }));
+  },
+
+  async getOutgoingRequests(): Promise<UserSummary[]> {
+    const reqs: FriendRequestDto[] = await request('/friendsuggestions/outgoing');
+    return reqs.map(r => toUserSummary(r.user));
+  },
+
+  /** Zruší moji odeslanou žádost. Už neexistující (404) bere jako hotovo. */
+  async cancelRequest(userId: string): Promise<void> {
+    const me = this.getCurrentUserId();
+    try {
+      await request(`/friendsuggestions?suggesterId=${me}&suggestedId=${encodeURIComponent(userId)}`, {
+        method: 'DELETE',
+        idempotent: true,
+      });
+    } catch (e) {
+      if (!(e instanceof ApiError && e.status === 404)) throw e;
+    }
   },
 
   async getPendingRequests(): Promise<UserSummary[]> {
@@ -584,8 +607,21 @@ export const api = {
     return reqs.map(r => toUserSummary(r.user));
   },
 
-  async addFriend(userId: string): Promise<void> {
-    await request('/friendsuggestions', { method: 'POST', body: userId });
+  /**
+   * "+" u uživatele. Když on už žádost poslal mně, backend ji rovnou přijme
+   * (`accepted`). 409 se bere jako úspěch - žádost už existuje, nebo už jsme
+   * přátelé, a o to uživateli šlo.
+   */
+  async addFriend(userId: string): Promise<AddFriendResult> {
+    try {
+      const res = await request('/friendsuggestions', { method: 'POST', body: userId });
+      return res?.accepted ? 'accepted' : 'requested';
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        return e.serverMessage === 'Already friends' ? 'accepted' : 'requested';
+      }
+      throw e;
+    }
   },
 
   async getMyFriendInviteCode(): Promise<string> {

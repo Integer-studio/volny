@@ -46,3 +46,14 @@ Nativecn `components/ui/button` stojí na shadcn tokenech, které appka
 nemá, takže zůstal nepoužitý. `BottomSheet` má `dismissable` a
 `ProfileSheet` ho během akce vypíná. Zbylá místa z kritérií patří do
 skupin B a F.
+
+**2026-10-07 (skupina B):**
+- Odebrání přítele v hledání se potvrzuje inline ("Zpět" / "Odebrat").
+- Obnovení odkazu přítele chce potvrzení ("Starý odkaz i QR kód
+  přestanou fungovat.").
+- `PendingFriendInviteGate` ukáže `FriendInviteSheet` s
+  přijmout/odmítnout. Na 404 hlásí "Pozvánka do přátel už neplatí."
+- `AbortError` ze share vrací `cancelled`, bez toastu.
+- `GroupInviteSheet` má během joinu `dismissable={false}`.
+- Zbývá ve skupině F: smazání/opuštění skupiny, přepínač sdílení a
+  potvrzení obnovy odkazu skupiny.

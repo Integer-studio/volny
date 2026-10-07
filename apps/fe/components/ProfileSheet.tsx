@@ -28,10 +28,10 @@ type Props = {
 
 /**
  * Profile detail popup: contact info (only ever returned by the API when the
- * viewer is connected to this person) + friend add/remove. Only wired up
- * from the free-people list and a group's member list - see the onPress
- * callers in app/index.tsx and app/groups/[id].tsx. Deliberately NOT reachable
- * from app/search.tsx, where the people shown aren't connections yet.
+ * viewer is connected to this person) + friend add/remove. Opened from the
+ * free-people list, a group's member list and search (app/search.tsx) - tam
+ * hlavně proto, aby šlo poznat, kterého "Petra" člověk přidává (společné
+ * skupiny). Kontakt API cizím lidem nevydá.
  */
 export default function ProfileSheet({ userId, onClose }: Props) {
   const { show } = useToast();
@@ -62,10 +62,11 @@ export default function ProfileSheet({ userId, onClose }: Props) {
     onClose();
   };
 
-  const runAction = async (action: () => Promise<void>, failMessage: string) => {
+  const runAction = async (action: () => Promise<string | void>, failMessage: string) => {
     setBusy(true);
     try {
-      await action();
+      const done = await action();
+      if (done) show(done);
       profile.reload();
     } catch (e) {
       show(errorMessage(e, failMessage), 'error');
@@ -74,8 +75,25 @@ export default function ProfileSheet({ userId, onClose }: Props) {
     }
   };
 
-  const handleAdd = () => userId && runAction(() => api.addFriend(userId), 'Nepodařilo se odeslat žádost.');
-  const handleAccept = () => userId && runAction(() => api.acceptRequest(userId), 'Nepodařilo se přijmout žádost.');
+  const name = profile.data?.name ?? '';
+  const handleAdd = () =>
+    userId &&
+    runAction(async () => {
+      const result = await api.addFriend(userId);
+      return result === 'accepted' ? `Teď jste přátelé s ${name}.` : `Žádost odeslána uživateli ${name}.`;
+    }, 'Nepodařilo se odeslat žádost.');
+  const handleCancelRequest = () =>
+    userId &&
+    runAction(async () => {
+      await api.cancelRequest(userId);
+      return 'Žádost zrušena.';
+    }, 'Žádost se nepodařilo zrušit.');
+  const handleAccept = () =>
+    userId &&
+    runAction(async () => {
+      await api.acceptRequest(userId);
+      return `Teď jste přátelé s ${name}.`;
+    }, 'Nepodařilo se přijmout žádost.');
   const handleReject = () => userId && runAction(() => api.rejectRequest(userId), 'Nepodařilo se odmítnout žádost.');
   const handleRemove = () =>
     userId &&
@@ -246,8 +264,9 @@ export default function ProfileSheet({ userId, onClose }: Props) {
                 />
               </View>
             ) : profile.data.hasOutgoingRequest ? (
-              <View className="py-3 rounded-xl items-center bg-gray-100">
-                <Text className="text-gray-400 font-medium">Žádost odeslána</Text>
+              <View className="flex-row items-center">
+                <Text className="flex-1 text-gray-400 font-medium">Žádost odeslána</Text>
+                <Button label="Zrušit žádost" variant="secondary" loading={busy} onPress={handleCancelRequest} />
               </View>
             ) : (
               <Button label="Přidat do přátel" icon={UserPlus} loading={busy} onPress={handleAdd} />

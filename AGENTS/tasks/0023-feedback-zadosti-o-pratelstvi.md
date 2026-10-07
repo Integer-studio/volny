@@ -1,6 +1,6 @@
 # 0023 — Zpětná vazba při posílání žádostí o přátelství
 
-- **Stav:** todo
+- **Stav:** in progress
 - **Priorita:** 1
 - **Datum vytvoření:** 2026-10-07
 
@@ -36,17 +36,31 @@ Uživatelé hlásí, že posílání žádostí "nemá feedback". Příčiny (UX
 
 ## Kritéria splnění
 
-- [ ] Vyhledávání vrací (nebo klient dopočítá) vztah k uživateli a řádek má
+- [x] Vyhledávání vrací (nebo klient dopočítá) vztah k uživateli a řádek má
       stavy "Přidat" / "Odesláno · Zrušit" / "Přátelé" / "Přijmout".
-- [ ] Úspěšné odeslání ukáže toast "Žádost odeslána uživateli X". Chyba
+- [x] Úspěšné odeslání ukáže toast "Žádost odeslána uživateli X". Chyba
       ukáže `errorMessage()`. 409 se bere jako úspěch.
-- [ ] Při pomalé odpovědi se ukáže `useSlowActionNotice`.
-- [ ] Sekce "Odeslané žádosti" (napojená na `/outgoing`) s možností zrušit.
-- [ ] "+" na uživatele, který mi už žádost poslal, žádost rovnou přijme
+- [x] Při pomalé odpovědi se ukáže `useSlowActionNotice`.
+- [x] Sekce "Odeslané žádosti" (napojená na `/outgoing`) s možností zrušit.
+- [x] "+" na uživatele, který mi už žádost poslal, žádost rovnou přijme
       (BE nebo FE).
-- [ ] Hledání od 2–3 znaků s nápovědou, na BE `Take(20)`.
+- [x] Hledání od 2–3 znaků s nápovědou, na BE `Take(20)`.
 
 ## Poznámky
 
 Související: toasty pod modaly (0027) — chyby v `ProfileSheet` se kvůli tomu
 vůbec nezobrazí.
+
+**2026-10-07 (skupina B):**
+- BE: `GET /users?q=` vrací `UserSearchResultDto` s `relation`
+  (`none`/`friend`/`outgoing`/`incoming`), max 20, od 2 znaků.
+  `POST /friendsuggestions` na protisměrnou žádost rovnou přijme
+  (`200 { accepted: true }`) a na existující přátelství vrací 409.
+- FE: řádky hledání mají "Přidat" / "Odesláno · Zrušit" / "Přátelé" /
+  "Přijmout" a jdou rozkliknout do `ProfileSheet`. K tomu toasty a
+  `useSlowActionNotice`, sekce "Odeslané žádosti" a odmítnutí s 5s undo.
+  `ProfileSheet` umí žádost zrušit.
+- Pozor: `sign-in.tsx` kontroluje obsazenost jména přes `searchUsers`,
+  jenže endpoint je `[Authorize]` a odhlášenému vrací 401 - kontrola tak
+  nefungovala ani dřív. Patří do skupiny D (0028).
+- Zbývá ověřit s druhým účtem: protisměrná žádost, zrušení, undo.

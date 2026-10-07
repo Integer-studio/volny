@@ -176,6 +176,8 @@ export default function GroupDetail() {
         </View>
         <Pressable
           onPress={() => setQrVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Zvětšit QR kód pozvánky"
           className="p-1.5 bg-white rounded-lg border border-gray-100 active:opacity-70"
         >
           <QRCode value={buildInviteUrl(code)} size={64} />
@@ -191,7 +193,12 @@ export default function GroupDetail() {
           <Text className="text-gray-800 font-medium ml-2">Sdílet</Text>
         </Pressable>
         {data.isOwner && (
-          <Pressable onPress={handleRegenerate} disabled={regenerating} className="flex-row items-center justify-center bg-gray-100 py-3 px-3 rounded-xl ml-2 active:opacity-80">
+          <Pressable
+            onPress={handleRegenerate}
+            disabled={regenerating}
+            accessibilityRole="button"
+            accessibilityLabel="Vygenerovat nový odkaz"
+            className="flex-row items-center justify-center bg-gray-100 py-3 px-3 rounded-xl ml-2 active:opacity-80">
             {regenerating ? <ActivityIndicator color="#333" /> : <RefreshCw size={16} color="#333" />}
           </Pressable>
         )}

@@ -169,6 +169,7 @@ export default function SignIn() {
           setUsernameError(null);
           setPasswordError(null);
         }}
+        accessibilityRole="button"
         className="mt-6 items-center p-2"
       >
         <Text className="text-gray-500">

@@ -57,6 +57,8 @@ export default function BottomSheet({ visible, onClose, dismissable = true, chil
         <Pressable
           className="absolute top-0 bottom-0 left-0 right-0 bg-black/40"
           onPress={handleClose}
+          accessibilityRole="button"
+          accessibilityLabel="Zavřít"
         />
 
         <Animated.View style={{ transform: [{ translateY: slideAnim }] }}>

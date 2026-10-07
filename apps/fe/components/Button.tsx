@@ -30,6 +30,8 @@ type Props = {
   label: string;
   onPress: () => void;
   variant?: Variant;
+  /** `sm` = kompaktní pilulka pro akce v řádku seznamu (UserRow). */
+  size?: 'md' | 'sm';
   icon?: LucideIcon;
   /** Běžící akce: spinner, tlačítko nejde zmáčknout, šířka zůstává. */
   loading?: boolean;
@@ -49,6 +51,7 @@ export default function Button({
   label,
   onPress,
   variant = 'primary',
+  size = 'md',
   icon: Icon,
   loading = false,
   disabled = false,
@@ -65,7 +68,8 @@ export default function Button({
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
       className={cn(
-        'flex-row items-center justify-center py-3 px-5 rounded-xl active:opacity-80',
+        'flex-row items-center justify-center active:opacity-80',
+        size === 'sm' ? 'py-1.5 px-3 rounded-full' : 'py-3 px-5 rounded-xl',
         containerClass[variant],
         disabled && !loading && 'opacity-50',
         className,
@@ -74,14 +78,22 @@ export default function Button({
       {Icon ? (
         // S ikonou se spinner ukáže místo ní a popisek zůstane.
         <>
-          {loading ? <ActivityIndicator size="small" color={color} /> : <Icon size={16} color={color} />}
-          <Text className={cn('font-medium ml-2', textClass[variant])}>{label}</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color={color} />
+          ) : (
+            <Icon size={size === 'sm' ? 14 : 16} color={color} />
+          )}
+          <Text className={cn('font-medium', size === 'sm' ? 'text-sm ml-1.5' : 'ml-2', textClass[variant])}>
+            {label}
+          </Text>
         </>
       ) : (
         // Bez ikony spinner překryje popisek, který jen zprůhlední - šířka
         // tlačítka se tak během akce nemění.
         <>
-          <Text className={cn('font-medium', textClass[variant], loading && 'opacity-0')}>{label}</Text>
+          <Text className={cn('font-medium', size === 'sm' && 'text-sm', textClass[variant], loading && 'opacity-0')}>
+            {label}
+          </Text>
           {loading && (
             <View className="absolute inset-0 items-center justify-center">
               <ActivityIndicator size="small" color={color} />

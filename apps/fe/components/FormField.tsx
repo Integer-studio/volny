@@ -52,6 +52,8 @@ export default function FormField({ label, error, containerClassName, state, pre
           <Pressable
             onPress={() => setVisible(v => !v)}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={visible ? 'Skrýt heslo' : 'Zobrazit heslo'}
             className="absolute right-3"
           >
             {visible ? <EyeOff size={20} color="#888" /> : <Eye size={20} color="#888" />}
