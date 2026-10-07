@@ -41,3 +41,5 @@ volna a kontaktu se skupinou z [0021](./0021-skupina-toggle-volno-a-kontakt.md).
 ## Poznámky
 
 Na nativních platformách vizuálně neověřeno, jen web.
+
+PR: https://github.com/Integer-studio/volny/pull/19

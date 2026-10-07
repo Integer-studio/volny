@@ -56,3 +56,5 @@ Per-skupinové nastavení patří k členství — `GroupMember`
 
 Zadáno uživatelem 2026-10-06. Osobní údaje (kontakt) — držet striktně
 opt-in a per-skupina.
+
+PR: https://github.com/Integer-studio/volny/pull/19
