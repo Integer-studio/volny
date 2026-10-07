@@ -29,6 +29,11 @@ týká:
 - `eas-update.yml` — publikace OTA update pro Expo/EAS.
 - `volny-be-AutoDeployTrigger-*.yml` — automatický deploy `apps/be` jako
   kontejneru na Azure.
+- `volny-be-scheduled-scaling.yml` — cron, který backendu přes den
+  (6:30–21:00 Europe/Prague) nastaví `minReplicas: 1` a mimo okno vrátí
+  scale-to-zero (`minReplicas: 0`), viz task 0014. Spustit jde i ručně
+  s vynucenou hodnotou. `apps/be/app.yaml` je jen export konfigurace, CI ho
+  neaplikuje — `minReplicas` v něm ukazuje noční stav.
 
 Při úpravě jedné aplikace tedy typicky běží jen odpovídající workflow, ne
 oba.

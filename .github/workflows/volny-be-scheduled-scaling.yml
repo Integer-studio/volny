@@ -1,0 +1,100 @@
+name: Scheduled scaling for volny-be
+
+# Přes den (provozní okno 7:00-21:00 Europe/Prague) drží backend aspoň jednu
+# instanci, aby první uživatel ráno nečekal na cold start. Mimo okno platí
+# původní scale-to-zero (minReplicas 0). Task 0014.
+#
+# Cron v GitHub Actions běží v UTC a umí se zpozdit o desítky minut, proto:
+# - každý běh si sám spočítá, jaký stav má podle pražského času platit, a
+#   mění ho jen když se liší (běhy jsou idempotentní),
+# - ráno i večer jsou dva běhy (pro letní i zimní čas), z nichž jeden je
+#   no-op,
+# - náběh začíná už v 6:30 místního času, ať je instance teplá do 7:00 i se
+#   zpožděním cronu.
+
+on:
+  schedule:
+    # 6:30 Praha: 4:30 UTC v létě (CEST), 5:30 UTC v zimě (CET)
+    - cron: '30 4,5 * * *'
+    # 21:05 Praha: 19:05 UTC v létě, 20:05 UTC v zimě
+    - cron: '5 19,20 * * *'
+  workflow_dispatch:
+    inputs:
+      min_replicas:
+        description: 'Vynutit minReplicas (prázdné = podle denní doby)'
+        required: false
+        type: choice
+        options: ['', '0', '1']
+
+concurrency:
+  group: volny-be-scaling
+  cancel-in-progress: false
+
+env:
+  APP_NAME: volny-be
+  RESOURCE_GROUP: volny
+  HEALTH_URL: https://volny-be.ashysky-0141c791.germanywestcentral.azurecontainerapps.io/api/health
+
+jobs:
+  scale:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Desired minReplicas
+        id: desired
+        run: |
+          if [ -n "${{ inputs.min_replicas }}" ]; then
+            desired="${{ inputs.min_replicas }}"
+          else
+            # Okno náběhu 6:30-21:00 místního času.
+            minutes=$(( 10#$(TZ=Europe/Prague date +%H) * 60 + 10#$(TZ=Europe/Prague date +%M) ))
+            if [ "$minutes" -ge $(( 6 * 60 + 30 )) ] && [ "$minutes" -lt $(( 21 * 60 )) ]; then
+              desired=1
+            else
+              desired=0
+            fi
+          fi
+          echo "Praha: $(TZ=Europe/Prague date '+%F %H:%M %Z'), desired minReplicas=$desired"
+          echo "value=$desired" >> "$GITHUB_OUTPUT"
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.VOLNYBE_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.VOLNYBE_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.VOLNYBE_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Apply minReplicas
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt
+          current=$(az containerapp show -n "$APP_NAME" -g "$RESOURCE_GROUP" \
+            --query 'properties.template.scale.minReplicas' -o tsv)
+          desired='${{ steps.desired.outputs.value }}'
+          echo "current=$current desired=$desired"
+          if [ "$current" = "$desired" ]; then
+            echo "Beze změny."
+          else
+            # Změna scale pravidel vytvoří novou revizi (activeRevisionsMode
+            # Single, takže stará se deaktivuje). Image ani env se nemění.
+            az containerapp update -n "$APP_NAME" -g "$RESOURCE_GROUP" \
+              --min-replicas "$desired" --output none
+          fi
+
+      - name: Warm up
+        if: steps.desired.outputs.value == '1'
+        run: |
+          # Ověření, že instance opravdu běží a odpovídá, ještě před
+          # provozem - ne až na první request uživatele.
+          for i in $(seq 1 20); do
+            start=$(date +%s)
+            if curl -fsS --max-time 30 "$HEALTH_URL" > /dev/null; then
+              echo "Health OK (pokus $i, $(( $(date +%s) - start )) s)."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::Backend po náběhu neodpovídá na $HEALTH_URL"
+          exit 1
