@@ -231,12 +231,19 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(
-                  "https://thankful-forest-019ea4310.6.azurestaticapps.net",
-                  "https://volny.intstudio.cz",
-                  "http://localhost:8081")
-              .AllowAnyHeader()
-              .AllowAnyMethod());
+    {
+        // Lokální vývoj z jiného zařízení v síti (dev web na http://<IP>:8081)
+        // má origin podle IP, kterou nejde vyjmenovat předem - v Development
+        // se proto pustí jakýkoli origin. Produkce zůstává na seznamu.
+        if (builder.Environment.IsDevelopment())
+            policy.SetIsOriginAllowed(_ => true);
+        else
+            policy.WithOrigins(
+                "https://thankful-forest-019ea4310.6.azurestaticapps.net",
+                "https://volny.intstudio.cz",
+                "http://localhost:8081");
+        policy.AllowAnyHeader().AllowAnyMethod();
+    });
 });
 
 var app = builder.Build();
