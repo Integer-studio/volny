@@ -14,6 +14,7 @@ import { useAsyncData } from '../hooks/useAsyncData';
 import { useToast } from './Toast';
 import { errorMessage } from '../lib/errors';
 import BottomSheet from './BottomSheet';
+import Button from './Button';
 import FadeIn from './FadeIn';
 import TipCard from './tour/TipCard';
 import { useTour } from './tour/TourProvider';
@@ -36,8 +37,8 @@ export default function ProfileSheet({ userId, onClose }: Props) {
   const { show } = useToast();
   const [busy, setBusy] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
-  // U ukázkového přítele místo vytáčení jen vysvětlení. Přímo v listu, ne
-  // toastem - toast leží pod RN Modalem a ukázal by se až po zavření.
+  // U ukázkového přítele místo vytáčení jen vysvětlení, přímo v listu u
+  // kontaktů, kam uživatel zrovna ťukl.
   const [dummyNote, setDummyNote] = useState(false);
 
   const { skip } = useTour();
@@ -106,7 +107,7 @@ export default function ProfileSheet({ userId, onClose }: Props) {
   };
 
   return (
-    <BottomSheet visible={!!userId} onClose={handleClose}>
+    <BottomSheet visible={!!userId} onClose={handleClose} dismissable={!busy}>
       {profile.showSpinner ? (
         <View className="items-center py-8">
           <ActivityIndicator size="large" color="#EE6C4D" />
@@ -191,74 +192,65 @@ export default function ProfileSheet({ userId, onClose }: Props) {
             {isDummy ? null : isSelf ? (
               <View className="items-center">
                 <Text className="text-gray-400 text-base mb-4">To jsi ty! 😛</Text>
-                <Pressable
+                <Button
+                  label="Upravit profil"
+                  variant="secondary"
                   onPress={() => {
                     handleClose();
                     router.push('/settings');
                   }}
-                  className="flex-row items-center justify-center bg-gray-100 py-3 px-5 rounded-xl active:opacity-80"
-                >
-                  <Text className="text-gray-800 font-medium">Upravit profil</Text>
-                </Pressable>
+                />
               </View>
             ) : profile.data.isFriend ? (
               !confirmingRemove ? (
-                <Pressable
+                <Button
+                  label="Odebrat z přátel"
+                  variant="destructiveOutline"
+                  icon={UserMinus}
                   onPress={() => setConfirmingRemove(true)}
-                  className="flex-row items-center justify-center border border-red-200 py-3 rounded-xl active:bg-red-50"
-                >
-                  <UserMinus size={16} color="#ef4444" />
-                  <Text className="text-red-500 font-medium ml-2">Odebrat z přátel</Text>
-                </Pressable>
+                />
               ) : (
                 <View className="flex-row">
-                  <Pressable
-                    onPress={() => setConfirmingRemove(false)}
-                    className="flex-1 bg-gray-100 py-3 rounded-xl items-center mr-2 active:opacity-80"
-                  >
-                    <Text className="text-gray-700 font-medium">Zrušit</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={handleRemove}
+                  <Button
+                    label="Zrušit"
+                    variant="secondary"
                     disabled={busy}
-                    className="flex-1 bg-red-500 py-3 rounded-xl items-center ml-2 active:opacity-80"
-                  >
-                    {busy ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-medium">Odebrat</Text>}
-                  </Pressable>
+                    onPress={() => setConfirmingRemove(false)}
+                    className="flex-1 mr-2"
+                  />
+                  <Button
+                    label="Odebrat"
+                    variant="destructive"
+                    loading={busy}
+                    onPress={handleRemove}
+                    className="flex-1 ml-2"
+                  />
                 </View>
               )
             ) : profile.data.hasIncomingRequest ? (
               <View className="flex-row">
-                <Pressable
+                <Button
+                  label="Odmítnout"
+                  variant="secondary"
+                  icon={X}
+                  disabled={busy}
                   onPress={handleReject}
-                  disabled={busy}
-                  className="flex-1 flex-row items-center justify-center bg-gray-100 py-3 rounded-xl mr-2 active:opacity-80"
-                >
-                  <X size={16} color="#333" />
-                  <Text className="text-gray-700 font-medium ml-2">Odmítnout</Text>
-                </Pressable>
-                <Pressable
+                  className="flex-1 mr-2"
+                />
+                <Button
+                  label="Přijmout"
+                  icon={Check}
+                  loading={busy}
                   onPress={handleAccept}
-                  disabled={busy}
-                  className="flex-1 flex-row items-center justify-center bg-[#EE6C4D] py-3 rounded-xl ml-2 active:opacity-80"
-                >
-                  {busy ? <ActivityIndicator color="#fff" /> : <Check size={16} color="#fff" />}
-                  <Text className="text-white font-medium ml-2">Přijmout</Text>
-                </Pressable>
+                  className="flex-1 ml-2"
+                />
               </View>
             ) : profile.data.hasOutgoingRequest ? (
               <View className="py-3 rounded-xl items-center bg-gray-100">
                 <Text className="text-gray-400 font-medium">Žádost odeslána</Text>
               </View>
             ) : (
-              <Pressable
-                onPress={handleAdd}
-                disabled={busy}
-                className="flex-row items-center justify-center bg-[#EE6C4D] py-3 rounded-xl active:opacity-80"
-              >
-                {busy ? <ActivityIndicator color="#fff" /> : <UserPlus size={16} color="#fff" />}
-                <Text className="text-white font-medium ml-2">Přidat do přátel</Text>
-              </Pressable>
+              <Button label="Přidat do přátel" icon={UserPlus} loading={busy} onPress={handleAdd} />
             )}
           </View>
         </FadeIn>

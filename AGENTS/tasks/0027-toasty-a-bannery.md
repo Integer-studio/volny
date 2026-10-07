@@ -1,6 +1,6 @@
 # 0027 — Toasty pod modaly, umístění toastu a banneru
 
-- **Stav:** todo
+- **Stav:** in progress
 - **Priorita:** 2
 - **Datum vytvoření:** 2026-10-07
 
@@ -21,9 +21,24 @@
 
 ## Kritéria splnění
 
-- [ ] Toasty jsou vidět i nad otevřeným sheetem (host uvnitř `BottomSheet`,
+- [x] Toasty jsou vidět i nad otevřeným sheetem (host uvnitř `BottomSheet`,
       nebo chybový řádek přímo v sheetu).
-- [ ] Toast respektuje `insets.bottom`.
-- [ ] Offline a notifikační banner posunou obsah, místo aby ho překryly.
+- [x] Toast respektuje `insets.bottom`.
+- [x] Offline a notifikační banner posunou obsah, místo aby ho překryly.
       Notifikační banner jde zavřít (na nějakou dobu).
-- [ ] Toast je live region.
+- [x] Toast je live region.
+
+## Poznámky
+
+**2026-10-07 (skupina 0):**
+- Hostitelé toastu jsou zásobník (`ToastHost` v `Toast.tsx`). Jeden je
+  v `ToastProvider`u a další má každý otevřený `BottomSheet` uvnitř
+  `Modal`u. Kreslí ho ten naposledy připojený.
+- Spodek toastu je `max(32, insets.bottom + 16)`.
+- Live region: Android přes `accessibilityLiveRegion`, web přes
+  `role`/`aria-live`, iOS přes `announceForAccessibility`.
+- Lišty kreslí `TopBanners` v toku nad `Stack`em. Horní safe area si vezme
+  lišta a obsahu pod ní se podstrčí `insets.top = 0`.
+- Notifikační lišta se dá zavřít křížkem na 7 dní (`localStorage`).
+- Zbývá ověřit na zařízení: toast nad sheetem na Androidu/iOS, odsazení
+  hlavičky pod lištou na iOS (nativní header), web.

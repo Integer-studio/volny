@@ -46,7 +46,7 @@ doby před zavedením priorit je uvedena orientačně.
 | 0024 | Mizející rychlá volba (presety)                | todo        | 1        | [0024-mizejici-presety.md](./0024-mizejici-presety.md) |
 | 0025 | Souběh zápisů stavu volna a falešné chyby      | todo        | 1        | [0025-soubeh-zapisu-stavu-volna.md](./0025-soubeh-zapisu-stavu-volna.md) |
 | 0026 | Prázdné stavy místo načítání nebo chyby        | todo        | 1        | [0026-prazdne-stavy-vs-nacitani.md](./0026-prazdne-stavy-vs-nacitani.md) |
-| 0027 | Toasty pod modaly, umístění toastu a banneru   | todo        | 2        | [0027-toasty-a-bannery.md](./0027-toasty-a-bannery.md) |
+| 0027 | Toasty pod modaly, umístění toastu a banneru   | in progress | 2        | [0027-toasty-a-bannery.md](./0027-toasty-a-bannery.md) |
 | 0028 | Přihlášení a registrace: zpětná vazba a chyby  | todo        | 1        | [0028-prihlaseni-a-registrace-ux.md](./0028-prihlaseni-a-registrace-ux.md) |
 | 0029 | Nastavení a oznámení: autosave a povolení      | todo        | 2        | [0029-nastaveni-a-oznameni-ux.md](./0029-nastaveni-a-oznameni-ux.md) |
 | 0030 | Potvrzení a busy stavy u destruktivních akcí   | todo        | 2        | [0030-potvrzeni-a-busy-stavy.md](./0030-potvrzeni-a-busy-stavy.md) |

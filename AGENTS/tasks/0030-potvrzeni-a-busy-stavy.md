@@ -36,3 +36,13 @@ vlastní `Pressable`. Sdílený `components/ui/button` se nikde nepoužívá.
 - [ ] Pozvánka přítele: sheet přijmout/odmítnout (jako u skupin), na 404
       hláška "Pozvánka už neplatí".
 - [ ] `AbortError` ze share = zrušeno, bez toastu.
+
+## Poznámky
+
+**2026-10-07 (skupina 0):** Sdílený `components/Button.tsx` (varianty
+`primary`/`secondary`/`destructive`/`destructiveOutline`, `icon`,
+`loading`, `disabled`) je hotový. Zatím ho používá jen `ProfileSheet`.
+Nativecn `components/ui/button` stojí na shadcn tokenech, které appka
+nemá, takže zůstal nepoužitý. `BottomSheet` má `dismissable` a
+`ProfileSheet` ho během akce vypíná. Zbylá místa z kritérií patří do
+skupin B a F.

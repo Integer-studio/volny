@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Animated, Modal, Pressable, View, useWindowDimensions } from "react-native";
+import { ToastHost } from "./Toast";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
+  /**
+   * false = scrim ani Zpět na Androidu sheet nezavřou. Pro dobu, kdy běží
+   * akce, jejíž výsledek by se po zavření ztratil (join, mazání...).
+   */
+  dismissable?: boolean;
   children: React.ReactNode;
 };
 
@@ -16,7 +22,7 @@ type Props = {
  * caller, kept wired up below) so the group invite QR sheet and the profile
  * popup can reuse the exact same look/feel instead of duplicating it.
  */
-export default function BottomSheet({ visible, onClose, children }: Props) {
+export default function BottomSheet({ visible, onClose, dismissable = true, children }: Props) {
   // Odjezd o výšku obrazovky, ne o pevný kus: vyšší sheet (editor presetu)
   // jinak dojel jen do půlky a zbytek pak zmizel modalovým fade - vypadalo
   // to jako průsvitný sheet přes obrazovku.
@@ -32,6 +38,7 @@ export default function BottomSheet({ visible, onClose, children }: Props) {
   }, [visible]);
 
   const handleClose = () => {
+    if (!dismissable) return;
     Animated.timing(slideAnim, {
       toValue: offscreen,
       duration: 250,
@@ -57,6 +64,9 @@ export default function BottomSheet({ visible, onClose, children }: Props) {
             {children}
           </View>
         </Animated.View>
+
+        {/* Toast nad sheetem - host v kořeni appky je pod Modalem. */}
+        {visible && <ToastHost />}
       </View>
     </Modal>
   );
