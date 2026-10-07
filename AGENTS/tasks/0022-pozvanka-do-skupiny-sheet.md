@@ -37,6 +37,12 @@ volna a kontaktu se skupinou z [0021](./0021-skupina-toggle-volno-a-kontakt.md).
 - [x] Ověřeno ve webovém buildu proti lokálnímu BE (Playwright): přihlášený
       otevře odkaz → doma sheet → vypne sdílení → Přijmout → je členem se
       `sharesWithGroup = false`, toast „Připojeno do skupiny …“.
+- [x] Sheet neprobleskne přes onboarding při studeném startu uprostřed
+      průvodce: `TourProvider` má `ready` (krok načtený z AsyncStorage) a
+      gate na něj čeká. Ověřeno v Playwright (krok `intro` → sheet se
+      neukáže, `ring` → ukáže).
+- [x] Neplatný odkaz u přihlášeného stačí toastem (rozhodnutí zadavatele),
+      stránka „Neplatná pozvánka“ zůstává jen pro nepřihlášené.
 
 ## Poznámky
 

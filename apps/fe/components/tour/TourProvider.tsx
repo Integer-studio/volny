@@ -8,6 +8,13 @@ export type TourTargetId = 'ring' | 'button' | 'friendsIcon' | 'groupsIcon' | 'f
 type TourValue = {
   /** Aktuální krok, nebo `null`, když průvodce neběží (nikdy nezačal / je `done`). */
   step: TourStep | null;
+  /**
+   * Jestli už je `step` načtený pro přihlášeného uživatele. Při studeném
+   * startu se krok čte z AsyncStorage asynchronně a do té doby je `step`
+   * `null`, i když průvodce třeba běží - kdo podle něj něco ukazuje (např.
+   * PendingInviteGate), má počkat na `ready`.
+   */
+  ready: boolean;
   /** Posune průvodce dál, ale jen pokud je právě na kroku `from` - volání je tak idempotentní a pozdní/dvojí volání nic nerozbije. */
   advance: (from: TourStep) => void;
   /** Skočí rovnou na konkrétní krok (pokračování po handoffu, přeskočení části A). */
@@ -31,6 +38,10 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const [raw, setRaw] = useState<TourStep | null>(() =>
     userId ? (readTourStepSync(userId) ?? null) : null,
   );
+  // Pro kterého uživatele je `raw` načtené - viz TourValue.ready.
+  const [loadedFor, setLoadedFor] = useState<string | null>(() =>
+    userId && readTourStepSync(userId) !== undefined ? userId : null,
+  );
   const targets = useRef(new Map<TourTargetId, React.RefObject<View | null>>());
 
   useEffect(() => {
@@ -41,11 +52,14 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     const sync = readTourStepSync(userId);
     if (sync !== undefined) {
       setRaw(sync);
+      setLoadedFor(userId);
       return;
     }
     let alive = true;
     readTourStep(userId).then(s => {
-      if (alive) setRaw(s);
+      if (!alive) return;
+      setRaw(s);
+      setLoadedFor(userId);
     });
     return () => {
       alive = false;
@@ -78,13 +92,14 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<TourValue>(
     () => ({
       step: raw === 'done' ? null : raw,
+      ready: userId != null && loadedFor === userId,
       advance,
       goTo,
       skip,
       registerTarget,
       getTarget,
     }),
-    [raw, advance, goTo, skip, registerTarget, getTarget],
+    [raw, userId, loadedFor, advance, goTo, skip, registerTarget, getTarget],
   );
 
   return <TourContext.Provider value={value}>{children}</TourContext.Provider>;

@@ -31,7 +31,7 @@ type Invite = { code: string; preview: GroupPreview };
 export default function PendingInviteGate() {
   const { show } = useToast();
   const tour = useTour();
-  const blockedByTour = isOnboardingStep(tour.step);
+  const blockedByTour = !tour.ready || isOnboardingStep(tour.step);
 
   const [checkTick, setCheckTick] = useState(0);
   const [invite, setInvite] = useState<Invite | null>(null);
