@@ -134,6 +134,10 @@ else
 builder.Services.AddSingleton<SemFre.Services.INotificationService, SemFre.Services.NotificationServiceDispatcher>();
 builder.Services.AddHostedService<SemFre.Background.NotificationBackgroundService>();
 
+// Planned free time (task 0008): notifies connections once a slot's StartTime passes.
+builder.Services.AddScoped<SemFre.Services.FreeTimeActivator>();
+builder.Services.AddHostedService<SemFre.Background.FreeTimeActivationService>();
+
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key missing");
 var issuer = builder.Configuration["Jwt:Issuer"];
