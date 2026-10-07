@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, Text, View, useWindowDimensions } from "react-native";
+import { Animated, Pressable, Text, View, useWindowDimensions } from "react-native";
 import FreeButton from "./FreeButton";
 import PresetList, { PRESET_LIST_H } from "./PresetList";
 import Reveal from "./Reveal";
+import TimeEditSheet from "./TimeEditSheet";
 import TimeRing, { BUTTON_RATIO, RING_BASE } from "./TimeRing";
-import { clampTarget } from "./TimeRing/scale";
+import { T_MIN, clampTarget, clampToWindow } from "./TimeRing/scale";
 import { useTourTarget } from "./tour/TourProvider";
 import { defaultTarget, resolvePresets } from "./TimeRing/presets";
 import { usePresets } from "../hooks/usePresets";
@@ -30,17 +31,21 @@ const MIN_RING = 260;
 const KEEP_AFTER_END_MS = 2 * 60_000;
 
 type Props = {
+  /** Volno je založené - běží, nebo je naplánované (`freeFrom`). */
   isFree: boolean;
+  /** Naplánovaný začátek, dokud volno ještě nezačalo (task 0008); jinak `null`. */
+  freeFrom: Date | null;
   /** Čas, do kdy volno běží. Jen když `isFree`. */
   freeUntil: Date | null;
   fade: Animated.Value;
   pending: boolean;
   now: Date;
-  /** Klepnutí na tlačítko, když volno neběží - potvrzuje natažený čas. */
-  onConfirm: (until: Date) => void;
-  /** Puštění handle za běhu volna - nový konec se ukládá hned. */
-  onChangeEnd: (until: Date) => void;
-  /** Klepnutí na tlačítko, když volno běží - ukončuje ho. */
+  /** Klepnutí na tlačítko, když volno neběží - potvrzuje natažený čas.
+   * `start` v budoucnu volno jen naplánuje, `null` = hned. */
+  onConfirm: (until: Date, start: Date | null) => void;
+  /** Puštění handle u založeného volna - nový začátek i konec se ukládá hned. */
+  onChangeSlot: (start: Date | null, until: Date) => void;
+  /** Klepnutí na tlačítko u založeného volna - ukončí ho, nebo zruší plán. */
   onEnd: () => void;
   /** Uživatel si sám vybral čas (puštění handle, klepnutí na preset) - pro průvodce po registraci. */
   onPick?: () => void;
@@ -60,12 +65,13 @@ type Props = {
  */
 export default function FreeDial({
   isFree,
+  freeFrom,
   freeUntil,
   fade,
   pending,
   now,
   onConfirm,
-  onChangeEnd,
+  onChangeSlot,
   onEnd,
   onPick,
 }: Props) {
@@ -106,6 +112,15 @@ export default function FreeDial({
   // Průběžná hodnota z tažení. Zůstává tady: čas se vykresluje jen v tomhle
   // komponentu, takže ji nikdo jiný nepotřebuje.
   const [preview, setPreview] = useState<Date | null>(null);
+  // Rozpracovaný začátek, dokud volno není založené (`null` = teď). U
+  // založeného volna je zdrojem pravdy `freeFrom`.
+  const [startSel, setStartSel] = useState<Date | null>(null);
+  // Průběžný začátek z tažení; `undefined` = netáhne se.
+  const [startPreview, setStartPreview] = useState<Date | null | undefined>(
+    undefined,
+  );
+  // Sheet s přesným časem (task 0010). Klíč ho při každém otevření přemontuje.
+  const [exactKey, setExactKey] = useState<number | null>(null);
 
   const wasFree = useRef(isFree);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -126,6 +141,8 @@ export default function FreeDial({
     const cameFromFree = wasFree.current && !isFree;
     wasFree.current = isFree;
     setPreview(null);
+    setStartPreview(undefined);
+    setStartSel(null);
     clearReset();
     // Úpravy presetů patří k zadávání času; za běhu volna je seznam schovaný.
     setEditing(false);
@@ -142,16 +159,27 @@ export default function FreeDial({
       () => setTarget(defaultTarget(new Date(), defsRef.current)),
       KEEP_AFTER_END_MS,
     );
-  }, [isFree, freeUntil?.getTime()]);
+  }, [isFree, freeUntil?.getTime(), freeFrom?.getTime()]);
+
+  // Začátek, který právě platí. Ten, na který už čas dojel, je zase "teď".
+  const rawStart = isFree ? freeFrom : startSel;
+  const start = rawStart && rawStart > now ? rawStart : null;
 
   // `now` se posouvá i bez zásahu uživatele, takže uložený cíl může vypadnout
   // z rozsahu - ořízne se až při vykreslení, aby se stav nepřepisoval sám.
-  const safeTarget = clampTarget(target, now);
+  // Čas zadaný na minuty (task 0010) se nesnapuje na čtvrthodinu, jen ořízne;
+  // snapuje se jen to, co už stihlo uběhnout.
+  const minEnd = start ? new Date(start.getTime() + T_MIN * 60_000) : null;
+  const windowed = target > now ? clampToWindow(target, now) : clampTarget(target, now);
+  const safeTarget = minEnd && windowed < minEnd ? minEnd : windowed;
   // Za běhu volna se zobrazuje `freeUntil` ze serveru, ne oříznutá hodnota
   // prstence: uložený konec může ležet mimo jeho rozsah a ořez by čas i
   // odpočet zkreslil.
   const committed = isFree ? (freeUntil ?? safeTarget) : safeTarget;
   const shown = preview ?? committed;
+  const shownStart = startPreview !== undefined ? startPreview : start;
+  // Naplánované a ještě nezačalo - tlačítko ho zruší, popisek bez "!".
+  const planned = isFree && start !== null;
   // Schválně bez memoizace: mapování pár kotev je zanedbatelné a memo by
   // muselo hlídat i změny seznamu z editoru.
   const presets = resolvePresets(now, manage.presets);
@@ -163,7 +191,7 @@ export default function FreeDial({
       onEnd();
       return;
     }
-    onConfirm(safeTarget);
+    onConfirm(safeTarget, start);
     setPreview(null);
   };
 
@@ -179,9 +207,28 @@ export default function FreeDial({
     onPick?.();
     // Puštění na stejné hodnotě by jinak poslalo PUT, který nic nemění.
     if (isFree && freeUntil && d.getTime() !== freeUntil.getTime()) {
-      onChangeEnd(d);
+      onChangeSlot(start, d);
     }
   };
+
+  /** Puštění handle začátku (task 0008), případně s dotlačeným koncem. */
+  const handleSlot = (s: Date | null, end: Date) => {
+    clearReset();
+    setTarget(end);
+    setPreview(null);
+    setStartPreview(undefined);
+    onPick?.();
+    if (!isFree) {
+      setStartSel(s);
+      return;
+    }
+    const sameStart = (s?.getTime() ?? null) === (start?.getTime() ?? null);
+    const sameEnd = freeUntil?.getTime() === end.getTime();
+    if (!sameStart || !sameEnd) onChangeSlot(s, end);
+  };
+
+  const withDay = (d: Date) =>
+    formatTime(d) + (isTomorrow(d, now) ? " (zítra)" : "");
 
   return (
     <View
@@ -195,16 +242,27 @@ export default function FreeDial({
           prst při tažení zakrývá spodek prstence, ne horní okraj. */}
       <View className="items-center mb-3">
         {/* Otazník, dokud volno neběží - noví uživatelé jinak brali
-            "Volný do 16:00" za hotovou věc (task 0031). */}
-        <Text className="text-gray-900 text-2xl font-bold">
-          Volný do {formatTime(shown)}
-          {isTomorrow(shown, now) ? " (zítra)" : ""}
-          {isFree ? "!" : "?"}
-        </Text>
-        <Text className="text-gray-400 text-sm mt-0.5">
-          {isFree ? "zbývá " : ""}
-          {formatDuration(minutesUntil(shown, now))}
-        </Text>
+            "Volný do 16:00" za hotovou věc (task 0031). Naplánované volno
+            je potvrzené, ale ještě neběží - bez znaménka.
+            Klepnutí otevře přesné zadání na minuty (task 0010). */}
+        <Pressable
+          onPress={() => setExactKey(Date.now())}
+          accessibilityRole="button"
+          accessibilityHint="Zadat přesný čas na minuty"
+          className="items-center active:opacity-60"
+        >
+          <Text className="text-gray-900 text-2xl font-bold text-center">
+            {shownStart
+              ? `Volný od ${withDay(shownStart)} do ${withDay(shown)}`
+              : `Volný do ${withDay(shown)}`}
+            {planned ? "" : isFree ? "!" : "?"}
+          </Text>
+          <Text className="text-gray-400 text-sm mt-0.5">
+            {shownStart
+              ? `${formatDuration(minutesUntil(shown, shownStart))} · začíná za ${formatDuration(minutesUntil(shownStart, now))}`
+              : `${isFree ? "zbývá " : ""}${formatDuration(minutesUntil(shown, now))}`}
+          </Text>
+        </Pressable>
       </View>
 
       <View ref={ringTarget} collapsable={false}>
@@ -215,6 +273,12 @@ export default function FreeDial({
           presets={presets}
           onPreview={setPreview}
           onChange={handleChange}
+          start={start}
+          onStartPreview={(s, end) => {
+            setStartPreview(s);
+            setPreview(end);
+          }}
+          onStartChange={handleSlot}
         >
           <View ref={buttonTarget} collapsable={false}>
             <FreeButton
@@ -223,9 +287,13 @@ export default function FreeDial({
               fade={fade}
               pending={pending}
               accessibilityLabel={
-                isFree
-                  ? "Ukončit volno"
-                  : `Označit se jako volný do ${formatTime(safeTarget)}`
+                planned
+                  ? "Zrušit naplánované volno"
+                  : isFree
+                    ? "Ukončit volno"
+                    : start
+                      ? `Naplánovat volno od ${formatTime(start)} do ${formatTime(safeTarget)}`
+                      : `Označit se jako volný do ${formatTime(safeTarget)}`
               }
               size={buttonSize}
               pressHaptic={isFree ? "cancel" : "confirm"}
@@ -250,6 +318,21 @@ export default function FreeDial({
           manage={manage}
         />
       </Reveal>
+
+      {exactKey !== null && (
+        <TimeEditSheet
+          key={exactKey}
+          visible
+          onClose={() => setExactKey(null)}
+          now={now}
+          start={start}
+          end={committed}
+          onSave={(s, end) => {
+            setTarget(end);
+            handleSlot(s, end);
+          }}
+        />
+      )}
     </View>
   );
 }

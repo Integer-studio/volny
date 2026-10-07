@@ -127,6 +127,15 @@ export function clampTarget(date: Date, now: Date): Date {
   return d;
 }
 
+/**
+ * Ořízne čas do okna `[now, now + T_MAX]`, ale **nesnapuje** ho. Pro hodnoty
+ * zadané na minuty (task 0010) - `clampTarget` by z 18:07 udělal 18:00.
+ */
+export function clampToWindow(date: Date, now: Date): Date {
+  const max = now.getTime() + T_MAX * 60_000;
+  return new Date(clamp(date.getTime(), now.getTime(), max));
+}
+
 export type Tick = {
   /** Absolutní čas, na kterém čárka stojí. */
   date: Date;
@@ -216,14 +225,37 @@ export function snapToVisibleTick(
   offsetMin: number,
   range: number,
   now: Date,
+  /** Nejbližší povolená hodnota - u naplánovaného volna je to začátek + `T_MIN`. */
+  minOffset: number = T_MIN,
 ): Date {
   const step = visibleStep(range);
   const d = new Date(now.getTime() + clamp(offsetMin, 0, T_MAX) * 60_000);
   d.setSeconds(0, 0);
   d.setMinutes(Math.round(d.getMinutes() / step) * step);
   // Zaokrouhlení může vypadnout z povoleného rozsahu - posune se o krok zpět.
-  while (dateToOffset(d, now) < T_MIN) d.setMinutes(d.getMinutes() + step);
+  while (dateToOffset(d, now) < minOffset) d.setMinutes(d.getMinutes() + step);
   while (dateToOffset(d, now) > T_MAX) d.setMinutes(d.getMinutes() - step);
+  return d;
+}
+
+/**
+ * Zaklapnutí začátku volna (task 0008). Stejné čárky jako u konce, jen dolní
+ * mez je `teď` místo `T_MIN`: méně než půl kroku od teď znamená "začít hned"
+ * (`null`) - na to se táhne zpátky, když už plán nechci. Horní mez nechává
+ * místo na nejkratší volno před koncem okna.
+ */
+export function snapStart(
+  offsetMin: number,
+  range: number,
+  now: Date,
+): Date | null {
+  const step = visibleStep(range);
+  if (offsetMin < step / 2) return null;
+  const d = new Date(now.getTime() + offsetMin * 60_000);
+  d.setSeconds(0, 0);
+  d.setMinutes(Math.round(d.getMinutes() / step) * step);
+  while (dateToOffset(d, now) <= 0) d.setMinutes(d.getMinutes() + step);
+  while (dateToOffset(d, now) > T_MAX - T_MIN) d.setMinutes(d.getMinutes() - step);
   return d;
 }
 

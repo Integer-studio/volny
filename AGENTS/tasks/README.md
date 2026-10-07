@@ -37,8 +37,6 @@ doby před zavedením priorit je uvedena orientačně.
 | ---- | ---------------------------------------------- | ----------- | -------- | -------------------------------------------------------------------- |
 | 0005 | Web push notifikace pro iOS (Safari)           | in progress | 1        | [0005-ios-safari-web-push.md](./0005-ios-safari-web-push.md)         |
 | 0007 | Nové zadávání času                             | in progress | 1        | [0007-nove-zadavani-casu.md](./0007-nove-zadavani-casu.md)           |
-| 0008 | Scheduled začátek volna (max. den dopředu)     | todo        | 2        | [0008-scheduled-zacatek-volna.md](./0008-scheduled-zacatek-volna.md) |
-| 0010 | Vlastní čas (manuální zadání)                  | todo        | 3        | [0010-vlastni-cas.md](./0010-vlastni-cas.md)                         |
 | 0012 | "Kde jsem" políčko (volný text)                | todo        | 3        | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md)               |
 | 0014 | Lepší always-on backend                        | todo        | 1        | [0014-always-on-backend.md](./0014-always-on-backend.md)             |
 | 0032 | Dark mode                                      | todo        | 3        | [0032-dark-mode.md](./0032-dark-mode.md) |
@@ -69,9 +67,10 @@ Doporučené pořadí: 0 → A → B → C (0014 paralelně) → D → E → F �
   ověření z 0007 (0005 i 0007 čekají jen na test na reálném iPhonu).
 - **F. Skupiny — destruktivní akce:** zbytek 0030 + plurál "členů" a QR
   sheet skupiny z 0031.
-- **G. Rozšíření modelu volna:** 0008 + 0012 (obojí mění `FreeTime`/
-  `FreeTimeCreateDto` a zobrazení v `UserRow`/`StatusHeadline`).
-- **Samostatně:** 0010 (čas na minuty), 0032 (dark mode).
+- **G. Rozšíření modelu volna:** 0012 (mění `FreeTime`/`FreeTimeCreateDto`
+  a zobrazení v `UserRow`). 0008 je hotové - při 0012 počítej i se
+  sekcí "Později".
+- **Samostatně:** 0032 (dark mode).
 
 ## Hotové úkoly
 
@@ -102,3 +101,5 @@ Doporučené pořadí: 0 → A → B → C (0014 paralelně) → D → E → F �
 | 0029 | Nastavení a oznámení: autosave a povolení      | done | 2        | [0029-nastaveni-a-oznameni-ux.md](./0029-nastaveni-a-oznameni-ux.md) |
 | 0030 | Potvrzení a busy stavy u destruktivních akcí   | done | 2        | [0030-potvrzeni-a-busy-stavy.md](./0030-potvrzeni-a-busy-stavy.md) |
 | 0031 | Přístupnost a texty                            | done | 3        | [0031-pristupnost-a-texty.md](./0031-pristupnost-a-texty.md) |
+| 0008 | Scheduled začátek volna (max. den dopředu)     | done | 2        | [0008-scheduled-zacatek-volna.md](./0008-scheduled-zacatek-volna.md) |
+| 0010 | Vlastní čas (manuální zadání)                  | done | 3        | [0010-vlastni-cas.md](./0010-vlastni-cas.md)                         |

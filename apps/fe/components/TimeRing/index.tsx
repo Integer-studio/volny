@@ -26,6 +26,7 @@ import {
   offsetToAngle,
   polar,
   rangeForOffset,
+  snapStart,
   snapToVisibleTick,
   tickWeight,
   visibleStep,
@@ -44,6 +45,10 @@ const TRACK_W = 30;
 const HANDLE_R = 22;
 /** O kolik handle povyroste, když ho uživatel drží. */
 const HANDLE_R_ACTIVE = 26;
+/** Handle začátku volna (task 0008) je menší a jen obrysový - je vždy vidět,
+ * ale nemá soupeřit s koncem, který se táhne mnohem častěji. */
+const START_R = 15;
+const START_R_ACTIVE = 19;
 /** Čárky leží uvnitř dráhy, symetricky kolem jejího středu. Hodinové se
  * od ostatních liší tloušťkou a mírně délkou, ne barvou. */
 const TICK_LEN = { hour: 16, minor: 11 };
@@ -102,6 +107,9 @@ const SPEED_FAST = 0.25;
  * při couvání poskakovaly dopředu a dozadu. */
 const ZOOM_GROW = { base: 0.004, fast: 0.05 };
 const ZOOM_SHRINK = { base: 0.0015, fast: 0.015 };
+/** Jak rychle okno dohání konec, který před sebou tlačí začátek (za snímek). */
+const PUSH_GROW = 0.06;
+const PUSH_SHRINK = 0.02;
 /** Rychlost, pod kterou se doleť vůbec nepočítá. Bez tohohle prahu by i
  * obyčejné rychlejší zadání času po puštění přeskočilo o čárku - tedy o 15
  * minut proti tomu, co měl uživatel před očima. Doletět má jen skutečné
@@ -134,6 +142,18 @@ type Props = {
   onPreview?: (target: Date) => void;
   /** Výsledný čas po puštění nebo klepnutí. */
   onChange?: (target: Date) => void;
+  /**
+   * Začátek volna (task 0008). `null` = teď: handle začátku stojí na začátku
+   * dráhy a s časem se nehýbe. Do budoucna se dá odtáhnout - oblouk pak vede
+   * od začátku do konce.
+   */
+  start?: Date | null;
+  /** Průběžný začátek během tažení. `target` je konec, případně dotlačený
+   * začátkem před sebou. */
+  onStartPreview?: (start: Date | null, target: Date) => void;
+  /** Výsledný začátek po puštění, spolu s (možná dotlačeným) koncem. Bez
+   * tohohle callbacku handle začátku nejde chytit. */
+  onStartChange?: (start: Date | null, target: Date) => void;
   /** Obsah uprostřed prstence (hlavní tlačítko). */
   children: React.ReactNode;
 };
@@ -200,6 +220,9 @@ export default function TimeRing({
   disabled = false,
   onPreview,
   onChange,
+  start = null,
+  onStartPreview,
+  onStartChange,
   children,
 }: Props) {
   const reduceMotion = useReduceMotion();
@@ -222,7 +245,14 @@ export default function TimeRing({
     offsetToAngle(initialOffset, initialRange),
   );
   const [range, setRange] = useState(initialRange);
-  const [dragging, setDragging] = useState(false);
+  const [dragging, setDragging] = useState<"end" | "start" | null>(null);
+  // Začátek se během tažení drží lokálně (minuty od teď, spojitě); jinak se
+  // odvozuje z propsy. Okno prstence ale dál řídí konec.
+  const [dragStartOff, setDragStartOff] = useState<number | null>(null);
+  const startOffProp = start
+    ? clamp(dateToOffset(start, now), 0, T_MAX)
+    : 0;
+  const startOff = dragStartOff ?? startOffProp;
 
   // Stejné hodnoty jako stav, ale zapsané synchronně. Gesto se musí rozhodovat
   // podle toho, kam prst právě dojel, ne podle stavu, který se do Reactu
@@ -294,8 +324,28 @@ export default function TimeRing({
     () => new Set(presets.map((p) => p.date.getTime())),
     [presets],
   );
-  const latest = useRef({ now, onPreview, onChange, presetTimes });
-  latest.current = { now, onPreview, onChange, presetTimes };
+  const latest = useRef({
+    now,
+    target,
+    startOff: startOffProp,
+    canStart: !!onStartChange,
+    onPreview,
+    onChange,
+    onStartPreview,
+    onStartChange,
+    presetTimes,
+  });
+  latest.current = {
+    now,
+    target,
+    startOff: startOffProp,
+    canStart: !!onStartChange,
+    onPreview,
+    onChange,
+    onStartPreview,
+    onStartChange,
+    presetTimes,
+  };
 
   /**
    * Doplutí na danou hodnotu: úhel i okno pružinou současně. Kdyby se hýbal
@@ -345,7 +395,12 @@ export default function TimeRing({
     let fingerCont = 0;
     let prevRaw = 0;
     let grabOffset = 0;
-    let grabbed: "handle" | "track" | null = null;
+    let grabbed: "handle" | "start" | "track" | null = null;
+    /** Konec v okamžiku chycení začátku - začátek ho smí jen tlačit dopředu. */
+    let endBase = 0;
+    /** Kam až smí konec při tažení couvnout (úhel začátku při chycení). */
+    let endFloor = START_ANGLE;
+    let startLoop: number | null = null;
     let lastTickKey = 0;
     let origin = { x: 0, y: 0 };
     // Vyhlazená úhlová rychlost (°/ms) - řídí jak dolet po hodu, tak to,
@@ -369,7 +424,12 @@ export default function TimeRing({
     };
 
     const snapAt = (a: number, rng: number) =>
-      snapToVisibleTick(readOffset(a, rng), rng, latest.current.now);
+      snapToVisibleTick(
+        readOffset(a, rng),
+        rng,
+        latest.current.now,
+        latest.current.startOff + T_MIN,
+      );
 
     /**
      * Ohlásí nahoru novou náhledovou hodnotu, ale jen když se opravdu
@@ -437,6 +497,83 @@ export default function TimeRing({
     const stopEdge = () => {
       if (edgeLoop !== null) cancelAnimationFrame(edgeLoop);
       edgeLoop = null;
+      if (startLoop !== null) cancelAnimationFrame(startLoop);
+      startLoop = null;
+    };
+
+    // --- Tažení začátku (task 0008) -------------------------------------
+    // Začátek se čte lineárně v aktuálním okně. Když dojede ke konci, tlačí
+    // ho před sebou s mezerou `T_MIN` a okno pak dohání tlačený konec - přes
+    // vlastní smyčku, takže se roztahuje i když prst u konce dráhy stojí.
+    let startOffCur = 0;
+    let lastStartKey: number | null = null;
+    let lastPushKey = 0;
+
+    const pushedEnd = (sOff: number) => Math.max(endBase, sOff + T_MIN);
+
+    const applyStart = () => {
+      const a = clamp(fingerCont - grabOffset, START_ANGLE, END_ANGLE);
+      const sOff = clamp(readOffset(a, rangeRef.current), 0, T_MAX - T_MIN);
+      startOffCur = sOff;
+      const eOff = pushedEnd(sOff);
+
+      const wanted = rangeForOffset(eOff);
+      const rate = wanted > rangeRef.current ? PUSH_GROW : PUSH_SHRINK;
+      const nextRange = rangeRef.current + (wanted - rangeRef.current) * rate;
+      rangeRef.current = nextRange;
+      rangeAnim.setValue(nextRange);
+
+      const endA = offsetToAngle(eOff, nextRange);
+      angleRef.current = endA;
+      angleAnim.setValue(endA);
+      setDragStartOff(sOff);
+
+      const { now: n, target: t } = latest.current;
+      const sDate = snapStart(sOff, nextRange, n);
+      const sKey = sDate ? sDate.getTime() : 0;
+      const eDate =
+        eOff > endBase
+          ? snapToVisibleTick(eOff, nextRange, n, dateToOffset(sDate ?? n, n) + T_MIN)
+          : t;
+      if (sKey === lastStartKey && eDate.getTime() === lastPushKey) return;
+      const crossed = lastStartKey !== null && sKey !== lastStartKey;
+      lastStartKey = sKey;
+      lastPushKey = eDate.getTime();
+      latest.current.onStartPreview?.(sDate, eDate);
+      if (!crossed) return;
+      if (!sDate) haptic("tickHour");
+      else {
+        const w = tickWeight(sDate);
+        if (w === "hour") haptic("tickHour");
+        else if (w === "half") haptic("tickHalf");
+        else haptic("tickMinor");
+      }
+    };
+
+    const runStart = () => {
+      startLoop = requestAnimationFrame(runStart);
+      applyStart();
+    };
+
+    /** Puštění začátku: zaklapnout, případně dotlačit konec, ohlásit nahoru. */
+    const releaseStart = () => {
+      const { now: n, target: t } = latest.current;
+      const sDate = snapStart(startOffCur, rangeRef.current, n);
+      const sMin = sDate ? dateToOffset(sDate, n) : 0;
+      let end = t;
+      if (dateToOffset(t, n) < sMin + T_MIN || pushedEnd(startOffCur) > endBase) {
+        end = snapToVisibleTick(
+          Math.max(dateToOffset(t, n), sMin + T_MIN),
+          rangeRef.current,
+          n,
+          sMin + T_MIN,
+        );
+      }
+      setDragStartOff(null);
+      setDragging(null);
+      latest.current.onStartChange?.(sDate, end);
+      const off = clampOffset(dateToOffset(end, n));
+      animateTo(off, rangeForOffset(off));
     };
 
     return PanResponder.create({
@@ -447,7 +584,8 @@ export default function TimeRing({
       onMoveShouldSetPanResponder: inBand,
       // Tažení za handle si držíme za každou cenu, jinak ho ScrollView po pár
       // pixelech sebere a změní ve scroll. Dotek jinde na dráze klidně pustíme.
-      onPanResponderTerminationRequest: () => grabbed !== "handle",
+      onPanResponderTerminationRequest: () =>
+        grabbed !== "handle" && grabbed !== "start",
 
       onPanResponderGrant: (e) => {
         const { pageX, pageY, locationX, locationY } = e.nativeEvent;
@@ -462,11 +600,37 @@ export default function TimeRing({
 
         const cur = angleRef.current;
         const touchAngle = pointToAngle(locationX, locationY, c);
+        const startA = offsetToAngle(latest.current.startOff, rangeRef.current);
+        const dEnd = Math.abs(normalizeDelta(touchAngle - cur));
+        const dStart = Math.abs(normalizeDelta(touchAngle - startA));
+        // Oba handly můžou stát blízko sebe - vyhrává ten bližší, při shodě
+        // konec (táhne se častěji).
         grabbed =
-          Math.abs(normalizeDelta(touchAngle - cur)) <= GRAB_DEG
+          dEnd <= GRAB_DEG && dEnd <= dStart
             ? "handle"
-            : "track";
+            : latest.current.canStart && dStart <= GRAB_DEG
+              ? "start"
+              : dEnd <= GRAB_DEG
+                ? "handle"
+                : "track";
+
+        if (grabbed === "start") {
+          prevRaw = touchAngle;
+          fingerCont = touchAngle;
+          grabOffset = normalizeDelta(touchAngle - startA);
+          endBase = clampOffset(
+            dateToOffset(latest.current.target, latest.current.now),
+          );
+          startOffCur = latest.current.startOff;
+          lastStartKey = null;
+          lastPushKey = latest.current.target.getTime();
+          mode.current = "drag";
+          setDragging("start");
+          runStart();
+          return;
+        }
         if (grabbed !== "handle") return;
+        endFloor = startA;
 
         prevRaw = touchAngle;
         fingerCont = touchAngle;
@@ -477,12 +641,12 @@ export default function TimeRing({
         resetWindBudget();
         lastTickKey = snapAt(cur, rangeRef.current).getTime();
         mode.current = "drag";
-        setDragging(true);
+        setDragging("end");
         runEdge();
       },
 
       onPanResponderMove: (e, g) => {
-        if (grabbed !== "handle") return;
+        if (grabbed !== "handle" && grabbed !== "start") return;
         // Obě cesty k souřadnicím se liší podle platformy i typu vstupu, tak
         // se berou obě - `??` by tu nestačilo, protože nulu propustí dál.
         const ev = e.nativeEvent;
@@ -491,6 +655,8 @@ export default function TimeRing({
         const step = normalizeDelta(raw - prevRaw);
         fingerCont += step;
         prevRaw = raw;
+        // Začátek se přepočítává ve vlastní smyčce (`runStart`).
+        if (grabbed === "start") return;
 
         const t = Date.now();
         const dt = Math.max(1, t - prevTime);
@@ -500,7 +666,9 @@ export default function TimeRing({
         velocity = velocity * 0.7 + (step / dt) * 0.3;
 
         const desired = fingerCont - grabOffset;
-        const next = withRubberBand(desired);
+        // Konec nesmí couvnout za začátek - zarazí se o něj natvrdo, ne
+        // pružinou; pružina patří jen ke krajům dráhy.
+        const next = Math.max(withRubberBand(desired), endFloor);
         angleRef.current = next;
         angleAnim.setValue(next);
 
@@ -542,8 +710,10 @@ export default function TimeRing({
 
       onPanResponderRelease: (_e, g) => {
         stopEdge();
-        if (grabbed === "handle") {
-          setDragging(false);
+        if (grabbed === "start") {
+          releaseStart();
+        } else if (grabbed === "handle") {
+          setDragging(null);
           // Setrvačnost: doletí jen skutečný hod. Rychlost se nejdřív sníží
           // o mrtvou zónu, takže běžný (i svižný) tah skončí přesně tam, kde
           // ho uživatel pustil, a nepřeskočí mu čas o čárku.
@@ -577,8 +747,10 @@ export default function TimeRing({
 
       onPanResponderTerminate: () => {
         stopEdge();
-        if (grabbed === "handle") {
-          setDragging(false);
+        if (grabbed === "start") {
+          releaseStart();
+        } else if (grabbed === "handle") {
+          setDragging(null);
           settleTo(snapAt(angleRef.current, rangeRef.current));
         }
         grabbed = null;
@@ -595,13 +767,30 @@ export default function TimeRing({
     const step = visibleStep(range) * dir;
     const next = new Date(target.getTime() + step * 60_000);
     const off = dateToOffset(next, now);
-    if (off < T_MIN || off > T_MAX) return;
+    if (off < startOffProp + T_MIN || off > T_MAX) return;
     onChange?.(next);
   };
 
-  const handleR = (dragging ? HANDLE_R_ACTIVE : HANDLE_R) * k;
+  /** Totéž pro začátek. Pod teď se zastaví na "teď", konec případně dotlačí. */
+  const nudgeStart = (dir: 1 | -1) => {
+    const step = visibleStep(range) * dir;
+    const off = startOffProp + step;
+    if (off > T_MAX - T_MIN) return;
+    const next = off <= 0 ? null : new Date(now.getTime() + off * 60_000);
+    if (!next && !start) return;
+    const minEnd = (next ? dateToOffset(next, now) : 0) + T_MIN;
+    const end =
+      dateToOffset(target, now) < minEnd
+        ? new Date(now.getTime() + minEnd * 60_000)
+        : target;
+    onStartChange?.(next, end);
+  };
+
+  const handleR = (dragging === "end" ? HANDLE_R_ACTIVE : HANDLE_R) * k;
   const handle = polar(c, c, r, angle);
-  const shownOffset = readOffset(angle, range);
+  const startAngle = offsetToAngle(startOff, range);
+  const startHandle = polar(c, c, r, startAngle);
+  const startR = (dragging === "start" ? START_R_ACTIVE : START_R) * k;
 
   const hourTicks = ticks.filter((t) => t.isHour);
 
@@ -614,7 +803,11 @@ export default function TimeRing({
         Platform.OS === "web"
           ? ({
               userSelect: "none",
-              cursor: disabled ? "default" : dragging ? "grabbing" : "pointer",
+              cursor: disabled
+                ? "default"
+                : dragging
+                  ? "grabbing"
+                  : "pointer",
             } as object)
           : null,
       ]}
@@ -659,7 +852,7 @@ export default function TimeRing({
         />
 
         <Path
-          d={arcPath(c, c, r, START_ANGLE, angle)}
+          d={arcPath(c, c, r, startAngle, angle)}
           stroke={ORANGE}
           strokeWidth={TRACK_W * k}
           strokeLinecap="round"
@@ -674,7 +867,7 @@ export default function TimeRing({
             const len = (t.isHour ? TICK_LEN.hour : TICK_LEN.minor) * k;
             const a = polar(c, c, r + len / 2, t.angle);
             const b = polar(c, c, r - len / 2, t.angle);
-            const onArc = t.angle <= angle;
+            const onArc = t.angle >= startAngle && t.angle <= angle;
             return (
               <Line
                 key={t.date.getTime()}
@@ -691,6 +884,19 @@ export default function TimeRing({
           })}
         </G>
 
+        {/* Začátek: menší obrysový knoflík bez tečky. Kreslí se před koncem,
+            takže když se potkají, konec leží navrch. */}
+        {onStartChange && (
+          <Circle
+            cx={startHandle.x}
+            cy={startHandle.y}
+            r={startR}
+            fill={BG}
+            stroke={ORANGE}
+            strokeWidth={3 * k}
+          />
+        )}
+
         {/* Handle: světlý knoflík s oranžovým lemem a tečkou uprostřed - čte
             se jako fyzický ovladač, ne jako useknutý konec čáry. */}
         <Circle
@@ -704,11 +910,27 @@ export default function TimeRing({
         <Circle
           cx={handle.x}
           cy={handle.y}
-          r={(dragging ? 7 : 6) * k}
+          r={(dragging === "end" ? 7 : 6) * k}
           fill={ORANGE}
         />
       </Svg>
       </View>
+
+      {onStartChange && (
+        <View
+          style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+          pointerEvents="none"
+          accessible
+          accessibilityRole="adjustable"
+          accessibilityLabel="Volný od"
+          accessibilityValue={{ text: start ? formatTime(start) : "teď" }}
+          accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+          onAccessibilityAction={(e) => {
+            if (e.nativeEvent.actionName === "increment") nudgeStart(1);
+            if (e.nativeEvent.actionName === "decrement") nudgeStart(-1);
+          }}
+        />
+      )}
 
       {/* Čísla hodin zvenčí za dráhou. Handle je nemá čím překrýt, takže
           nikam neuhýbají ani se neschovávají. */}
@@ -745,8 +967,11 @@ export default function TimeRing({
         // `range` se animuje po snímcích, takže přechod vyjde plynule sám.
         // V seznamu pod prstencem je preset dostupný vždycky.
         const fadeZone = range * PRESET_EDGE_FADE;
-        const visibility = clamp((range + fadeZone - off) / fadeZone, 0, 1);
-        if (off <= 0 || visibility <= 0) return null;
+        const edge = clamp((range + fadeZone - off) / fadeZone, 0, 1);
+        if (off <= 0 || edge <= 0) return null;
+        // Kotva dřív, než může volno skončit (před začátkem + `T_MIN`), je
+        // jen ztlumená a nejde zvolit - `RingMarker` pod 0.5 klepnutí nebere.
+        const visibility = off < startOff + T_MIN ? Math.min(edge, 0.35) : edge;
         return (
           <RingMarker
             key={p.id}

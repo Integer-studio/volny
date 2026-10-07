@@ -1,6 +1,6 @@
 # 0008 — Scheduled začátek volna (max. den dopředu)
 
-- **Stav:** todo
+- **Stav:** done
 - **Priorita:** 2 (důležité, ale nebrání releasu)
 - **Datum vytvoření:** 2026-09-06
 
@@ -20,18 +20,18 @@ budoucího začátku — dnes lze zvolit jen konec ("volno do…").
 
 ## Kritéria splnění
 
-- [ ] FE: v UI pro zapnutí volna přibude možnost zvolit i budoucí začátek
+- [x] FE: v UI pro zapnutí volna přibude možnost zvolit i budoucí začátek
       (ne jen konec), s omezením max. 24 hodin dopředu.
-- [ ] BE: `FreeTimeCreateDtoValidator` validuje, že `StartTime` (pokud je
+- [x] BE: `FreeTimeCreateDtoValidator` validuje, že `StartTime` (pokud je
       v budoucnu) není víc než 24 hodin od teď.
-- [ ] Naplánované budoucí volno je přátelům viditelné už před aktivací
+- [x] Naplánované budoucí volno je přátelům viditelné už před aktivací
       (např. "bude volný od 18:00"), ne až po aktivaci.
-- [ ] Aktivace v čase `StartTime` (a odeslání notifikace přátelům) je
+- [x] Aktivace v čase `StartTime` (a odeslání notifikace přátelům) je
       odpovědnost backendu, nezávisle na tom, jestli je klientská appka
       otevřená — např. periodická kontrola v background service
       analogicky k existující `NotificationBackgroundService`, ne
       spoléhání na to, že klient v danou chvíli zavolá nějaký endpoint.
-- [ ] Ověřeno, že notifikace při dosažení `StartTime` skutečně dojde
+- [x] Ověřeno, že notifikace při dosažení `StartTime` skutečně dojde
       (dnes se u budoucího startu nepošle vůbec, viz
       `FreeTimesController.Create`, podmínka `start <= DateTime.UtcNow`).
 
@@ -51,3 +51,29 @@ oblouk začíná pevně na `teď`. Na jeho začátek by přibyl handle, který j
 odtáhnout dopředu, a oblouk by pak vedl od začátku do konce volna. Kód je
 v `apps/fe/components/TimeRing/index.tsx` a `scale.ts`. Pozor, že rozsah
 prstence je dnes max. 16 h, takže na limit 24 h dopředu nestačí.
+
+**Hotovo 2026-10-07** (větev `feature/planovane-volno-a-presny-cas`).
+
+- **BE:** `FreeTime.NotifiedAt` + `FreeTimeActivationService`. Ten každých
+  30 s aktivuje volna, jejichž start nastal: push "má teď volno" + realtime,
+  stejnou cestou jako tlačítko (`FreeTimeActivator`). Validátor povolí start
+  i konec nejvýš 24 h dopředu. `GET /api/connections/upcoming` a
+  `UserDto.UpcomingFreeTime`. Migrace vyplní `NotifiedAt` starým řádkům, ať
+  deploy nic znovu nerozešle.
+- **FE:** druhý, menší obrysový handle na prstenci = začátek. Když dojede ke
+  konci, tlačí ho před sebou (mezera `T_MIN`). Popisek ukazuje "Volný od
+  18:00 do 21:00". Naplánované volno se ukládá puštěním handle a hlavní
+  tlačítko ho zruší. Tlačítko "začít hned" záměrně není, stačí stáhnout
+  začátek na teď. Přátelé vidí plány v sekci **"Později"** pod seznamem
+  volných. Sekce se ukáže jen když není prázdná, za stejných podmínek jako
+  seznam volných.
+- **Rozhodnuto:** začátek **běžícího** volna jde odtáhnout dopředu. Volno se
+  tím vrátí do plánu (`NotifiedAt = null`) a v novém začátku přátelům znovu
+  přijde "má teď volno". Push při naplánování se neposílá, jen realtime
+  signál.
+- Rozsah prstence zůstal 24 h, poznámka výš o 16 h už neplatí. Začátek i
+  konec se vejdou do `[teď, teď + 24 h]`.
+- Ověřeno lokálně: BE přes curl (aktivace schedulerem, 400 nad 24 h,
+  návrat do plánu, okamžitý start) a FE na webu v headless Chromiu (tah
+  začátku, plán, sekce Později, stažení na teď). **Neověřeno:** dotyk na
+  nativu a skutečný push na zařízení.
