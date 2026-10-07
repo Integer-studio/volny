@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, Text, View, useWindowDimensions } from "react-native";
 import FreeButton from "./FreeButton";
-import PresetList, { PRESET_LIST_H } from "./PresetList";
+import PresetList, { PRESET_PEEK_H } from "./PresetList";
 import Reveal from "./Reveal";
 import TimeEditSheet from "./TimeEditSheet";
 import TimeRing, { BUTTON_RATIO, RING_BASE } from "./TimeRing";
@@ -18,11 +18,11 @@ import {
 
 /** Rezerva na stíny presetů, které přesahují za jejich box. */
 const SHADOW_ROOM = 10;
-/** Kolik svislého místa si nad/pod prstencem berou hlavička obrazovky,
- * popisek s časem a seznam presetů - podle toho se prstenec zastropuje, aby se vše
- * vešlo bez rolování celé obrazovky. Seznam presetů si roluje sám ve svém
- * boxu, takže do stropu jde jen jeho pevná výška. */
-const VERTICAL_CHROME = 300 + PRESET_LIST_H;
+/** Odhad výšky hlavičky obrazovky a popisku, než se změří skutečný layout
+ * (první snímek). Pak se počítá z `availableHeight` a změřeného popisku. */
+const VERTICAL_CHROME_GUESS = 200;
+/** Odstup seznamu presetů od prstence (`mt-6`) a popisku od prstence (`mb-3`). */
+const PRESET_GAP = 24;
 /** Pod tuhle velikost prstenec nezmenšovat, i kdyby byla obrazovka nízká. */
 const MIN_RING = 260;
 /** Jak dlouho po ukončení volna zůstane na prstenci jeho starý konec, než se
@@ -49,6 +49,9 @@ type Props = {
   onEnd: () => void;
   /** Uživatel si sám vybral čas (puštění handle, klepnutí na preset) - pro průvodce po registraci. */
   onPick?: () => void;
+  /** Výška, do které se má ovladač vejít (viditelná plocha obrazovky pod
+   * hlavičkou). Podle ní se prstenec zvětší, kolik to jde. */
+  availableHeight?: number;
 };
 
 /**
@@ -74,6 +77,7 @@ export default function FreeDial({
   onChangeSlot,
   onEnd,
   onPick,
+  availableHeight,
 }: Props) {
   // Cíle nápověd průvodce po registraci (components/tour).
   const ringTarget = useTourTarget("ring");
@@ -93,15 +97,20 @@ export default function FreeDial({
   // vrací `window.innerWidth` **včetně** svislého scrollbaru, takže prstenec
   // vycházel o jeho šířku větší, než kolik je uvnitř ScrollView k dispozici,
   // a přidával vodorovné rolování.
+  //
+  // Výška se počítá ze skutečně změřené plochy a popisku, ne z odhadu
+  // celé obrazovky: na webu v mobilu ukusuje výšku lišta prohlížeče
+  // i banner oznámení a pevná rezerva tam prstenec vždy srazila na minimum.
   const { width, height } = useWindowDimensions();
   const [avail, setAvail] = useState<number | null>(null);
+  const [labelH, setLabelH] = useState<number | null>(null);
+  const roomForRing =
+    availableHeight != null && labelH != null
+      ? availableHeight - labelH - PRESET_GAP - PRESET_PEEK_H
+      : height - VERTICAL_CHROME_GUESS - PRESET_GAP - PRESET_PEEK_H;
   const ringSize = Math.max(
     MIN_RING,
-    Math.min(
-      RING_BASE,
-      (avail ?? width - 32) - SHADOW_ROOM,
-      height - VERTICAL_CHROME,
-    ),
+    Math.min(RING_BASE, (avail ?? width - 32) - SHADOW_ROOM, roomForRing),
   );
   const buttonSize = Math.round(ringSize * BUTTON_RATIO);
 
@@ -246,7 +255,10 @@ export default function FreeDial({
           zmizel, stav nese barva tlačítka a předsazené "zbývá". Čas stojí
           nad prstencem, protože je to hodnota, kterou prstenec nastavuje:
           prst při tažení zakrývá spodek prstence, ne horní okraj. */}
-      <View className="items-center mb-3">
+      <View
+        className="items-center mb-3"
+        onLayout={(e) => setLabelH(e.nativeEvent.layout.height + 12)}
+      >
         {/* Otazník, dokud volno neběží - noví uživatelé jinak brali
             "Volný do 16:00" za hotovou věc (task 0031). Naplánované volno
             je potvrzené, ale ještě neběží - bez znaménka.

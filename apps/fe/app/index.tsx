@@ -156,6 +156,8 @@ export default function Index() {
   // Počítá se i z rozměrů, ne jen při rolování - na malé obrazovce je seznam
   // pod ohybem hned od začátku (task 0024).
   const [canScrollMore, setCanScrollMore] = useState(false);
+  // Viditelná výška rolované plochy - podle ní si FreeDial velikost prstence.
+  const [viewportH, setViewportH] = useState<number | undefined>(undefined);
   const scrollMetrics = useRef({ offset: 0, viewport: 0, content: 0 });
   const updateCanScrollMore = (patch: Partial<typeof scrollMetrics.current>) => {
     const m = Object.assign(scrollMetrics.current, patch);
@@ -412,9 +414,10 @@ export default function Index() {
               content: contentSize.height,
             });
           }}
-          onLayout={(e) =>
-            updateCanScrollMore({ viewport: e.nativeEvent.layout.height })
-          }
+          onLayout={(e) => {
+            setViewportH(e.nativeEvent.layout.height);
+            updateCanScrollMore({ viewport: e.nativeEvent.layout.height });
+          }}
           onContentSizeChange={(_w, h) => updateCanScrollMore({ content: h })}
           scrollEventThrottle={16}
           bounces={false}
@@ -442,6 +445,8 @@ export default function Index() {
             onChangeSlot={(start, until) => applyStatus(true, until, start)}
             onEnd={() => applyStatus(false, null)}
             onPick={() => advance("ring")}
+            // Odečtený horní padding obsahu (`paddingTop: 12`).
+            availableHeight={viewportH != null ? viewportH - 12 : undefined}
           />
 
           <Reveal
