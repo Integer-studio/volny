@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import X from 'lucide-react-native/icons/x';
-import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
-import { needsWebNotificationPrompt } from '../lib/push';
+import { useNotificationStatus } from '../lib/notifications';
 import { getItem, setItem } from '../lib/storage';
 import { useTour } from './tour/TourProvider';
 
@@ -21,10 +20,10 @@ export type NotificationBannerState = {
  * Stav lišty s žádostí o povolení oznámení. Žije v TopBanners (ne v liště),
  * protože ten potřebuje vědět, jestli je vidět, aby pod ní posunul obsah.
  *
- * Once tapped, hides for the rest of this mount regardless of outcome -
- * there is no need to persist that: if permission ends up 'denied',
- * needsWebNotificationPrompt() (which only fires on 'default') naturally
- * stays false on every future mount too. Zavření křížkem se naopak ukládá,
+ * Ukazuje se jen ve stavu `default` (web i APK - na APK je to zároveň
+ * vysvětlení před systémovým dialogem, task 0029). Once tapped, hides for
+ * the rest of this mount regardless of outcome - there is no need to
+ * persist that: 'granted'/'denied' keep it hidden on every future mount. Zavření křížkem se naopak ukládá,
  * jinak by lišta naskočila při každém načtení stránky.
  */
 export function useNotificationBanner(): NotificationBannerState {
@@ -35,6 +34,8 @@ export function useNotificationBanner(): NotificationBannerState {
   // oznámení se tam stejně ptá krok "plocha + oznámení".
   const { step } = useTour();
   const { status } = useAuth();
+  const notifications = useNotificationStatus();
+  const enableNotifications = notifications.enable;
 
   useEffect(() => {
     getItem(DISMISSED_UNTIL_KEY)
@@ -44,8 +45,9 @@ export function useNotificationBanner(): NotificationBannerState {
 
   const enable = useCallback(() => {
     setAsked(true);
-    api.registerPushToken().catch(() => {});
-  }, []);
+    // Synchronně z klepnutí - viz enableNotifications.
+    enableNotifications().catch(() => {});
+  }, [enableNotifications]);
 
   const dismiss = useCallback(() => {
     const until = Date.now() + DISMISS_MS;
@@ -59,13 +61,13 @@ export function useNotificationBanner(): NotificationBannerState {
     step == null &&
     dismissedUntil != null &&
     dismissedUntil <= Date.now() &&
-    needsWebNotificationPrompt();
+    notifications.status === 'default';
 
   return { visible, enable, dismiss };
 }
 
 /**
- * Web-only banner that asks for notification permission. This exists because
+ * Banner that asks for notification permission (web and APK). On web it exists because
  * Notification.requestPermission() must run inside a direct user-gesture
  * handler - Firefox (and increasingly other browsers) silently refuses it
  * otherwise, with no dialog shown at all. PushGateWeb used to call this

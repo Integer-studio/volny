@@ -41,7 +41,6 @@ doby před zavedením priorit je uvedena orientačně.
 | 0010 | Vlastní čas (manuální zadání)                  | todo        | 3        | [0010-vlastni-cas.md](./0010-vlastni-cas.md)                         |
 | 0012 | "Kde jsem" políčko (volný text)                | todo        | 3        | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md)               |
 | 0014 | Lepší always-on backend                        | todo        | 1        | [0014-always-on-backend.md](./0014-always-on-backend.md)             |
-| 0029 | Nastavení a oznámení: autosave a povolení      | todo        | 2        | [0029-nastaveni-a-oznameni-ux.md](./0029-nastaveni-a-oznameni-ux.md) |
 | 0030 | Potvrzení a busy stavy u destruktivních akcí   | todo        | 2        | [0030-potvrzeni-a-busy-stavy.md](./0030-potvrzeni-a-busy-stavy.md) |
 | 0031 | Přístupnost a texty                            | todo        | 3        | [0031-pristupnost-a-texty.md](./0031-pristupnost-a-texty.md) |
 | 0032 | Dark mode                                      | todo        | 3        | [0032-dark-mode.md](./0032-dark-mode.md) |
@@ -102,3 +101,4 @@ Doporučené pořadí: 0 → A → B → C (0014 paralelně) → D → E → F �
 | 0027 | Toasty pod modaly, umístění toastu a banneru   | done | 2        | [0027-toasty-a-bannery.md](./0027-toasty-a-bannery.md) |
 | 0026 | Prázdné stavy místo načítání nebo chyby        | done | 1        | [0026-prazdne-stavy-vs-nacitani.md](./0026-prazdne-stavy-vs-nacitani.md) |
 | 0028 | Přihlášení a registrace: zpětná vazba a chyby  | done | 1        | [0028-prihlaseni-a-registrace-ux.md](./0028-prihlaseni-a-registrace-ux.md) |
+| 0029 | Nastavení a oznámení: autosave a povolení      | done | 2        | [0029-nastaveni-a-oznameni-ux.md](./0029-nastaveni-a-oznameni-ux.md) |

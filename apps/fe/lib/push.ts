@@ -174,7 +174,7 @@ export async function getExpoPushTokenAsync(): Promise<string | null> {
  * Firebase SDK so it never ends up in the native (Android/iOS) bundle.
  */
 export async function getFcmWebTokenAsync(): Promise<string | null> {
-  if (!isWebPushSupported) return null;
+  if (!isWebPushSupported || Notification.permission !== 'granted') return null;
 
   try {
     const { initializeApp, getApps } = await import('firebase/app');
@@ -182,11 +182,9 @@ export async function getFcmWebTokenAsync(): Promise<string | null> {
 
     const app = getApps()[0] ?? initializeApp(FIREBASE_WEB_CONFIG);
 
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.warn('[push] Web notification permission not granted:', permission);
-      return null;
-    }
+    // O povolení se tu už neříká - musí to být synchronně v klepnutí, ještě
+    // před importy výše (lib/notifications.ts enableNotifications).
+    if (Notification.permission !== 'granted') return null;
 
     const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
     const messaging = getMessaging(app);

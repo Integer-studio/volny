@@ -1,6 +1,6 @@
 # 0029 — Nastavení a oznámení: autosave a povolení notifikací
 
-- **Stav:** todo
+- **Stav:** done
 - **Priorita:** 2
 - **Datum vytvoření:** 2026-10-07
 
@@ -28,10 +28,10 @@
 
 ## Kritéria splnění
 
-- [ ] Sekce "Oznámení" v nastavení podle stavu: iOS tab → návod k instalaci,
+- [x] Sekce "Oznámení" v nastavení podle stavu: iOS tab → návod k instalaci,
       `default` → "Zapnout", `denied` → návod pro daný prohlížeč.
-- [ ] Na nativu žádost o povolení až po vysvětlujícím kroku (ne přes intro).
-- [ ] Web: `requestPermission()` synchronně v click handleru. `default` ≠
+- [x] Na nativu žádost o povolení až po vysvětlujícím kroku (ne přes intro).
+- [x] Web: `requestPermission()` synchronně v click handleru. `default` ≠
       "zablokováno".
 - [x] Jméno se ukládá až na blur / "Uložit", s poznámkou "Tímto jménem se
       přihlašuješ".
@@ -50,3 +50,19 @@ chybu ohlásí toast. `me` se bere z odpovědi `PUT /users/me` (`applyMe`), bez
 `refreshMe`. Jméno a Instagram mají `autoCorrect={false}`. Popisek
 "Uživatelské jméno", hláška "je už obsazené" všude. Oznámení zbývají pro
 skupinu E.
+
+**2026-10-07 (skupina E):** Nový `lib/notifications.ts` sjednocuje stav
+oznámení pro web i APK (`needsInstall` / `unsupported` / `default` /
+`granted` / `denied`):
+- Na webu se `Notification.requestPermission()` volá synchronně jako první
+  věc v klepnutí. `getFcmWebTokenAsync` už o povolení nežádá, jen čte stav.
+- Zavřený dialog (`default`) není "zablokováno". Průvodce i nastavení
+  nabídnou zkusit znovu.
+- APK: `PushGateNative` registruje jen při už povoleném stavu. O povolení
+  se žádá z nového kroku průvodce (varianta `native` s vysvětlením), z
+  lišty (teď i na APK) nebo z nastavení.
+- Nastavení má sekci "Oznámení" podle stavu, včetně návodu pro iOS kartu a
+  odblokování podle prohlížeče (`unblockInstructions`).
+
+Neověřeno na zařízení: Android 13+ (dialog až po kroku průvodce), iOS
+z plochy a Firefox/Safari (synchronní žádost).

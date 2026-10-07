@@ -8,7 +8,8 @@ import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
 import { fieldError, errorMessage } from '../lib/errors';
 import { validateInstagram, validatePhone } from '../lib/validators';
-import { needsWebNotificationPrompt } from '../lib/push';
+import { isPushSupported, needsWebNotificationPrompt } from '../lib/push';
+import { unblockInstructions, useNotificationStatus } from '../lib/notifications';
 import { writeHandoffCookie } from '../lib/handoff';
 import { clearInstallPrompt, getInstallPrompt, isAndroidWeb, isIOS, isStandalone } from '../lib/platform-web';
 import { isOnboardingStep, type TourStep } from '../lib/tour';
@@ -31,10 +32,13 @@ type InstallVariant =
   | 'android'
   /** Desktop, nainstalovaná PWA, aplikace z plochy iOS - zbývá jen povolit oznámení. */
   | 'notifyOnly'
-  /** Nativní APK (oznámení řeší PushGate) nebo už povolená oznámení. */
+  /** APK - vysvětlení před systémovým dialogem (dřív vyskočil hned po registraci). */
+  | 'native'
+  /** Nativní iOS (bez pushe) nebo už povolená oznámení. */
   | 'none';
 
 function installVariant(): InstallVariant {
+  if (isPushSupported) return 'native';
   if (Platform.OS !== 'web') return 'none';
   if (isIOS() && !isStandalone()) return 'ios';
   if (isAndroidWeb() && !isStandalone()) return 'android';
@@ -55,10 +59,16 @@ export default function Onboarding() {
     if (!isOnboardingStep(step)) router.replace('/');
   }, [step]);
 
+  // Na APK se stav povolení zjišťuje asynchronně (Android < 13 má povoleno
+  // rovnou) - do té doby krok čeká, ať neproblikne.
+  const notif = useNotificationStatus();
+  const nativeReady = variant !== 'native' || notif.status != null;
+  const skipInstall = variant === 'none' || (variant === 'native' && notif.status != null && notif.status !== 'default');
+
   // Nemá-li krok s plochou co nabídnout, rovnou se přeskočí.
   useEffect(() => {
-    if (screen === 'install' && variant === 'none') goTo('ring');
-  }, [screen, variant, goTo]);
+    if (screen === 'install' && skipInstall) goTo('ring');
+  }, [screen, skipInstall, goTo]);
 
   if (!screen || !isOnboardingStep(screen)) return <View className="flex-1 bg-[#FCFBF8]" />;
 
@@ -90,7 +100,7 @@ export default function Onboarding() {
 
       {screen === 'intro' && <IntroStep onNext={() => advance('intro')} bottom={insets.bottom} />}
       {screen === 'contact' && <ContactStep onNext={() => advance('contact')} bottom={insets.bottom} />}
-      {screen === 'install' && variant !== 'none' && (
+      {screen === 'install' && variant !== 'none' && !skipInstall && nativeReady && (
         <InstallStep variant={step === 'notify' ? 'notifyOnly' : variant} onNext={finish} bottom={insets.bottom} />
       )}
 
@@ -325,9 +335,15 @@ function InstallStep({
 }) {
   const { height } = useWindowDimensions();
   const [askingNotif, setAskingNotif] = useState(false);
-  const [notifState, setNotifState] = useState<'ask' | 'granted' | 'denied'>(() =>
-    needsWebNotificationPrompt() ? 'ask' : 'granted',
-  );
+  const notif = useNotificationStatus();
+  // `default` po zavřeném dialogu není "zablokováno" - jde se zeptat znovu.
+  const [dismissedPrompt, setDismissedPrompt] = useState(false);
+  const notifState: 'ask' | 'granted' | 'denied' =
+    notif.status === 'granted'
+      ? 'granted'
+      : notif.status === 'denied' || notif.status === 'unsupported'
+        ? 'denied'
+        : 'ask';
   const [installPrompt, setInstallPrompt] = useState(getInstallPrompt);
 
   // Kód pro přenos přihlášení do aplikace z plochy (lib/handoff.ts). Vytváří
@@ -353,13 +369,13 @@ function InstallStep({
 
   const enableNotifications = async () => {
     setAskingNotif(true);
-    // Volá Notification.requestPermission() - musí to být přímo z klepnutí.
-    await api.registerPushToken().catch(() => null);
+    // Volá Notification.requestPermission() synchronně - musí to být přímo
+    // z klepnutí.
+    const next = await notif.enable().catch(() => null);
     setAskingNotif(false);
-    const perm = typeof Notification !== 'undefined' ? Notification.permission : 'denied';
-    setNotifState(perm === 'granted' ? 'granted' : 'denied');
+    setDismissedPrompt(next === 'default');
     // Chvíli nechat vidět potvrzení, ať přechod dál nepůsobí jako chyba.
-    if (variant === 'notifyOnly' && perm === 'granted') setTimeout(onNext, 700);
+    if ((variant === 'notifyOnly' || variant === 'native') && next === 'granted') setTimeout(onNext, 700);
   };
 
   const install = async () => {
@@ -371,7 +387,7 @@ function InstallStep({
   };
 
   const headline =
-    variant === 'notifyOnly'
+    variant === 'notifyOnly' || variant === 'native'
       ? 'Zapni si oznámení, ať víš, kdy mají přátelé volno.'
       : 'Chceš vědět jako první, kdy jsou tví přátelé Volní?';
 
@@ -434,30 +450,41 @@ function InstallStep({
           </>
         )}
 
-        {variant === 'notifyOnly' && (
+        {variant === 'native' && (
+          <Text className="text-[#2B2724]/70 text-base leading-6 mt-2">
+            Pošleme ti oznámení, když ti někdo pošle žádost o přátelství nebo když mají přátelé volno. Nic jiného.
+          </Text>
+        )}
+
+        {(variant === 'notifyOnly' || variant === 'native') && (
           <View className="mt-8 gap-3">
             {notifState === 'denied' ? (
               <Text className="text-gray-500 text-sm leading-5">
-                Oznámení jsou v prohlížeči zablokovaná. Povolit je můžeš v nastavení webu.
+                Oznámení jsou zablokovaná. {unblockInstructions()}
               </Text>
             ) : notifState === 'granted' ? (
               <NotificationsOn />
             ) : (
               <PrimaryButton label="Zapnout oznámení" onPress={enableNotifications} loading={askingNotif} />
             )}
+            {dismissedPrompt && notifState === 'ask' && (
+              <Text className="text-gray-500 text-sm leading-5">Dialog se zavřel bez volby. Zkus to znovu.</Text>
+            )}
           </View>
         )}
 
         {notifState === 'denied' && variant === 'android' && (
-          <Text className="text-gray-500 text-sm leading-5 mt-3">
-            Povolit je můžeš v nastavení webu (ikona vlevo od adresy).
-          </Text>
+          <Text className="text-gray-500 text-sm leading-5 mt-3">{unblockInstructions()}</Text>
         )}
       </View>
 
       <Pressable onPress={onNext} accessibilityRole="button" className="py-3 mt-8 items-center">
         <Text className="text-[#2B2724]/60 text-base">
-          {variant === 'ios' ? 'Pokračovat tady v Safari' : variant === 'notifyOnly' ? 'Teď ne' : 'Pokračovat'}
+          {variant === 'ios'
+            ? 'Pokračovat tady v Safari'
+            : (variant === 'notifyOnly' || variant === 'native') && notifState !== 'granted'
+              ? 'Teď ne'
+              : 'Pokračovat'}
         </Text>
       </Pressable>
     </ScrollView>

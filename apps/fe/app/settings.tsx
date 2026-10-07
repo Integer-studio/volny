@@ -4,6 +4,7 @@ import { api, ApiError } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
 import { useToast } from '../components/Toast';
 import FormField from '../components/FormField';
+import NotificationSettings from '../components/NotificationSettings';
 import { fieldError, errorMessage } from '../lib/errors';
 import { useAutosaveField } from '../hooks/useAutosaveField';
 import { useSlowActionNotice } from '../hooks/useSlowActionNotice';
@@ -218,6 +219,8 @@ export default function Settings() {
         state={instagramField.state}
         containerClassName="mb-8"
       />
+
+      <NotificationSettings />
 
       <Text className="text-gray-400 text-xs font-bold tracking-widest mb-3">VZHLED</Text>
       <View className="flex-row items-center justify-between mb-2">

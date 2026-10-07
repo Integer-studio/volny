@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { api } from '../lib/api';
+import { getNotificationStatus } from '../lib/notifications';
 import {
   isPushSupported,
   isWebPushSupported,
@@ -32,12 +33,20 @@ function PushGateNative() {
   // Register on mount of the authenticated tree. This covers BOTH cold
   // start with a valid stored JWT and a fresh login/register, because
   // RootLayout mounts this component in either case.
+  //
+  // Jen když už je povoleno (Android < 13, nebo povoleno dřív). Systémový
+  // dialog dřív vyskočil hned po registraci přes úvod průvodce, bez
+  // vysvětlení - teď se o povolení žádá až z kroku průvodce, lišty nebo
+  // nastavení (lib/notifications.ts).
   useEffect(() => {
     let cancelled = false;
-    api.registerPushToken().then(token => {
-      if (!cancelled && token) {
-        console.log('[push] registered:', token);
-      }
+    getNotificationStatus().then(status => {
+      if (cancelled || status !== 'granted') return;
+      api.registerPushToken().then(token => {
+        if (!cancelled && token) {
+          console.log('[push] registered:', token);
+        }
+      });
     });
     return () => { cancelled = true; };
   }, []);

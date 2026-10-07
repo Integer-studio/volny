@@ -41,6 +41,14 @@ z plochy přenáší jednorázovým kódem v cookie (`lib/handoff.ts`,
 `POST /api/auth/handoff`). Zbývá ověření na reálném iPhonu (poslední
 kritérium).
 
+### Stav 2026-10-07 (skupina E)
+
+Z [0029](./0029-nastaveni-a-oznameni-ux.md): žádost o povolení teď běží
+synchronně v klepnutí (dřív jí předcházely dynamické importy Firebase, což
+Safari mohlo brát jako vypršené gesto). V nastavení je sekce "Oznámení",
+která v Safari kartě ukáže návod na přidání na plochu a v aplikaci z plochy
+tlačítko "Zapnout". Pořád zbývá jen ověření na reálném iPhonu.
+
 ### Zjištění z rešerše (2026-09-04)
 
 - **Firebase Cloud Messaging podporuje Safari** od srpna 2023 (Safari 16.1+/
