@@ -6,6 +6,7 @@ import { api, ApiError } from '../../lib/api';
 import { useAuth } from '../../lib/auth-context';
 import { useAsyncData } from '../../hooks/useAsyncData';
 import InviteLoadError from '../../components/InviteLoadError';
+import { memberCountLabel } from '../../lib/plural';
 import { setPendingInvite, clearPendingInvite } from '../../lib/pending-invite';
 
 export default function JoinGroup() {
@@ -66,7 +67,7 @@ export default function JoinGroup() {
       </View>
       <Text className="text-2xl font-bold text-gray-900 text-center mb-2">{p.name}</Text>
       <Text className="text-gray-400 text-center mb-8">
-        {p.memberCount} {p.memberCount === 1 ? 'člen' : 'členů'}{p.ownerName ? ` · založil ${p.ownerName}` : ''}
+        {memberCountLabel(p.memberCount)}{p.ownerName ? ` · založil ${p.ownerName}` : ''}
       </Text>
 
       {status === 'signedOut' && (

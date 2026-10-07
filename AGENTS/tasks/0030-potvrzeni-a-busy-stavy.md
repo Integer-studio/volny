@@ -1,6 +1,6 @@
 # 0030 — Potvrzení a busy stavy u destruktivních akcí
 
-- **Stav:** todo
+- **Stav:** done
 - **Priorita:** 2
 - **Datum vytvoření:** 2026-10-07
 
@@ -28,14 +28,14 @@ vlastní `Pressable`. Sdílený `components/ui/button` se nikde nepoužívá.
 
 ## Kritéria splnění
 
-- [ ] Sdílený `Button` s `loading`/`disabled` použitý v těchto místech.
-- [ ] Potvrzení (inline, jako v `ProfileSheet`) u odebrání přítele a
+- [x] Sdílený `Button` s `loading`/`disabled` použitý v těchto místech.
+- [x] Potvrzení (inline, jako v `ProfileSheet`) u odebrání přítele a
       obnovení pozvánky. Při chybě toast (nebo undo).
-- [ ] Busy stav u smazání/opuštění skupiny a přepínače sdílení.
-- [ ] `BottomSheet` má `dismissable={false}` během běžící akce.
-- [ ] Pozvánka přítele: sheet přijmout/odmítnout (jako u skupin), na 404
+- [x] Busy stav u smazání/opuštění skupiny a přepínače sdílení.
+- [x] `BottomSheet` má `dismissable={false}` během běžící akce.
+- [x] Pozvánka přítele: sheet přijmout/odmítnout (jako u skupin), na 404
       hláška "Pozvánka už neplatí".
-- [ ] `AbortError` ze share = zrušeno, bez toastu.
+- [x] `AbortError` ze share = zrušeno, bez toastu.
 
 ## Poznámky
 
@@ -57,3 +57,11 @@ skupin B a F.
 - `GroupInviteSheet` má během joinu `dismissable={false}`.
 - Zbývá ve skupině F: smazání/opuštění skupiny, přepínač sdílení a
   potvrzení obnovy odkazu skupiny.
+
+**2026-10-07 (skupina F):** Detail skupiny používá `Button`:
+- Smazání a opuštění mají `loading` a zamčené "Zrušit", takže dvojťuk
+  nepošle dva requesty. Po úspěchu se ukáže toast.
+- Obnova odkazu skupiny chce inline potvrzení.
+- Přepínač sdílení je během ukládání zamčený a při chybě se vrací na
+  hodnotu ze serveru. Zapnutí, které odhalí kontakt, chce potvrzení,
+  vypnutí ne.

@@ -12,12 +12,7 @@ import FadeIn from '../../components/FadeIn';
 import { useTour, useTourTarget } from '../../components/tour/TourProvider';
 import TourOverlay from '../../components/tour/TourOverlay';
 import GroupInviteSheet from '../../components/GroupInviteSheet';
-
-function memberCountLabel(n: number): string {
-  if (n === 1) return '1 člen';
-  if (n >= 2 && n <= 4) return `${n} členové`;
-  return `${n} členů`;
-}
+import { memberCountLabel } from '../../lib/plural';
 
 export default function GroupsList() {
   const { show } = useToast();

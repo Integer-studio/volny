@@ -8,6 +8,8 @@ import QRCode from 'react-native-qrcode-svg';
 import { api, ApiError, GroupDetail as GroupDetailModel } from '../../lib/api';
 import { useAsyncData } from '../../hooks/useAsyncData';
 import { useToast } from '../../components/Toast';
+import Button from '../../components/Button';
+import { useSlowActionNotice } from '../../hooks/useSlowActionNotice';
 import FormField from '../../components/FormField';
 import UserRow from '../../components/UserRow';
 import BottomSheet from '../../components/BottomSheet';
@@ -42,6 +44,13 @@ export default function GroupDetail() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [confirmingRegenerate, setConfirmingRegenerate] = useState(false);
+  // Smazání / opuštění: zamyká tlačítka, ať dvojťuk nepošle dva requesty.
+  const [destroying, setDestroying] = useState(false);
+  const [sharingSaving, setSharingSaving] = useState(false);
+  // Zapnutí sdílení odhalí kontakt - chce potvrzení, vypnutí ne.
+  const [confirmingShareOn, setConfirmingShareOn] = useState(false);
+  useSlowActionNotice(destroying || regenerating || sharingSaving);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [qrVisible, setQrVisible] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -79,9 +88,17 @@ export default function GroupDetail() {
     if (!group.settled) {
       return <View className="flex-1 bg-[#FCFBF8]" />;
     }
+    const gone = group.error instanceof ApiError && (group.error.status === 404 || group.error.status === 403);
     return (
       <View className="flex-1 bg-[#FCFBF8] items-center justify-center px-6">
-        <Text className="text-gray-400 text-center">Skupinu se nepodařilo načíst.</Text>
+        <Text className="text-gray-400 text-center mb-6">
+          {gone ? 'Skupina neexistuje, nebo v ní už nejsi.' : 'Skupinu se nepodařilo načíst.'}
+        </Text>
+        {gone ? (
+          <Button label="Zpět na skupiny" variant="secondary" onPress={() => router.replace('/groups')} />
+        ) : (
+          <Button label="Zkusit znovu" loading={group.pending} onPress={group.reload} />
+        )}
       </View>
     );
   }
@@ -101,6 +118,7 @@ export default function GroupDetail() {
   };
 
   const handleRegenerate = async () => {
+    setConfirmingRegenerate(false);
     setRegenerating(true);
     try {
       const fresh = await api.regenerateInvite(id);
@@ -115,29 +133,46 @@ export default function GroupDetail() {
 
   const sharesWithGroup = sharing ?? data.sharesWithGroup;
 
-  const handleSharingChange = async (value: boolean) => {
+  const saveSharing = async (value: boolean) => {
+    setConfirmingShareOn(false);
     setSharing(value);
+    setSharingSaving(true);
     try {
       await api.setGroupSharing(id, value);
       setReloadTick(t => t + 1);
     } catch {
-      setSharing(!value);
+      // Zpět na poslední hodnotu ze serveru, ne na `!value` - přepínač je
+      // během ukládání zamčený, ale serverová hodnota je jistota.
+      setSharing(null);
       show('Změna sdílení se nezdařila.', 'error');
+    } finally {
+      setSharingSaving(false);
     }
   };
 
+  const handleSharingChange = (value: boolean) => {
+    if (value) setConfirmingShareOn(true);
+    else saveSharing(false);
+  };
+
   const handleDelete = async () => {
+    setDestroying(true);
     try {
       await api.deleteGroup(id);
+      show('Skupina smazána.');
       router.replace('/groups');
     } catch {
       show('Smazání se nezdařilo.', 'error');
+    } finally {
+      setDestroying(false);
     }
   };
 
   const handleLeave = async () => {
+    setDestroying(true);
     try {
       await api.leaveGroup(id);
+      show(`Už nejsi ve skupině ${data.name}.`);
       router.replace('/groups');
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
@@ -146,6 +181,8 @@ export default function GroupDetail() {
         show('Opuštění se nezdařilo.', 'error');
       }
       setConfirmingLeave(false);
+    } finally {
+      setDestroying(false);
     }
   };
 
@@ -183,19 +220,13 @@ export default function GroupDetail() {
           <QRCode value={buildInviteUrl(code)} size={64} />
         </Pressable>
       </View>
-      <View className="flex-row mb-8">
-        <Pressable onPress={handleCopy} className="flex-1 flex-row items-center justify-center bg-gray-100 py-3 rounded-xl mr-2 active:opacity-80">
-          <Copy size={16} color="#333" />
-          <Text className="text-gray-800 font-medium ml-2">Kopírovat</Text>
-        </Pressable>
-        <Pressable onPress={handleShare} className="flex-1 flex-row items-center justify-center bg-gray-100 py-3 rounded-xl mx-1 active:opacity-80">
-          <Share2 size={16} color="#333" />
-          <Text className="text-gray-800 font-medium ml-2">Sdílet</Text>
-        </Pressable>
+      <View className={`flex-row ${confirmingRegenerate ? 'mb-3' : 'mb-8'}`}>
+        <Button label="Kopírovat" variant="secondary" icon={Copy} onPress={handleCopy} className="flex-1 mr-2" />
+        <Button label="Sdílet" variant="secondary" icon={Share2} onPress={handleShare} className="flex-1 mx-1" />
         {data.isOwner && (
           <Pressable
-            onPress={handleRegenerate}
-            disabled={regenerating}
+            onPress={() => setConfirmingRegenerate(true)}
+            disabled={regenerating || confirmingRegenerate}
             accessibilityRole="button"
             accessibilityLabel="Vygenerovat nový odkaz"
             className="flex-row items-center justify-center bg-gray-100 py-3 px-3 rounded-xl ml-2 active:opacity-80">
@@ -203,6 +234,17 @@ export default function GroupDetail() {
           </Pressable>
         )}
       </View>
+      {confirmingRegenerate && (
+        <View className="mb-8">
+          <Text className="text-gray-600 text-center mb-3">
+            Vygenerovat nový odkaz? Starý odkaz, kód i QR kód přestanou fungovat.
+          </Text>
+          <View className="flex-row">
+            <Button label="Zpět" variant="secondary" onPress={() => setConfirmingRegenerate(false)} className="flex-1 mr-2" />
+            <Button label="Vygenerovat" onPress={handleRegenerate} className="flex-1 ml-2" />
+          </View>
+        </View>
+      )}
 
       {/* Task 0021: jeden přepínač pro volno i kontakt, vzájemný - přes
           skupinu se dva členové vidí jen když ho mají zapnutý oba. */}
@@ -212,16 +254,30 @@ export default function GroupDetail() {
         <Switch
           value={sharesWithGroup}
           onValueChange={handleSharingChange}
+          disabled={sharingSaving || confirmingShareOn}
           trackColor={{ false: '#E5E7EB', true: '#EE6C4D' }}
           thumbColor="#fff"
           // Viz settings.tsx - barva zapnutého jezdce na react-native-web.
           {...({ activeThumbColor: '#fff' } as object)}
           accessibilityLabel="Sdílet volno a kontakt se skupinou"
+          accessibilityState={{ busy: sharingSaving }}
         />
       </View>
-      <Text className="text-gray-400 text-xs mb-8">
-        {groupSharingHint(sharesWithGroup)}
-      </Text>
+      {confirmingShareOn ? (
+        <View className="mb-8">
+          <Text className="text-gray-600 text-center mb-3">
+            Členové skupiny uvidí, kdy máš volno, i tvůj telefon a Instagram.
+          </Text>
+          <View className="flex-row">
+            <Button label="Zpět" variant="secondary" onPress={() => setConfirmingShareOn(false)} className="flex-1 mr-2" />
+            <Button label="Sdílet" onPress={() => saveSharing(true)} className="flex-1 ml-2" />
+          </View>
+        </View>
+      ) : (
+        <Text className="text-gray-400 text-xs mb-8">
+          {groupSharingHint(sharesWithGroup)}
+        </Text>
+      )}
 
       <Text className="text-gray-400 text-xs font-bold tracking-widest mb-3">
         ČLENOVÉ ({data.memberCount})
@@ -240,36 +296,24 @@ export default function GroupDetail() {
       <View className="border-t border-gray-100 pt-6">
         {data.isOwner ? (
           !confirmingDelete ? (
-            <Pressable onPress={() => setConfirmingDelete(true)} className="border border-red-200 py-3 rounded-xl items-center active:bg-red-50">
-              <Text className="text-red-500 font-medium">Smazat skupinu</Text>
-            </Pressable>
+            <Button label="Smazat skupinu" variant="destructiveOutline" onPress={() => setConfirmingDelete(true)} />
           ) : (
             <View>
               <Text className="text-gray-600 text-center mb-3">Smazat skupinu pro všechny členy?</Text>
               <View className="flex-row">
-                <Pressable onPress={() => setConfirmingDelete(false)} className="flex-1 bg-gray-100 py-3 rounded-xl items-center mr-2 active:opacity-80">
-                  <Text className="text-gray-700 font-medium">Zrušit</Text>
-                </Pressable>
-                <Pressable onPress={handleDelete} className="flex-1 bg-red-500 py-3 rounded-xl items-center ml-2 active:opacity-80">
-                  <Text className="text-white font-medium">Smazat</Text>
-                </Pressable>
+                <Button label="Zrušit" variant="secondary" disabled={destroying} onPress={() => setConfirmingDelete(false)} className="flex-1 mr-2" />
+                <Button label="Smazat" variant="destructive" loading={destroying} onPress={handleDelete} className="flex-1 ml-2" />
               </View>
             </View>
           )
         ) : !confirmingLeave ? (
-          <Pressable onPress={() => setConfirmingLeave(true)} className="border border-red-200 py-3 rounded-xl items-center active:bg-red-50">
-            <Text className="text-red-500 font-medium">Opustit skupinu</Text>
-          </Pressable>
+          <Button label="Opustit skupinu" variant="destructiveOutline" onPress={() => setConfirmingLeave(true)} />
         ) : (
           <View>
             <Text className="text-gray-600 text-center mb-3">Opravdu chceš opustit tuto skupinu?</Text>
             <View className="flex-row">
-              <Pressable onPress={() => setConfirmingLeave(false)} className="flex-1 bg-gray-100 py-3 rounded-xl items-center mr-2 active:opacity-80">
-                <Text className="text-gray-700 font-medium">Zrušit</Text>
-              </Pressable>
-              <Pressable onPress={handleLeave} className="flex-1 bg-red-500 py-3 rounded-xl items-center ml-2 active:opacity-80">
-                <Text className="text-white font-medium">Opustit</Text>
-              </Pressable>
+              <Button label="Zrušit" variant="secondary" disabled={destroying} onPress={() => setConfirmingLeave(false)} className="flex-1 mr-2" />
+              <Button label="Opustit" variant="destructive" loading={destroying} onPress={handleLeave} className="flex-1 ml-2" />
             </View>
           </View>
         )}
@@ -287,6 +331,12 @@ export default function GroupDetail() {
           <Text className="text-gray-900 text-lg font-semibold tracking-wide mt-6">
             {code}
           </Text>
+          {/* Stejné akce jako u QR přítele - kdo QR otevře, často chce
+              odkaz rovnou poslat. */}
+          <View className="flex-row mt-6 self-stretch">
+            <Button label="Kopírovat" variant="secondary" icon={Copy} onPress={handleCopy} className="flex-1 mr-2" />
+            <Button label="Sdílet" variant="secondary" icon={Share2} onPress={handleShare} className="flex-1 ml-2" />
+          </View>
         </View>
       </BottomSheet>
 

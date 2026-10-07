@@ -1,6 +1,6 @@
 # 0031 — Přístupnost a texty
 
-- **Stav:** todo
+- **Stav:** done
 - **Priorita:** 3
 - **Datum vytvoření:** 2026-10-07
 
@@ -29,10 +29,10 @@
 ## Kritéria splnění
 
 - [x] Všechna ikonová tlačítka mají label a roli.
-- [ ] Genitivní popisky presetů (ideálně jako pole v datech presetů, viz
+- [x] Genitivní popisky presetů (ideálně jako pole v datech presetů, viz
       0009).
-- [ ] Opravené plurály a sjednocené texty.
-- [ ] `useNow` zarovnaný na minutu a obnovený na `AppState` `active`.
+- [x] Opravené plurály a sjednocené texty.
+- [x] `useNow` zarovnaný na minutu a obnovený na `AppState` `active`.
 
 ## Poznámky
 
@@ -56,3 +56,8 @@ popisku a chybu do `accessibilityHint` a live regionu, umí `hint` a `ref`.
 `BootSplash` používá `COLD_START_MESSAGE`. Texty "Handle"/"přezdívka" →
 "uživatelské jméno", "zabrané" → "obsazené". Zbývá skupina F: plurál
 "členů" v `join/[code].tsx` a Kopírovat/Sdílet v QR sheetu skupiny.
+
+**2026-10-07 (skupina F):** Plurál členů přes sdílené `lib/plural.ts`
+(i v `join/[code].tsx`). QR sheet skupiny má Kopírovat/Sdílet jako QR
+přítele. Genitiv presetů se vyřešil popiskem s časem (viz skupina A),
+kritérium je tím splněné.
