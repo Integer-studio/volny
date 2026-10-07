@@ -67,6 +67,13 @@ prstence je dnes max. 16 h, takže na limit 24 h dopředu nestačí.
   začátek na teď. Přátelé vidí plány v sekci **"Později"** pod seznamem
   volných. Sekce se ukáže jen když není prázdná, za stejných podmínek jako
   seznam volných.
+- **Doladěno po review (2026-10-07):** handle začátku je zmenšený jen
+  v klidu na "teď". Tažený nebo stojící jinde vypadá stejně jako konec a má
+  stejnou fyziku: pružinu za kraji, zoom podle rychlosti tahu, namotávání,
+  setrvačnost a doběh. Presety uhýbají oběma handlům. Klepnutí na preset
+  dřív, než může volno skončit, ho udělá začátkem (oblouk se prodlouží
+  dozadu). Popisek času má jemný šedý podklad, aby bylo vidět, že jde
+  klepnout.
 - **Rozhodnuto:** začátek **běžícího** volna jde odtáhnout dopředu. Volno se
   tím vrátí do plánu (`NotifiedAt = null`) a v novém začátku přátelům znovu
   přijde "má teď volno". Push při naplánování se neposílá, jen realtime

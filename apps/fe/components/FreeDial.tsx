@@ -200,6 +200,13 @@ export default function FreeDial({
    * konec ukládá hned; jinak se jen odloží do potvrzení tlačítkem.
    */
   const handleChange = (d: Date) => {
+    // Kotva ze seznamu dřív, než může volno skončit, se stane začátkem -
+    // stejně jako klepnutí na ni přímo na prstenci.
+    if (start && d.getTime() < start.getTime() + T_MIN * 60_000) {
+      const minEnd = new Date(d.getTime() + T_MIN * 60_000);
+      handleSlot(d, safeTarget < minEnd ? minEnd : safeTarget);
+      return;
+    }
     // Uživatel si hodnotu vybral sám, takže se na ni už nemá nic vracet.
     clearReset();
     setTarget(d);
@@ -249,7 +256,8 @@ export default function FreeDial({
           onPress={() => setExactKey(Date.now())}
           accessibilityRole="button"
           accessibilityHint="Zadat přesný čas na minuty"
-          className="items-center active:opacity-60"
+          // Jemný šedý podklad napovídá, že na čas jde klepnout.
+          className="items-center rounded-2xl bg-black/[0.04] px-4 py-2 active:bg-black/[0.08]"
         >
           <Text className="text-gray-900 text-2xl font-bold text-center">
             {shownStart
