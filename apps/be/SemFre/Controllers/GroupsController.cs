@@ -128,6 +128,29 @@ public class GroupsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Toggles whether the caller shares free status and contact with this
+    /// group (task 0021). Mutual - see ConnectionService.
+    /// </summary>
+    [HttpPut("{id:int}/sharing")]
+    public async Task<IActionResult> UpdateSharing(int id, GroupSharingUpdateDto dto)
+    {
+        var userId = _access.GetCurrentUserId(User);
+        if (userId == null) return Unauthorized();
+
+        var member = await _db.GroupMembers.SingleOrDefaultAsync(m => m.GroupID == id && m.UserID == userId);
+        if (member == null) return NotFound();
+
+        if (member.SharesWithGroup != dto.SharesWithGroup)
+        {
+            member.SharesWithGroup = dto.SharesWithGroup;
+            await _db.SaveChangesAsync();
+            await _realtime.FreeChangedForAsync(await MemberIdsAsync(id));
+        }
+
+        return NoContent();
+    }
+
     [HttpPost("{id:int}/invite/regenerate")]
     public async Task<IActionResult> RegenerateInvite(int id)
     {
@@ -266,6 +289,11 @@ public class GroupsController : ControllerBase
             }
         ).OrderByDescending(m => m.IsOwner).ThenBy(m => m.Name).ToListAsync();
 
+        var sharesWithGroup = await _db.GroupMembers.AsNoTracking()
+            .Where(m => m.GroupID == groupId && m.UserID == currentUserId)
+            .Select(m => m.SharesWithGroup)
+            .SingleOrDefaultAsync();
+
         return new GroupDetailDto
         {
             GroupID = grp.GroupID,
@@ -275,7 +303,8 @@ public class GroupsController : ControllerBase
             CreatedAt = grp.CreatedAt,
             InviteCode = grp.InviteCode,
             Members = members,
-            AlreadyMember = false
+            AlreadyMember = false,
+            SharesWithGroup = sharesWithGroup
         };
     }
 }

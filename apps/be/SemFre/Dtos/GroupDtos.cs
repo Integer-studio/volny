@@ -13,6 +13,11 @@ public class GroupUpdateDto
     public string? Name { get; set; }
 }
 
+public class GroupSharingUpdateDto
+{
+    public bool SharesWithGroup { get; set; }
+}
+
 public class GroupJoinDto
 {
     public string Code { get; set; } = null!;
@@ -46,6 +51,8 @@ public class GroupDetailDto
     public string InviteCode { get; set; } = null!;
     public List<GroupMemberDto> Members { get; set; } = new();
     public bool AlreadyMember { get; set; }
+    /// <summary>The caller's own GroupMember.SharesWithGroup for this group.</summary>
+    public bool SharesWithGroup { get; set; }
 }
 
 public class GroupInvitePreviewDto
