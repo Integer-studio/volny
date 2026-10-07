@@ -234,8 +234,7 @@ export default function FreeDial({
     if (!sameStart || !sameEnd) onChangeSlot(s, end);
   };
 
-  const withDay = (d: Date) =>
-    formatTime(d) + (isTomorrow(d, now) ? " (zítra)" : "");
+  const openExact = () => setExactKey(Date.now());
 
   return (
     <View
@@ -251,26 +250,39 @@ export default function FreeDial({
         {/* Otazník, dokud volno neběží - noví uživatelé jinak brali
             "Volný do 16:00" za hotovou věc (task 0031). Naplánované volno
             je potvrzené, ale ještě neběží - bez znaménka.
-            Klepnutí otevře přesné zadání na minuty (task 0010). */}
-        <Pressable
-          onPress={() => setExactKey(Date.now())}
-          accessibilityRole="button"
-          accessibilityHint="Zadat přesný čas na minuty"
-          // Jemný šedý podklad napovídá, že na čas jde klepnout.
-          className="items-center rounded-2xl bg-black/[0.04] px-4 py-2 active:bg-black/[0.08]"
-        >
-          <Text className="text-gray-900 text-2xl font-bold text-center">
-            {shownStart
-              ? `Volný od ${withDay(shownStart)} do ${withDay(shown)}`
-              : `Volný do ${withDay(shown)}`}
+            Klepnutí na čas (šedý podklad) otevře přesné zadání na minuty
+            (task 0010). */}
+        <View className="flex-row flex-wrap items-center justify-center">
+          <Text className="text-gray-900 text-2xl font-bold">Volný</Text>
+          {shownStart && (
+            <>
+              <Text className="text-gray-900 text-2xl font-bold"> od</Text>
+              <TimeChip
+                date={shownStart}
+                now={now}
+                label="Upravit začátek"
+                onPress={openExact}
+              />
+            </>
+          )}
+          <Text className="text-gray-900 text-2xl font-bold">
+            {" do"}
+          </Text>
+          <TimeChip
+            date={shown}
+            now={now}
+            label="Upravit konec"
+            onPress={openExact}
+          />
+          <Text className="text-gray-900 text-2xl font-bold">
             {planned ? "" : isFree ? "!" : "?"}
           </Text>
-          <Text className="text-gray-400 text-sm mt-0.5">
-            {shownStart
-              ? `${formatDuration(minutesUntil(shown, shownStart))} · začíná za ${formatDuration(minutesUntil(shownStart, now))}`
-              : `${isFree ? "zbývá " : ""}${formatDuration(minutesUntil(shown, now))}`}
-          </Text>
-        </Pressable>
+        </View>
+        <Text className="text-gray-400 text-sm mt-0.5">
+          {shownStart
+            ? `${formatDuration(minutesUntil(shown, shownStart))} · začíná za ${formatDuration(minutesUntil(shownStart, now))}`
+            : `${isFree ? "zbývá " : ""}${formatDuration(minutesUntil(shown, now))}`}
+        </Text>
       </View>
 
       <View ref={ringTarget} collapsable={false}>
@@ -342,5 +354,46 @@ export default function FreeDial({
         />
       )}
     </View>
+  );
+}
+
+/**
+ * Čas v popisku nad prstencem. Jemný šedý podklad jen kolem samotného času
+ * napovídá, že na něj jde klepnout - otevře přesné zadání na minuty (task
+ * 0010). Číslice jsou tabulkové, aby chip při tažení prstence necukal šířkou.
+ */
+function TimeChip({
+  date,
+  now,
+  label,
+  onPress,
+}: {
+  date: Date;
+  now: Date;
+  label: string;
+  onPress: () => void;
+}) {
+  const tomorrow = isTomorrow(date, now);
+  return (
+    <>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}, ${formatTime(date)}${tomorrow ? " zítra" : ""}`}
+        accessibilityHint="Zadat přesný čas na minuty"
+        hitSlop={6}
+        className="ml-1.5 mr-0.5 rounded-lg bg-black/[0.05] px-1.5 active:bg-black/[0.1]"
+      >
+        <Text
+          className="text-gray-900 text-2xl font-bold"
+          style={{ fontVariant: ["tabular-nums"] }}
+        >
+          {formatTime(date)}
+        </Text>
+      </Pressable>
+      {tomorrow && (
+        <Text className="text-gray-900 text-2xl font-bold ml-1">(zítra)</Text>
+      )}
+    </>
   );
 }
