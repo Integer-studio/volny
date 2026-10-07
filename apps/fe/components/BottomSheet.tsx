@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Animated, Modal, Pressable, View } from "react-native";
+import { Animated, Modal, Pressable, View, useWindowDimensions } from "react-native";
 
 type Props = {
   visible: boolean;
@@ -17,11 +17,15 @@ type Props = {
  * popup can reuse the exact same look/feel instead of duplicating it.
  */
 export default function BottomSheet({ visible, onClose, children }: Props) {
-  const [slideAnim] = useState(new Animated.Value(400));
+  // Odjezd o výšku obrazovky, ne o pevný kus: vyšší sheet (editor presetu)
+  // jinak dojel jen do půlky a zbytek pak zmizel modalovým fade - vypadalo
+  // to jako průsvitný sheet přes obrazovku.
+  const { height: offscreen } = useWindowDimensions();
+  const [slideAnim] = useState(new Animated.Value(offscreen));
 
   useEffect(() => {
     Animated.timing(slideAnim, {
-      toValue: visible ? 0 : 400,
+      toValue: visible ? 0 : offscreen,
       duration: visible ? 300 : 250,
       useNativeDriver: true,
     }).start();
@@ -29,8 +33,8 @@ export default function BottomSheet({ visible, onClose, children }: Props) {
 
   const handleClose = () => {
     Animated.timing(slideAnim, {
-      toValue: 400,
-      duration: 200,
+      toValue: offscreen,
+      duration: 250,
       useNativeDriver: true,
     }).start(() => onClose());
   };

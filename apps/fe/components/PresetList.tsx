@@ -99,13 +99,17 @@ export default function PresetList({
   };
 
   const { show } = useToast();
-  // `undefined` = editor zavřený, `null` = nový preset.
-  const [editingPreset, setEditingPreset] = useState<PresetDef | null | undefined>(undefined);
+  // Upravovaný preset (`null` = nový). Při zavírání zůstává, aby se obsah
+  // sheetu během odjezdu neměnil (titulek, tlačítko Smazat) - zavření řídí
+  // jen `sheetOpen`.
+  const [editingPreset, setEditingPreset] = useState<PresetDef | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   // Každé otevření editoru je nová instance - viz PresetEditSheet.
   const [sheetKey, setSheetKey] = useState(0);
   const openEditor = (def: PresetDef | null) => {
     setSheetKey((k) => k + 1);
     setEditingPreset(def);
+    setSheetOpen(true);
   };
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -126,7 +130,7 @@ export default function PresetList({
   const showAdd = editing || empty;
 
   const handleDelete = (def: PresetDef) => {
-    setEditingPreset(undefined);
+    setSheetOpen(false);
     manage.remove(def).then(
       () =>
         show(`Preset ${def.name} smazán.`, "success", 5000, {
@@ -174,7 +178,7 @@ export default function PresetList({
             accessibilityRole="button"
             hitSlop={10}
           >
-            <Text className="text-[#EE6C4D] font-medium text-sm">
+            <Text className="text-gray-500 font-medium text-sm">
               {editing ? "Hotovo" : "Upravit"}
             </Text>
           </Pressable>
@@ -313,10 +317,10 @@ export default function PresetList({
 
       <PresetEditSheet
         key={sheetKey}
-        visible={editingPreset !== undefined}
-        preset={editingPreset ?? null}
+        visible={sheetOpen}
+        preset={editingPreset}
         all={manage.presets}
-        onClose={() => setEditingPreset(undefined)}
+        onClose={() => setSheetOpen(false)}
         onSave={(input) =>
           editingPreset ? manage.update(editingPreset.id, input) : manage.create(input)
         }
