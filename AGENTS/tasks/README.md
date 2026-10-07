@@ -53,6 +53,36 @@ doby před zavedením priorit je uvedena orientačně.
 | 0031 | Přístupnost a texty                            | todo        | 3        | [0031-pristupnost-a-texty.md](./0031-pristupnost-a-texty.md) |
 | 0032 | Dark mode                                      | todo        | 3        | [0032-dark-mode.md](./0032-dark-mode.md) |
 
+## Skupiny otevřených úkolů
+
+Úkoly, které má smysl dělat spolu (jedna větev / PR), protože sahají na
+stejné soubory nebo mají společnou příčinu. Sestaveno 2026-10-07.
+Doporučené pořadí: 0 → A → B → C (0014 paralelně) → D → E → F → G.
+
+- **0. Prerekvizita — toasty a `Button`:** 0027 + sdílený `Button`
+  s `loading`/`disabled` z 0030. Na tom stojí hlášení chyb v 0023, 0028 a
+  0030 (toasty se dnes pod `ProfileSheet`/`GroupInviteSheet` neukážou).
+- **A. Zápis stavu volna na hlavní obrazovce:** 0025 + 0024, k tomu z 0031
+  genitivní popisky presetů, nadpis před označením, `busy` hlavního
+  tlačítka a `useNow`, a z 0011 rozhodnutí o fallbacku "+2 h" (pak 0011
+  zavřít). Dvojťuk a rychlý rollback z 0025 spouští race v `Reveal` z 0024.
+- **B. Přátelé a hledání:** 0023 + hledací části 0026 (načítání/chyba místo
+  "nikdo") a 0030 (potvrzení odebrání přítele, sheet pozvánky přítele)
+  + labely ikonových tlačítek z 0031. Hlavně `app/search.tsx`,
+  `ProfileSheet`, `FriendSuggestionsController`, `UsersController`.
+- **C. Studený backend:** 0014 (BE infra, samostatný PR) + login/boot část
+  0028 + zbytek 0026 (hlavní obrazovka, skupiny, pozvánky).
+- **D. Účet a nastavení:** formulář a session z 0028 + autosave z 0029 +
+  sjednocené texty z 0031 (uživatelské jméno, "zabrané/obsazené",
+  `FormField`, `BootSplash`).
+- **E. Notifikace a ověření na iPhonu:** 0005 + oznamovací část 0029 + iOS
+  ověření z 0007 (0005 i 0007 čekají jen na test na reálném iPhonu).
+- **F. Skupiny — destruktivní akce:** zbytek 0030 + plurál "členů" a QR
+  sheet skupiny z 0031.
+- **G. Rozšíření modelu volna:** 0008 + 0012 (obojí mění `FreeTime`/
+  `FreeTimeCreateDto` a zobrazení v `UserRow`/`StatusHeadline`).
+- **Samostatně:** 0010 (čas na minuty), 0032 (dark mode).
+
 ## Hotové úkoly
 
 | ID   | Název                                                             | Stav | Priorita | Soubor                                                                               |
