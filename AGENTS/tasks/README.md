@@ -60,3 +60,5 @@ doby před zavedením priorit je uvedena orientačně.
 | 0018 | Haptika prstencového zadávání času                                | done | 2        | [0018-haptika-prstence.md](./0018-haptika-prstence.md)                               |
 | 0019 | Interaktivní onboarding po registraci                             | done | 1        | [0019-onboarding-po-registraci.md](./0019-onboarding-po-registraci.md)               |
 | 0020 | Mazání účtu                                                       | done | 1        | [0020-mazani-uctu.md](./0020-mazani-uctu.md)                                         |
+| 0021 | Toggle ve skupině: sdílet volno a kontakt                         | done | 2        | [0021-skupina-toggle-volno-a-kontakt.md](./0021-skupina-toggle-volno-a-kontakt.md)   |
+| 0022 | Pozvánka do skupiny jako sheet (přijmout/odmítnout + sdílení)   | done | 2        | [0022-pozvanka-do-skupiny-sheet.md](./0022-pozvanka-do-skupiny-sheet.md)             |

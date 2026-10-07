@@ -25,9 +25,13 @@ public class ConnectionService : IConnectionService
             join peer in _db.GroupMembers.AsNoTracking() on mine.GroupID equals peer.GroupID
             join g in _db.Groups.AsNoTracking() on mine.GroupID equals g.GroupID
             join u in _db.Users.AsNoTracking() on peer.UserID equals u.UserID
-            where peer.UserID != userId
+            where peer.UserID != userId && mine.SharesWithGroup && peer.SharesWithGroup
             select new { u.UserID, u.Username, u.Name, g.GroupID, GroupName = g.Name }
         ).ToListAsync();
+
+        // A group only connects two members when BOTH have SharesWithGroup on
+        // (task 0021) - mutual, so the graph stays symmetric and "I see you"
+        // always implies "you see me".
 
         // Structural dedupe: someone who is both a friend and a co-member of
         // two groups ends up as exactly one ConnectionInfo with IsFriend=true
@@ -56,7 +60,7 @@ public class ConnectionService : IConnectionService
         if (await _db.FriendPairs.AsNoTracking().AnyAsync(fp => fp.Friend1ID == a && fp.Friend2ID == b))
             return true;
 
-        var myGroupIds = _db.GroupMembers.AsNoTracking().Where(m => m.UserID == userA).Select(m => m.GroupID);
-        return await _db.GroupMembers.AsNoTracking().AnyAsync(m => m.UserID == userB && myGroupIds.Contains(m.GroupID));
+        var myGroupIds = _db.GroupMembers.AsNoTracking().Where(m => m.UserID == userA && m.SharesWithGroup).Select(m => m.GroupID);
+        return await _db.GroupMembers.AsNoTracking().AnyAsync(m => m.UserID == userB && m.SharesWithGroup && myGroupIds.Contains(m.GroupID));
     }
 }

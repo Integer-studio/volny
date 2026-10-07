@@ -13,6 +13,14 @@ public class GroupMember
     public int UserID { get; set; }
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Per-group opt-out (task 0021): when false, this member's free status
+    /// and contact info are not shared through this group, and - since the
+    /// rule is mutual - they don't see the other members' either. Friendship
+    /// is unaffected. See ConnectionService.
+    /// </summary>
+    public bool SharesWithGroup { get; set; } = true;
+
     public Group? Group { get; set; }
     public User? User { get; set; }
 }

@@ -114,7 +114,7 @@ type UserProfileDto = {
 
 export type GroupSummary = { id: string; name: string; memberCount: number; isOwner: boolean };
 export type GroupMember = { id: string; username: string; name: string; joinedAt: Date; isOwner: boolean };
-export type GroupDetail = GroupSummary & { inviteCode: string; members: GroupMember[]; alreadyMember: boolean };
+export type GroupDetail = GroupSummary & { inviteCode: string; members: GroupMember[]; alreadyMember: boolean; sharesWithGroup: boolean };
 export type GroupPreview = { name: string; memberCount: number; ownerName?: string; alreadyMember: boolean };
 export type FriendInvitePreview = { name: string; username: string; alreadyFriend: boolean };
 
@@ -122,7 +122,7 @@ type GroupSummaryDto = { groupID: number; name: string; memberCount: number; isO
 type GroupMemberDto = { userID: number; username: string; name: string; joinedAt: string; isOwner: boolean };
 type GroupDetailDto = {
   groupID: number; name: string; memberCount?: number; isOwner?: boolean;
-  inviteCode: string; members: GroupMemberDto[]; alreadyMember: boolean;
+  inviteCode: string; members: GroupMemberDto[]; alreadyMember: boolean; sharesWithGroup: boolean;
 };
 type GroupInvitePreviewDto = { name: string; memberCount: number; ownerName?: string; alreadyMember: boolean };
 type FriendInvitePreviewDto = { name: string; username: string; alreadyFriend: boolean };
@@ -136,6 +136,7 @@ function toGroupDetail(d: GroupDetailDto, currentUserId: number | null): GroupDe
     isOwner: owner?.userID === currentUserId,
     inviteCode: d.inviteCode,
     alreadyMember: d.alreadyMember,
+    sharesWithGroup: d.sharesWithGroup,
     members: d.members.map(m => ({
       id: m.userID.toString(),
       username: m.username,
@@ -662,6 +663,10 @@ export const api = {
     await request(`/groups/${id}`, { method: 'PUT', body: JSON.stringify({ name }), idempotent: true });
   },
 
+  async setGroupSharing(id: string, sharesWithGroup: boolean): Promise<void> {
+    await request(`/groups/${id}/sharing`, { method: 'PUT', body: JSON.stringify({ sharesWithGroup }), idempotent: true });
+  },
+
   async deleteGroup(id: string): Promise<void> {
     await request(`/groups/${id}`, { method: 'DELETE', idempotent: true });
   },
@@ -691,11 +696,11 @@ export const api = {
     return preview;
   },
 
-  async joinGroup(code: string): Promise<GroupDetail> {
+  async joinGroup(code: string, sharesWithGroup = true): Promise<GroupDetail> {
     // Safe to mark idempotent: the backend reports alreadyMember rather than
     // erroring on a repeat join, so a retried request after an ambiguous
     // timeout can't create a duplicate membership.
-    const detail: GroupDetailDto = await request('/groups/join', { method: 'POST', body: JSON.stringify({ code }), idempotent: true });
+    const detail: GroupDetailDto = await request('/groups/join', { method: 'POST', body: JSON.stringify({ code, sharesWithGroup }), idempotent: true });
     return toGroupDetail(detail, currentUserId);
   },
 };

@@ -13,9 +13,20 @@ public class GroupUpdateDto
     public string? Name { get; set; }
 }
 
+public class GroupSharingUpdateDto
+{
+    public bool SharesWithGroup { get; set; }
+}
+
 public class GroupJoinDto
 {
     public string Code { get; set; } = null!;
+    /// <summary>
+    /// Initial GroupMember.SharesWithGroup, chosen in the invite sheet. Defaults
+    /// to true so clients that don't send it keep the old behavior. Ignored
+    /// when the caller is already a member.
+    /// </summary>
+    public bool SharesWithGroup { get; set; } = true;
 }
 
 public class GroupSummaryDto
@@ -46,6 +57,8 @@ public class GroupDetailDto
     public string InviteCode { get; set; } = null!;
     public List<GroupMemberDto> Members { get; set; } = new();
     public bool AlreadyMember { get; set; }
+    /// <summary>The caller's own GroupMember.SharesWithGroup for this group.</summary>
+    public bool SharesWithGroup { get; set; }
 }
 
 public class GroupInvitePreviewDto

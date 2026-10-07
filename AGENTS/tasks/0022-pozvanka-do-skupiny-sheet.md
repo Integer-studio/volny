@@ -1,0 +1,61 @@
+# 0022 — Pozvánka do skupiny jako sheet s přijmout/odmítnout a sdílením
+
+- **Stav:** done
+- **Priorita:** 2 (důležité, ale nebrání releasu)
+- **Datum vytvoření:** 2026-10-07
+
+## Popis / kontext
+
+Po otevření odkazu na skupinu se dřív buď ukázala celá stránka
+`/join/[code]` s tlačítkem „Připojit se“ (přihlášený), nebo se uživatel po
+přihlášení/registraci připojil automaticky (`PendingInviteGate`). Nově se
+zobrazí spodní sheet s přijetím/odmítnutím a rovnou s přepínačem sdílení
+volna a kontaktu se skupinou z [0021](./0021-skupina-toggle-volno-a-kontakt.md).
+
+## Rozhodnutí (2026-10-07, se zadavatelem)
+
+- Přihlášený uživatel: `/join/[code]` uloží kód a přesměruje na hlavní
+  obrazovku, sheet vyjede nad ní. Po přijetí přejde na detail skupiny, po
+  odmítnutí zůstává doma.
+- Stejný sheet i při zadání kódu v seznamu skupin („Připojit se kódem“);
+  kdo už je členem, jde rovnou na detail skupiny.
+- Vysvětlení pod přepínačem krátké, ve stylu průvodce, bez odstavce o
+  vzájemnosti.
+- Nepřihlášený: stávající stránka s výzvou k přihlášení zůstává, po
+  přihlášení/registraci se místo automatického připojení ukáže sheet.
+- Nově registrovaný: sheet až po části A průvodce (intro, kontakt,
+  instalace), před nápovědami nad hlavní obrazovkou.
+- Přepínač sdílení výchozí zapnuto.
+- Zavření sheetu jinak (tap mimo, Zpět na Androidu) = odmítnutí, kód se
+  zahodí.
+- Obsah: ikona skupiny, název, přepínač s vysvětlením, Odmítnout / Přijmout.
+
+## Kritéria splnění
+
+- [x] `POST /api/groups/join` přijímá `sharesWithGroup` (výchozí `true`,
+      u existujícího člena se ignoruje).
+- [x] `PendingInviteGate` ukazuje sheet místo automatického připojení,
+      čeká na konec části A průvodce, už-člen → toast, neplatný kód → toast.
+- [x] `/join/[code]` pro přihlášené jen uloží kód a jde domů
+      (`onPendingInviteSet` probudí gate).
+- [x] Text vysvětlení sdílený s detailem skupiny (`lib/group-sharing.ts`).
+- [x] Sheet je samostatná komponenta `components/GroupInviteSheet.tsx`,
+      používá ji `PendingInviteGate` (odkaz) i `app/groups/index.tsx` (kód).
+      Ověřeno v Playwright: odkaz → Přijmout → `/groups/1`; kód → sheet →
+      vypnout sdílení → Přijmout → `/groups/2` se `sharesWithGroup = false`;
+      kód skupiny, kde už je členem → rovnou `/groups/1`.
+- [x] Ověřeno ve webovém buildu proti lokálnímu BE (Playwright): přihlášený
+      otevře odkaz → doma sheet → vypne sdílení → Přijmout → je členem se
+      `sharesWithGroup = false`, toast „Připojeno do skupiny …“.
+- [x] Sheet neprobleskne přes onboarding při studeném startu uprostřed
+      průvodce: `TourProvider` má `ready` (krok načtený z AsyncStorage) a
+      gate na něj čeká. Ověřeno v Playwright (krok `intro` → sheet se
+      neukáže, `ring` → ukáže).
+- [x] Neplatný odkaz u přihlášeného stačí toastem (rozhodnutí zadavatele),
+      stránka „Neplatná pozvánka“ zůstává jen pro nepřihlášené.
+
+## Poznámky
+
+Na nativních platformách vizuálně neověřeno, jen web.
+
+PR: https://github.com/Integer-studio/volny/pull/19
