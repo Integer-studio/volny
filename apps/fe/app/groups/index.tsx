@@ -3,7 +3,7 @@ import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-nati
 import { router, useFocusEffect } from 'expo-router';
 import Users from 'lucide-react-native/icons/users';
 import Plus from 'lucide-react-native/icons/plus';
-import { api, ApiError } from '../../lib/api';
+import { api, ApiError, GroupPreview } from '../../lib/api';
 import { useAsyncData } from '../../hooks/useAsyncData';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { useToast } from '../../components/Toast';
@@ -11,6 +11,7 @@ import FormField from '../../components/FormField';
 import FadeIn from '../../components/FadeIn';
 import { useTour, useTourTarget } from '../../components/tour/TourProvider';
 import TourOverlay from '../../components/tour/TourOverlay';
+import GroupInviteSheet from '../../components/GroupInviteSheet';
 
 function memberCountLabel(n: number): string {
   if (n === 1) return '1 člen';
@@ -29,13 +30,24 @@ export default function GroupsList() {
   const [code, setCode] = useState('');
   const [joining, setJoining] = useState(false);
 
+  // Kód se nejdřív jen ověří a ukáže se sheet s pozvánkou (task 0022) -
+  // připojení a volba sdílení proběhne až v něm.
+  const [invite, setInvite] = useState<{ code: string; preview: GroupPreview } | null>(null);
+
   const handleJoin = async () => {
-    if (!code.trim()) return;
+    const trimmed = code.trim();
+    if (!trimmed) return;
     setJoining(true);
     try {
-      const detail = await api.joinGroup(code.trim());
-      setCode('');
-      router.push(`/groups/${detail.id}`);
+      const preview = await api.previewInvite(trimmed);
+      if (preview.alreadyMember) {
+        // join je idempotentní a vrátí detail i s id, které preview nemá.
+        const detail = await api.joinGroup(trimmed);
+        setCode('');
+        router.push(`/groups/${detail.id}`);
+      } else {
+        setInvite({ code: trimmed, preview });
+      }
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
         show('Neplatný kód pozvánky.', 'error');
@@ -113,6 +125,16 @@ export default function GroupsList() {
         <Plus size={18} color="#EE6C4D" />
         <Text className="text-[#EE6C4D] font-medium ml-2">Vytvořit skupinu</Text>
       </Pressable>
+
+      <GroupInviteSheet
+        code={invite?.code ?? null}
+        preview={invite?.preview ?? null}
+        onDecline={() => setInvite(null)}
+        onJoined={() => {
+          setInvite(null);
+          setCode('');
+        }}
+      />
 
       <TourOverlay screen="groups" />
     </View>

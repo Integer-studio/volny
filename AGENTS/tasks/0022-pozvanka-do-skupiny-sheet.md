@@ -15,7 +15,12 @@ volna a kontaktu se skupinou z [0021](./0021-skupina-toggle-volno-a-kontakt.md).
 ## Rozhodnutí (2026-10-07, se zadavatelem)
 
 - Přihlášený uživatel: `/join/[code]` uloží kód a přesměruje na hlavní
-  obrazovku, sheet vyjede nad ní. Po přijetí i odmítnutí zůstává doma.
+  obrazovku, sheet vyjede nad ní. Po přijetí přejde na detail skupiny, po
+  odmítnutí zůstává doma.
+- Stejný sheet i při zadání kódu v seznamu skupin („Připojit se kódem“);
+  kdo už je členem, jde rovnou na detail skupiny.
+- Vysvětlení pod přepínačem krátké, ve stylu průvodce, bez odstavce o
+  vzájemnosti.
 - Nepřihlášený: stávající stránka s výzvou k přihlášení zůstává, po
   přihlášení/registraci se místo automatického připojení ukáže sheet.
 - Nově registrovaný: sheet až po části A průvodce (intro, kontakt,
@@ -34,6 +39,11 @@ volna a kontaktu se skupinou z [0021](./0021-skupina-toggle-volno-a-kontakt.md).
 - [x] `/join/[code]` pro přihlášené jen uloží kód a jde domů
       (`onPendingInviteSet` probudí gate).
 - [x] Text vysvětlení sdílený s detailem skupiny (`lib/group-sharing.ts`).
+- [x] Sheet je samostatná komponenta `components/GroupInviteSheet.tsx`,
+      používá ji `PendingInviteGate` (odkaz) i `app/groups/index.tsx` (kód).
+      Ověřeno v Playwright: odkaz → Přijmout → `/groups/1`; kód → sheet →
+      vypnout sdílení → Přijmout → `/groups/2` se `sharesWithGroup = false`;
+      kód skupiny, kde už je členem → rovnou `/groups/1`.
 - [x] Ověřeno ve webovém buildu proti lokálnímu BE (Playwright): přihlášený
       otevře odkaz → doma sheet → vypne sdílení → Přijmout → je členem se
       `sharesWithGroup = false`, toast „Připojeno do skupiny …“.
