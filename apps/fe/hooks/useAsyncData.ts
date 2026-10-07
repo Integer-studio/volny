@@ -28,6 +28,12 @@ type Options<T> = {
   cacheKey?: string;
   /** Runs only on the cache-read path, to restore types JSON can't carry (e.g. Date). A throw here evicts the cached entry instead of crashing the screen. */
   revive?: (raw: unknown) => T;
+  /**
+   * false = nefetchovat vůbec a nechat `data` i cache beze změny (např.
+   * seznam volných přátel, když uživatel sám volný není). Vyhodnocuje se
+   * při změně `deps`, takže proměnná, na které závisí, musí být v nich.
+   */
+  enabled?: boolean;
 };
 
 /**
@@ -45,6 +51,7 @@ type Options<T> = {
 export function useAsyncData<T>(fetcher: () => Promise<T>, deps: DependencyList, opts?: Options<T>): AsyncDataState<T> {
   const cacheKey = opts?.cacheKey;
   const revive = opts?.revive;
+  const enabled = opts?.enabled ?? true;
 
   const seedFromCache = (): { data: T | undefined; ts: number | null; stale: boolean } => {
     if (!cacheKey) return { data: undefined, ts: null, stale: false };
@@ -63,7 +70,7 @@ export function useAsyncData<T>(fetcher: () => Promise<T>, deps: DependencyList,
   const [seed] = useState(() => seedFromCache());
   const [data, setData] = useState<T | undefined>(seed.data);
   const [error, setError] = useState<Error | null>(null);
-  const [pending, setPending] = useState(true);
+  const [pending, setPending] = useState(enabled);
   const [reloadTick, setReloadTick] = useState(0);
   const [dataTs, setDataTs] = useState<number | null>(seed.ts);
   const [isStale, setIsStale] = useState(seed.stale);
@@ -89,6 +96,10 @@ export function useAsyncData<T>(fetcher: () => Promise<T>, deps: DependencyList,
 
   useEffect(() => {
     const myRunId = ++runId.current;
+    if (!enabled) {
+      setPending(false);
+      return;
+    }
     setPending(true);
     fetcher()
       .then(result => {

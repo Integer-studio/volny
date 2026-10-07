@@ -148,9 +148,13 @@ export default function Index() {
   // since every entry carries its own freeUntil, stale/expired rows are
   // simply filtered out below rather than trusted against a cache TTL.
   const freeList = useAsyncData<FreeEntry[]>(
-    () => (isFree ? api.getFreeNow() : Promise.resolve([])),
+    () => api.getFreeNow(),
     [isFree],
     {
+      // Nevolný uživatel seznam nevidí - dřív se tu vracelo `[]`, které
+      // přepsalo cache a po označení se ukázalo "Zatím nikdo z přátel."
+      // místo načítání.
+      enabled: isFree,
       cacheKey: "freeNow",
       revive: (raw) =>
         (raw as any[]).map((r) => ({
@@ -177,6 +181,15 @@ export default function Index() {
   );
   const connectionCount =
     (connections.data?.[0]?.length ?? 0) + (connections.data?.[1]?.length ?? 0);
+  // "Zatím nikoho nemáš." jen podle čerstvě načtených přátel a skupin - ne
+  // podle staré cache ani když načtení selhalo.
+  const hasNoConnections =
+    connections.data !== undefined && !connections.isStale && connectionCount === 0;
+  // Spinner i pro seznam, který už nějaká (prázdná) data má - jinak by se
+  // během načítání po označení ukázalo prázdno.
+  const showFreeSpinner = useDeferredPending(
+    freeList.pending && friends.length === 0,
+  );
 
   // Latest-wins guard: a slower earlier response must not overwrite a newer one.
   const pendingSeq = useRef(0);
@@ -396,19 +409,21 @@ export default function Index() {
               </View>
             )}
 
-            {freeList.error && (
+            {freeList.error && !freeList.pending && (
               <Pressable
                 onPress={freeList.reload}
+                accessibilityRole="button"
                 className="bg-red-50 rounded-xl px-3 py-2 mb-3"
               >
                 <Text className="text-red-500 text-xs">
-                  Nepodařilo se načíst — zobrazuji poslední známý stav. Zkusit
-                  znovu.
+                  {friends.length > 0
+                    ? "Nepodařilo se načíst — zobrazuji poslední známý stav. Zkusit znovu."
+                    : "Nepodařilo se načíst, kdo je volný. Zkusit znovu."}
                 </Text>
               </Pressable>
             )}
 
-            {freeList.showSpinner ? (
+            {showFreeSpinner ? (
               <ActivityIndicator size="small" color="#000" />
             ) : friends.length > 0 ? (
               <FadeIn>
@@ -422,7 +437,10 @@ export default function Index() {
                   />
                 ))}
               </FadeIn>
-            ) : !freeList.settled || showDummy ? null : connectionCount === 0 ? (
+            ) : !freeList.settled ||
+              freeList.pending ||
+              freeList.error ||
+              showDummy ? null : hasNoConnections ? (
               <FadeIn>
                 <Text className="text-gray-400 text-base mb-1">
                   Zatím nikoho nemáš.

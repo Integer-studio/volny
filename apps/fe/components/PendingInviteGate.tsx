@@ -52,13 +52,17 @@ export default function PendingInviteGate() {
         setInvite({ code, preview });
       } catch (e) {
         if (cancelled) return;
-        // A dead code (group deleted, invite regenerated) can never succeed,
-        // and a stored one would otherwise reopen this on every app load.
-        await clearPendingInvite();
-        show(
-          e instanceof ApiError && e.status === 404 ? 'Pozvánka do skupiny už neplatí.' : 'Pozvánku se nepodařilo načíst.',
-          'error',
-        );
+        if (e instanceof ApiError && e.status === 404) {
+          // A dead code (group deleted, invite regenerated) can never
+          // succeed, and a stored one would otherwise reopen this on every
+          // app load.
+          await clearPendingInvite();
+          show('Pozvánka do skupiny už neplatí.', 'error');
+        } else {
+          // Síťová chyba nebo studený backend - kód nechat, zkusí se při
+          // dalším spuštění.
+          show('Pozvánku do skupiny se nepodařilo načíst.', 'error');
+        }
       }
     });
     return () => { cancelled = true; };

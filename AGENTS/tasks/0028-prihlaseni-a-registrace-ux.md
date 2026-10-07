@@ -30,12 +30,25 @@
 
 - [ ] Anonymní `GET /auth/username-available` (nebo pre-check zrušit).
       Žádný logout při psaní.
-- [ ] Login: `useSlowActionNotice`, retry (`idempotent: true`), srozumitelná
+- [x] Login: `useSlowActionNotice`, retry (`idempotent: true`), srozumitelná
       hláška pro 502/503/504/timeout.
-- [ ] Boot: stav "Server neodpovídá · Zkusit znovu" místo přepnutí na login.
+- [x] Boot: stav "Server neodpovídá · Zkusit znovu" místo přepnutí na login.
       Login jen po skutečném 401.
 - [ ] Toast "Přihlášení vypršelo" (ideálně i návrat na původní route).
-- [ ] Register OK + login fail → přepnout na přihlášení s vyplněnými poli a
+- [x] Register OK + login fail → přepnout na přihlášení s vyplněnými poli a
       hláškou "Účet je vytvořený, přihlas se".
 - [ ] Klávesnice a Enter fungují.
 - [ ] Toast po smazání účtu.
+
+## Poznámky
+
+**2026-10-07 (skupina C):** Login je anonymní, `idempotent` a s
+`useSlowActionNotice`. Síť, timeout a 502/503/504 hlásí "Server teď
+neodpovídá" (`isServerUnavailable` v `lib/api.ts`). Retry dřív
+nepoznal timeout (`AbortSignal.timeout` hází `TimeoutError`, ne
+`AbortError`), to je opravené pro všechny requesty. Boot po vyčerpání pokusů
+nekončí na loginu, ale v `BootSplash` se "Server neodpovídá · Zkusit znovu"
+(a odkazem na jiný účet), retry i při návratu do popředí. Register OK +
+login fail přepne na přihlášení s vyplněnými poli a hláškou. Zbývá skupina D:
+`username-available`, toast při vypršení session, klávesnice/Enter, toast
+po smazání účtu.

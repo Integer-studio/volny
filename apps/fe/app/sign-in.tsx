@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
-import { api, ApiError } from "../lib/api";
+import { api, ApiError, isServerUnavailable, RegisteredButLoginFailedError } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { useToast } from "../components/Toast";
 import FormField from "../components/FormField";
 import { fieldError as getFieldError, errorMessage } from "../lib/errors";
+import { useSlowActionNotice } from "../hooks/useSlowActionNotice";
 
 function validatePasswordLocal(v: string): string | null {
   return v.length < 4 ? "Heslo musí mít alespoň 4 znaky." : null;
@@ -22,6 +23,9 @@ export default function SignIn() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  // Studený backend: po 4 s toast "server se probouzí", ať tlačítko
+  // se spinnerem nevypadá jako zaseknuté.
+  useSlowActionNotice(loading);
 
   useEffect(() => {
     if (isLogin || username.trim().length === 0) {
@@ -67,7 +71,15 @@ export default function SignIn() {
         await signUp(username, password, name);
       }
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) {
+      if (e instanceof RegisteredButLoginFailedError) {
+        // Účet existuje - další "Zaregistrovat" by skončil 409 "jméno je
+        // zabrané" na vlastní účet. Přepnout na přihlášení s vyplněnými poli.
+        setIsLogin(true);
+        show("Účet je vytvořený, přihlas se.", "success");
+      } else if (isServerUnavailable(e)) {
+        // Síť, timeout i 502/503/504 ze studeného nebo padlého serveru.
+        show("Server teď neodpovídá. Zkus to prosím za chvíli znovu.", "error");
+      } else if (e instanceof ApiError && e.status === 409) {
         setUsernameError(
           "Toto uživatelské jméno je již zabrané. Zvol si prosím jiné.",
         );
@@ -86,13 +98,6 @@ export default function SignIn() {
             "error",
           );
         }
-      } else if (!(e instanceof ApiError)) {
-        // Every network-level failure (fetch TypeError, AbortError from the
-        // request timeout, ...) lands here since it never became an
-        // ApiError. Without this branch it fell into the generic "wrong
-        // credentials"-sounding message below, indistinguishable from a
-        // real auth failure - see the APK login bug this was written for.
-        show("Nepodařilo se spojit se serverem.", "error");
       } else {
         show("Nepodařilo se přihlásit. Zkus to prosím znovu.", "error");
       }

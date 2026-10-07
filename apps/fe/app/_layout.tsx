@@ -36,7 +36,7 @@ warmUp();
 export const unstable_settings = { anchor: 'index' };
 
 function Navigation() {
-  const { status } = useAuth();
+  const { status, bootFailed, retryBoot, signOut } = useAuth();
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
@@ -159,7 +159,12 @@ function Navigation() {
           />
         </Stack>
       </TopBanners>
-      <BootSplash visible={status === 'loading'} />
+      <BootSplash
+        visible={status === 'loading'}
+        failed={bootFailed}
+        onRetry={retryBoot}
+        onSignOut={() => { signOut().catch(() => {}); }}
+      />
     </>
   );
 }

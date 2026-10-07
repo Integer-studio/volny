@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, Switch } from 'react-native';
 import { router } from 'expo-router';
 import Users from 'lucide-react-native/icons/users';
-import { api, GroupPreview } from '../lib/api';
+import { api, ApiError, GroupPreview } from '../lib/api';
 import { groupSharingHint } from '../lib/group-sharing';
 import { useToast } from './Toast';
 import BottomSheet from './BottomSheet';
@@ -39,8 +39,15 @@ export default function GroupInviteSheet({ code, preview, onDecline, onJoined }:
       const detail = await api.joinGroup(code, sharing);
       await onJoined?.();
       router.push(`/groups/${detail.id}`);
-    } catch {
-      show('Připojení do skupiny se nezdařilo.', 'error');
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) {
+        // Mezitím zneplatněná pozvánka - sheet zavřít (a uloženou pozvánku
+        // zahodit), opakování nemá smysl.
+        show('Pozvánka do skupiny už neplatí.', 'error');
+        onDecline();
+      } else {
+        show('Připojení do skupiny se nezdařilo. Zkus to prosím znovu.', 'error');
+      }
     } finally {
       setJoining(false);
     }

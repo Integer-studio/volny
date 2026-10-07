@@ -1,6 +1,6 @@
 # 0026 — Prázdné stavy se ukazují místo načítání nebo chyby
 
-- **Stav:** todo
+- **Stav:** done
 - **Priorita:** 1
 - **Datum vytvoření:** 2026-10-07
 
@@ -32,12 +32,12 @@ přišel o přátele/skupiny.
 
 ## Kritéria splnění
 
-- [ ] Každý seznam rozlišuje: načítání / chyba (s "Zkusit znovu") / prázdno /
+- [x] Každý seznam rozlišuje: načítání / chyba (s "Zkusit znovu") / prázdno /
       data.
-- [ ] Hledání ukazuje inline spinner během debounce a requestu.
-- [ ] Hlavní obrazovka nefetchuje ani nepřepisuje cache, když uživatel není
+- [x] Hledání ukazuje inline spinner během debounce a requestu.
+- [x] Hlavní obrazovka nefetchuje ani nepřepisuje cache, když uživatel není
       volný.
-- [ ] Pozvánky: "neplatná" jen při 404, jinak chyba s retry.
+- [x] Pozvánky: "neplatná" jen při 404, jinak chyba s retry.
 
 ## Poznámky
 
@@ -46,3 +46,13 @@ chybu s "Zkusit znovu", nápovědu pod 2 znaky a "Nikoho takového jsme
 nenašli." až po doběhnutí. Seznam přátel v hledání rozlišuje načítání,
 chybu, prázdno a data. Zbytek (hlavní obrazovka, skupiny, pozvánky) patří
 do skupiny C.
+
+**2026-10-07 (skupina C):** Hlavní obrazovka seznam volných nefetchuje, když
+uživatel volný není (`useAsyncData` má `enabled`), takže se nepřepíše cache.
+Během načítání ukazuje spinner i přes prázdná data, při chybě bez dat
+"Nepodařilo se načíst, kdo je volný" a "Zatím nikoho nemáš." jen podle
+čerstvě načtených přátel a skupin. Skupiny rozlišují chybu od prázdna.
+Pozvánky (`InviteLoadError`) ukazují "Neplatná pozvánka" jen při 404, jinak
+chybu se "Zkusit znovu" (a už nebliknou "neplatnou" před spinnerem).
+`PendingInviteGate` při síťové chybě pozvánku nezahodí a join v sheetu
+hlásí 404 zvlášť.

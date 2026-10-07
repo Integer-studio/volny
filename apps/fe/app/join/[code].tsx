@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Users from 'lucide-react-native/icons/users';
 import { api, ApiError } from '../../lib/api';
 import { useAuth } from '../../lib/auth-context';
 import { useAsyncData } from '../../hooks/useAsyncData';
+import InviteLoadError from '../../components/InviteLoadError';
 import { setPendingInvite, clearPendingInvite } from '../../lib/pending-invite';
 
 export default function JoinGroup() {
@@ -45,23 +46,14 @@ export default function JoinGroup() {
     return <View className="flex-1 bg-[#FCFBF8]" />;
   }
 
-  if (preview.showSpinner && preview.data === undefined) {
-    return (
-      <View className="flex-1 bg-[#FCFBF8] items-center justify-center">
-        <ActivityIndicator size="large" color="#EE6C4D" />
-      </View>
-    );
-  }
-
   if (!preview.data) {
     return (
-      <View className="flex-1 bg-[#FCFBF8] items-center justify-center px-8">
-        <Text className="text-gray-900 text-lg font-medium text-center mb-2">Neplatná pozvánka</Text>
-        <Text className="text-gray-400 text-center mb-8">Tento odkaz už nefunguje, nebo nikdy nefungoval.</Text>
-        <Pressable onPress={dismiss} className="bg-gray-900 py-3 px-6 rounded-xl active:opacity-80">
-          <Text className="text-white font-medium">Zpět domů</Text>
-        </Pressable>
-      </View>
+      <InviteLoadError
+        error={preview.pending ? null : preview.error}
+        showSpinner={preview.showSpinner}
+        onRetry={preview.reload}
+        onHome={dismiss}
+      />
     );
   }
 

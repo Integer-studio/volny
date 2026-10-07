@@ -16,6 +16,14 @@ type AuthValue = {
   /** True when the last background verify/refresh failed for a reason other than 401 (network down, container still cold). Never implies signedOut. */
   offline: boolean;
   /**
+   * Blocking boot probe gave up on a non-401 failure (token present, no
+   * cached `me`, server unreachable). Status stays 'loading' - BootSplash
+   * shows "Server neodpovídá" with retryBoot() instead of dropping a user
+   * with a perfectly valid token onto the login screen.
+   */
+  bootFailed: boolean;
+  retryBoot: () => void;
+  /**
    * '/' only resolves while status !== 'signedOut' (see app/_layout.tsx's
    * Stack.Protected guards) - router.replace('/') while actually signed out
    * targets a route with no match among the currently available screens and
@@ -48,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<UserDto | null>(null);
   const [verified, setVerified] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [bootFailed, setBootFailed] = useState(false);
   const alive = useRef(true);
   const userIdRef = useRef<string | null>(null);
   const backgroundTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -110,8 +119,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Blocking fallback: no cached `me` to enter optimistically with (first
   // launch on a new device, or after a cache wipe). Only a 401 means
   // signedOut; any other failure (network error, 502/503/504 from a cold
-  // Container App) retries with backoff before giving up.
+  // Container App) retries with backoff and then sets bootFailed - the
+  // token may well be valid, so it must not end on the login screen.
   const blockingProbe = useCallback(async () => {
+    setBootFailed(false);
     for (let attempt = 0; ; attempt++) {
       try {
         const user = await api.getMe();
@@ -137,7 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (attempt >= RETRY_DELAYS_MS.length) {
           if (!alive.current) return;
-          setStatus('signedOut');
+          setBootFailed(true);
           return;
         }
         await new Promise(r => setTimeout(r, RETRY_DELAYS_MS[attempt]));
@@ -206,13 +217,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // without waiting for the next background poll tick.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
-      if (next === 'active' && offline && status === 'signedIn') {
+      if (next !== 'active') return;
+      if (offline && status === 'signedIn') {
         if (backgroundTimer.current) clearTimeout(backgroundTimer.current);
         verifyInBackground();
+      } else if (bootFailed) {
+        blockingProbe();
       }
     });
     return () => sub.remove();
-  }, [offline, status, verifyInBackground]);
+  }, [offline, status, bootFailed, verifyInBackground, blockingProbe]);
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
@@ -226,6 +240,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     me,
     verified,
     offline,
+    bootFailed,
+    retryBoot: () => {
+      blockingProbe();
+    },
     homeRoute: status === 'signedOut' ? '/sign-in' : '/',
     signIn: async (username, password) => {
       await api.login(username, password);
@@ -266,6 +284,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setMe(null);
       setVerified(false);
       setOffline(false);
+      setBootFailed(false);
       clearCache();
       await Promise.race([
         api.unregisterPushToken().catch(() => {}),

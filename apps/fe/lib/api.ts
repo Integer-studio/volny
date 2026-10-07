@@ -42,6 +42,23 @@ export class ApiError extends Error {
   }
 }
 
+/** Registrace prošla, ale navazující přihlášení ne - účet už existuje. */
+export class RegisteredButLoginFailedError extends Error {
+  constructor(public cause: unknown) {
+    super('Registered, but the follow-up login failed');
+    this.name = 'RegisteredButLoginFailedError';
+  }
+}
+
+/**
+ * Selhání, za kterým je nedostupný nebo probouzející se server (síť,
+ * timeout, 502/503/504/408), ne chyba na straně uživatele.
+ */
+export function isServerUnavailable(e: unknown): boolean {
+  if (e instanceof ApiError) return [408, 502, 503, 504].includes(e.status);
+  return e instanceof Error && (e.name === 'AbortError' || e.name === 'TimeoutError' || e.name === 'TypeError');
+}
+
 export type UserSummary = { id: string; username: string; name: string };
 /** Vztah k uživateli z hledání: přítel, žádost odeslaná mnou, žádost od něj. */
 export type UserRelation = 'none' | 'friend' | 'outgoing' | 'incoming';
@@ -232,10 +249,6 @@ type RequestOptions = RequestInit & {
 
 const RETRY_DELAYS_MS = [400, 1200, 3000];
 
-function isRetryableStatus(status: number): boolean {
-  return status === 502 || status === 503 || status === 504 || status === 408;
-}
-
 function jitter(ms: number): number {
   return ms * (0.75 + Math.random() * 0.5); // +/-25%
 }
@@ -312,9 +325,8 @@ async function request(endpoint: string, options: RequestOptions = {}) {
       return await performRequest(endpoint, options);
     } catch (e) {
       const isLastAttempt = attempt >= maxAttempts - 1;
-      const isTransient =
-        (e instanceof ApiError && isRetryableStatus(e.status)) ||
-        (e instanceof Error && (e.name === 'AbortError' || e.name === 'TypeError'));
+      // AbortSignal.timeout() rejects with a TimeoutError, not AbortError.
+      const isTransient = isServerUnavailable(e);
       if (isLastAttempt || !isTransient) throw e;
       await sleep(jitter(RETRY_DELAYS_MS[attempt]));
     }
@@ -341,9 +353,15 @@ export const api = {
   },
 
   async login(username: string, password: string): Promise<void> {
+    // Retry je bezpečný: opakovaný login jen vydá další refresh token.
+    // anonymous + allowUnauthorized: 401 tu znamená špatné heslo, ne
+    // propadlou session - nesmí spustit refresh ani globální odhlášení.
     const res = await request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
+      anonymous: true,
+      allowUnauthorized: true,
+      idempotent: true,
     });
     currentToken = res.token;
     try {
@@ -363,11 +381,18 @@ export const api = {
   },
 
   async register(username: string, password: string, name: string, extra?: { phone?: string; instagram?: string }): Promise<void> {
+    // Bez retry: po nejednoznačném timeoutu by druhý pokus skončil 409 na
+    // vlastním, právě vytvořeném účtu.
     await request('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ username, password, name, phone: extra?.phone, instagram: extra?.instagram }),
+      anonymous: true,
     });
-    await this.login(username, password);
+    try {
+      await this.login(username, password);
+    } catch (e) {
+      throw new RegisteredButLoginFailedError(e);
+    }
   },
 
   /** Jednorázový kód pro přenos přihlášení do aplikace na ploše iOS - viz lib/handoff.ts. */

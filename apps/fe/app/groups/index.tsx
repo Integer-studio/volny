@@ -3,7 +3,7 @@ import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-nati
 import { router, useFocusEffect } from 'expo-router';
 import Users from 'lucide-react-native/icons/users';
 import Plus from 'lucide-react-native/icons/plus';
-import { api, ApiError, GroupPreview } from '../../lib/api';
+import { api, ApiError, GroupPreview, isServerUnavailable } from '../../lib/api';
 import { useAsyncData } from '../../hooks/useAsyncData';
 import { useAutoRefresh } from '../../hooks/useAutoRefresh';
 import { useToast } from '../../components/Toast';
@@ -51,6 +51,8 @@ export default function GroupsList() {
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
         show('Neplatný kód pozvánky.', 'error');
+      } else if (isServerUnavailable(e)) {
+        show('Server teď neodpovídá. Zkus to prosím znovu.', 'error');
       } else {
         show('Připojení se nezdařilo.', 'error');
       }
@@ -88,6 +90,11 @@ export default function GroupsList() {
           <ActivityIndicator size="small" color="#000" />
         ) : list.length > 0 ? (
           <ScrollView showsVerticalScrollIndicator={false}>
+            {groups.error && !groups.pending && (
+              <Pressable onPress={groups.reload} accessibilityRole="button" className="bg-red-50 rounded-xl px-3 py-2 mb-3">
+                <Text className="text-red-500 text-xs">Nepodařilo se načíst — zobrazuji poslední známý stav. Zkusit znovu.</Text>
+              </Pressable>
+            )}
             <FadeIn>
               {list.map(g => (
                 <Pressable
@@ -110,7 +117,12 @@ export default function GroupsList() {
               ))}
             </FadeIn>
           </ScrollView>
-        ) : groups.settled ? (
+        ) : groups.error && !groups.pending ? (
+          // Chyba bez dat nesmí vypadat jako "nejsi v žádné skupině".
+          <Pressable onPress={groups.reload} accessibilityRole="button" className="bg-red-50 rounded-xl px-3 py-2">
+            <Text className="text-red-500 text-sm">Skupiny se nepodařilo načíst. Zkusit znovu.</Text>
+          </Pressable>
+        ) : groups.settled && !groups.error ? (
           <FadeIn>
             <Text className="text-gray-400 text-base">Zatím nejsi v žádné skupině.</Text>
           </FadeIn>
