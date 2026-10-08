@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, Text, View, useWindowDimensions } from "react-native";
+import { Animated, Pressable, Text, View, useWindowDimensions } from "react-native";
 import FreeButton from "./FreeButton";
-import PresetList, { PRESET_LIST_H } from "./PresetList";
+import PresetList, { PRESET_PEEK_H } from "./PresetList";
 import Reveal from "./Reveal";
+import TimeEditSheet from "./TimeEditSheet";
 import TimeRing, { BUTTON_RATIO, RING_BASE } from "./TimeRing";
-import { clampTarget } from "./TimeRing/scale";
+import { T_MIN, clampTarget, clampToWindow } from "./TimeRing/scale";
 import { useTourTarget } from "./tour/TourProvider";
 import { defaultTarget, resolvePresets } from "./TimeRing/presets";
 import { usePresets } from "../hooks/usePresets";
@@ -17,11 +18,11 @@ import {
 
 /** Rezerva na stíny presetů, které přesahují za jejich box. */
 const SHADOW_ROOM = 10;
-/** Kolik svislého místa si nad/pod prstencem berou hlavička obrazovky,
- * popisek s časem a seznam presetů - podle toho se prstenec zastropuje, aby se vše
- * vešlo bez rolování celé obrazovky. Seznam presetů si roluje sám ve svém
- * boxu, takže do stropu jde jen jeho pevná výška. */
-const VERTICAL_CHROME = 300 + PRESET_LIST_H;
+/** Odhad výšky hlavičky obrazovky a popisku, než se změří skutečný layout
+ * (první snímek). Pak se počítá z `availableHeight` a změřeného popisku. */
+const VERTICAL_CHROME_GUESS = 200;
+/** Odstup seznamu presetů od prstence (`mt-6`) a popisku od prstence (`mb-3`). */
+const PRESET_GAP = 24;
 /** Pod tuhle velikost prstenec nezmenšovat, i kdyby byla obrazovka nízká. */
 const MIN_RING = 260;
 /** Jak dlouho po ukončení volna zůstane na prstenci jeho starý konec, než se
@@ -30,20 +31,27 @@ const MIN_RING = 260;
 const KEEP_AFTER_END_MS = 2 * 60_000;
 
 type Props = {
+  /** Volno je založené - běží, nebo je naplánované (`freeFrom`). */
   isFree: boolean;
+  /** Naplánovaný začátek, dokud volno ještě nezačalo (task 0008); jinak `null`. */
+  freeFrom: Date | null;
   /** Čas, do kdy volno běží. Jen když `isFree`. */
   freeUntil: Date | null;
   fade: Animated.Value;
   pending: boolean;
   now: Date;
-  /** Klepnutí na tlačítko, když volno neběží - potvrzuje natažený čas. */
-  onConfirm: (until: Date) => void;
-  /** Puštění handle za běhu volna - nový konec se ukládá hned. */
-  onChangeEnd: (until: Date) => void;
-  /** Klepnutí na tlačítko, když volno běží - ukončuje ho. */
+  /** Klepnutí na tlačítko, když volno neběží - potvrzuje natažený čas.
+   * `start` v budoucnu volno jen naplánuje, `null` = hned. */
+  onConfirm: (until: Date, start: Date | null) => void;
+  /** Puštění handle u založeného volna - nový začátek i konec se ukládá hned. */
+  onChangeSlot: (start: Date | null, until: Date) => void;
+  /** Klepnutí na tlačítko u založeného volna - ukončí ho, nebo zruší plán. */
   onEnd: () => void;
   /** Uživatel si sám vybral čas (puštění handle, klepnutí na preset) - pro průvodce po registraci. */
   onPick?: () => void;
+  /** Výška, do které se má ovladač vejít (viditelná plocha obrazovky pod
+   * hlavičkou). Podle ní se prstenec zvětší, kolik to jde. */
+  availableHeight?: number;
 };
 
 /**
@@ -60,14 +68,16 @@ type Props = {
  */
 export default function FreeDial({
   isFree,
+  freeFrom,
   freeUntil,
   fade,
   pending,
   now,
   onConfirm,
-  onChangeEnd,
+  onChangeSlot,
   onEnd,
   onPick,
+  availableHeight,
 }: Props) {
   // Cíle nápověd průvodce po registraci (components/tour).
   const ringTarget = useTourTarget("ring");
@@ -87,15 +97,20 @@ export default function FreeDial({
   // vrací `window.innerWidth` **včetně** svislého scrollbaru, takže prstenec
   // vycházel o jeho šířku větší, než kolik je uvnitř ScrollView k dispozici,
   // a přidával vodorovné rolování.
+  //
+  // Výška se počítá ze skutečně změřené plochy a popisku, ne z odhadu
+  // celé obrazovky: na webu v mobilu ukusuje výšku lišta prohlížeče
+  // i banner oznámení a pevná rezerva tam prstenec vždy srazila na minimum.
   const { width, height } = useWindowDimensions();
   const [avail, setAvail] = useState<number | null>(null);
+  const [labelH, setLabelH] = useState<number | null>(null);
+  const roomForRing =
+    availableHeight != null && labelH != null
+      ? availableHeight - labelH - PRESET_GAP - PRESET_PEEK_H
+      : height - VERTICAL_CHROME_GUESS - PRESET_GAP - PRESET_PEEK_H;
   const ringSize = Math.max(
     MIN_RING,
-    Math.min(
-      RING_BASE,
-      (avail ?? width - 32) - SHADOW_ROOM,
-      height - VERTICAL_CHROME,
-    ),
+    Math.min(RING_BASE, (avail ?? width - 32) - SHADOW_ROOM, roomForRing),
   );
   const buttonSize = Math.round(ringSize * BUTTON_RATIO);
 
@@ -106,6 +121,15 @@ export default function FreeDial({
   // Průběžná hodnota z tažení. Zůstává tady: čas se vykresluje jen v tomhle
   // komponentu, takže ji nikdo jiný nepotřebuje.
   const [preview, setPreview] = useState<Date | null>(null);
+  // Rozpracovaný začátek, dokud volno není založené (`null` = teď). U
+  // založeného volna je zdrojem pravdy `freeFrom`.
+  const [startSel, setStartSel] = useState<Date | null>(null);
+  // Průběžný začátek z tažení; `undefined` = netáhne se.
+  const [startPreview, setStartPreview] = useState<Date | null | undefined>(
+    undefined,
+  );
+  // Sheet s přesným časem (task 0010). Klíč ho při každém otevření přemontuje.
+  const [exactKey, setExactKey] = useState<number | null>(null);
 
   const wasFree = useRef(isFree);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -126,6 +150,8 @@ export default function FreeDial({
     const cameFromFree = wasFree.current && !isFree;
     wasFree.current = isFree;
     setPreview(null);
+    setStartPreview(undefined);
+    setStartSel(null);
     clearReset();
     // Úpravy presetů patří k zadávání času; za běhu volna je seznam schovaný.
     setEditing(false);
@@ -142,16 +168,27 @@ export default function FreeDial({
       () => setTarget(defaultTarget(new Date(), defsRef.current)),
       KEEP_AFTER_END_MS,
     );
-  }, [isFree, freeUntil?.getTime()]);
+  }, [isFree, freeUntil?.getTime(), freeFrom?.getTime()]);
+
+  // Začátek, který právě platí. Ten, na který už čas dojel, je zase "teď".
+  const rawStart = isFree ? freeFrom : startSel;
+  const start = rawStart && rawStart > now ? rawStart : null;
 
   // `now` se posouvá i bez zásahu uživatele, takže uložený cíl může vypadnout
   // z rozsahu - ořízne se až při vykreslení, aby se stav nepřepisoval sám.
-  const safeTarget = clampTarget(target, now);
+  // Čas zadaný na minuty (task 0010) se nesnapuje na čtvrthodinu, jen ořízne;
+  // snapuje se jen to, co už stihlo uběhnout.
+  const minEnd = start ? new Date(start.getTime() + T_MIN * 60_000) : null;
+  const windowed = target > now ? clampToWindow(target, now) : clampTarget(target, now);
+  const safeTarget = minEnd && windowed < minEnd ? minEnd : windowed;
   // Za běhu volna se zobrazuje `freeUntil` ze serveru, ne oříznutá hodnota
   // prstence: uložený konec může ležet mimo jeho rozsah a ořez by čas i
   // odpočet zkreslil.
   const committed = isFree ? (freeUntil ?? safeTarget) : safeTarget;
   const shown = preview ?? committed;
+  const shownStart = startPreview !== undefined ? startPreview : start;
+  // Naplánované a ještě nezačalo - tlačítko ho zruší, popisek bez "!".
+  const planned = isFree && start !== null;
   // Schválně bez memoizace: mapování pár kotev je zanedbatelné a memo by
   // muselo hlídat i změny seznamu z editoru.
   const presets = resolvePresets(now, manage.presets);
@@ -163,7 +200,7 @@ export default function FreeDial({
       onEnd();
       return;
     }
-    onConfirm(safeTarget);
+    onConfirm(safeTarget, start);
     setPreview(null);
   };
 
@@ -172,6 +209,13 @@ export default function FreeDial({
    * konec ukládá hned; jinak se jen odloží do potvrzení tlačítkem.
    */
   const handleChange = (d: Date) => {
+    // Kotva ze seznamu dřív, než může volno skončit, se stane začátkem -
+    // stejně jako klepnutí na ni přímo na prstenci.
+    if (start && d.getTime() < start.getTime() + T_MIN * 60_000) {
+      const minEnd = new Date(d.getTime() + T_MIN * 60_000);
+      handleSlot(d, safeTarget < minEnd ? minEnd : safeTarget);
+      return;
+    }
     // Uživatel si hodnotu vybral sám, takže se na ni už nemá nic vracet.
     clearReset();
     setTarget(d);
@@ -179,9 +223,27 @@ export default function FreeDial({
     onPick?.();
     // Puštění na stejné hodnotě by jinak poslalo PUT, který nic nemění.
     if (isFree && freeUntil && d.getTime() !== freeUntil.getTime()) {
-      onChangeEnd(d);
+      onChangeSlot(start, d);
     }
   };
+
+  /** Puštění handle začátku (task 0008), případně s dotlačeným koncem. */
+  const handleSlot = (s: Date | null, end: Date) => {
+    clearReset();
+    setTarget(end);
+    setPreview(null);
+    setStartPreview(undefined);
+    onPick?.();
+    if (!isFree) {
+      setStartSel(s);
+      return;
+    }
+    const sameStart = (s?.getTime() ?? null) === (start?.getTime() ?? null);
+    const sameEnd = freeUntil?.getTime() === end.getTime();
+    if (!sameStart || !sameEnd) onChangeSlot(s, end);
+  };
+
+  const openExact = () => setExactKey(Date.now());
 
   return (
     <View
@@ -193,17 +255,45 @@ export default function FreeDial({
           zmizel, stav nese barva tlačítka a předsazené "zbývá". Čas stojí
           nad prstencem, protože je to hodnota, kterou prstenec nastavuje:
           prst při tažení zakrývá spodek prstence, ne horní okraj. */}
-      <View className="items-center mb-3">
+      <View
+        className="items-center mb-3"
+        onLayout={(e) => setLabelH(e.nativeEvent.layout.height + 12)}
+      >
         {/* Otazník, dokud volno neběží - noví uživatelé jinak brali
-            "Volný do 16:00" za hotovou věc (task 0031). */}
-        <Text className="text-gray-900 text-2xl font-bold">
-          Volný do {formatTime(shown)}
-          {isTomorrow(shown, now) ? " (zítra)" : ""}
-          {isFree ? "!" : "?"}
-        </Text>
+            "Volný do 16:00" za hotovou věc (task 0031). Naplánované volno
+            je potvrzené, ale ještě neběží - bez znaménka.
+            Klepnutí na čas (šedý podklad) otevře přesné zadání na minuty
+            (task 0010). */}
+        <View className="flex-row flex-wrap items-center justify-center">
+          <Text className="text-gray-900 text-2xl font-bold">Volný</Text>
+          {shownStart && (
+            <>
+              <Text className="text-gray-900 text-2xl font-bold"> od</Text>
+              <TimeChip
+                date={shownStart}
+                now={now}
+                label="Upravit začátek"
+                onPress={openExact}
+              />
+            </>
+          )}
+          <Text className="text-gray-900 text-2xl font-bold">
+            {" do"}
+          </Text>
+          <TimeChip
+            date={shown}
+            now={now}
+            label="Upravit konec"
+            onPress={openExact}
+          />
+          <Text className="text-gray-900 text-2xl font-bold">
+            {planned ? "" : isFree ? "!" : "?"}
+          </Text>
+        </View>
         <Text className="text-gray-400 text-sm mt-0.5">
-          {isFree ? "zbývá " : ""}
-          {formatDuration(minutesUntil(shown, now))}
+          {shownStart
+            ? `${formatDuration(minutesUntil(shown, shownStart))} · začíná za ${formatDuration(minutesUntil(shownStart, now))}`
+            : `${isFree ? "zbývá " : ""}${formatDuration(minutesUntil(shown, now))}`}
         </Text>
       </View>
 
@@ -215,6 +305,12 @@ export default function FreeDial({
           presets={presets}
           onPreview={setPreview}
           onChange={handleChange}
+          start={start}
+          onStartPreview={(s, end) => {
+            setStartPreview(s);
+            setPreview(end);
+          }}
+          onStartChange={handleSlot}
         >
           <View ref={buttonTarget} collapsable={false}>
             <FreeButton
@@ -223,9 +319,13 @@ export default function FreeDial({
               fade={fade}
               pending={pending}
               accessibilityLabel={
-                isFree
-                  ? "Ukončit volno"
-                  : `Označit se jako volný do ${formatTime(safeTarget)}`
+                planned
+                  ? "Zrušit naplánované volno"
+                  : isFree
+                    ? "Ukončit volno"
+                    : start
+                      ? `Naplánovat volno od ${formatTime(start)} do ${formatTime(safeTarget)}`
+                      : `Označit se jako volný do ${formatTime(safeTarget)}`
               }
               size={buttonSize}
               pressHaptic={isFree ? "cancel" : "confirm"}
@@ -250,6 +350,62 @@ export default function FreeDial({
           manage={manage}
         />
       </Reveal>
+
+      {exactKey !== null && (
+        <TimeEditSheet
+          key={exactKey}
+          visible
+          onClose={() => setExactKey(null)}
+          now={now}
+          start={start}
+          end={committed}
+          onSave={(s, end) => {
+            setTarget(end);
+            handleSlot(s, end);
+          }}
+        />
+      )}
     </View>
+  );
+}
+
+/**
+ * Čas v popisku nad prstencem. Jemný šedý podklad jen kolem samotného času
+ * napovídá, že na něj jde klepnout - otevře přesné zadání na minuty (task
+ * 0010). Číslice jsou tabulkové, aby chip při tažení prstence necukal šířkou.
+ */
+function TimeChip({
+  date,
+  now,
+  label,
+  onPress,
+}: {
+  date: Date;
+  now: Date;
+  label: string;
+  onPress: () => void;
+}) {
+  const tomorrow = isTomorrow(date, now);
+  return (
+    <>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}, ${formatTime(date)}${tomorrow ? " zítra" : ""}`}
+        accessibilityHint="Zadat přesný čas na minuty"
+        hitSlop={6}
+        className="ml-1.5 mr-0.5 rounded-lg bg-black/[0.05] px-1.5 active:bg-black/[0.1]"
+      >
+        <Text
+          className="text-gray-900 text-2xl font-bold"
+          style={{ fontVariant: ["tabular-nums"] }}
+        >
+          {formatTime(date)}
+        </Text>
+      </Pressable>
+      {tomorrow && (
+        <Text className="text-gray-900 text-2xl font-bold ml-1">(zítra)</Text>
+      )}
+    </>
   );
 }

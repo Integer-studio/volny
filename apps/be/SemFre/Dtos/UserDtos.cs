@@ -34,6 +34,8 @@ public class UserDto
     public DateTime CreatedAt { get; set; }
     /// <summary>Null unless the user currently has an active free-time window (StartTime &lt;= now &lt; EndTime).</summary>
     public ActiveFreeTimeDto? ActiveFreeTime { get; set; }
+    /// <summary>The user's nearest planned free time that hasn't started yet (StartTime &gt; now), else null.</summary>
+    public ActiveFreeTimeDto? UpcomingFreeTime { get; set; }
 }
 
 public class ActiveFreeTimeDto

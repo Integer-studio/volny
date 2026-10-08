@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   NativeScrollEvent,
   Platform,
   NativeSyntheticEvent,
@@ -34,6 +35,11 @@ const ROWS_EACH_SIDE = 40;
 const SETTLE_MS = 150;
 
 const mod = (a: number, n: number) => ((a % n) + n) % n;
+
+const ORANGE = "#EE6C4D";
+const GRAY = "#9CA3AF";
+/** Neprostřední řádky jsou menší - dřív `text-2xl` vedle `text-3xl`. */
+const SIDE_SCALE = 0.8;
 
 type Props = {
   /** Popisky položek ("00".."23"). */
@@ -86,6 +92,10 @@ export default function TimeWheel({
   const programmatic = useRef<number | null>(null);
   const offsetY = useRef(centerRow(index) * ITEM_H);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Zvýraznění prostředního řádku (barva, velikost) jede přímo z pozice
+  // rolování přes interpolaci, ne přes stav: překreslit při každém kroku
+  // stovku řádků nestíhalo a oranžová za kolečkem viditelně zaostávala.
+  const scrollY = useRef(new Animated.Value(centerRow(index) * ITEM_H)).current;
   useEffect(() => () => {
     if (settleTimer.current) clearTimeout(settleTimer.current);
   }, []);
@@ -136,7 +146,7 @@ export default function TimeWheel({
     }
   };
 
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     offsetY.current = e.nativeEvent.contentOffset.y;
     if (settleTimer.current) clearTimeout(settleTimer.current);
     settleTimer.current = setTimeout(settle, SETTLE_MS);
@@ -170,7 +180,66 @@ export default function TimeWheel({
     scrollToRow(r, true);
   };
 
-  const rows = Array.from({ length: n * copies }, (_, r) => r);
+  // Řádky se renderují jednou (pro dané položky) - jejich vzhled řídí
+  // `scrollY`, takže je změna `row` nemusí překreslovat. Klepnutí proto jde
+  // přes ref, aby memo nedrželo starou `pick`.
+  const pickRef = useRef(pick);
+  pickRef.current = pick;
+  const onScroll = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+        useNativeDriver: false,
+        listener: (e: NativeSyntheticEvent<NativeScrollEvent>) =>
+          handleScrollRef.current(e),
+      }),
+    [scrollY],
+  );
+  const handleScrollRef = useRef(handleScroll);
+  handleScrollRef.current = handleScroll;
+
+  const rowEls = useMemo(
+    () =>
+      Array.from({ length: n * copies }, (_, r) => {
+        const input = [(r - 1) * ITEM_H, r * ITEM_H, (r + 1) * ITEM_H];
+        const color = scrollY.interpolate({
+          inputRange: input,
+          outputRange: [GRAY, ORANGE, GRAY],
+          extrapolate: "clamp",
+        });
+        const scale = scrollY.interpolate({
+          inputRange: input,
+          outputRange: [SIDE_SCALE, 1, SIDE_SCALE],
+          extrapolate: "clamp",
+        });
+        return (
+          <Pressable
+            key={r}
+            onPress={() => pickRef.current(r)}
+            style={[{ height: ITEM_H }, WEB_SNAP_ITEM]}
+            className="items-center justify-center"
+            // Celé kolečko je pro čtečky jeden ovladač, ne stovka tlačítek.
+            accessible={false}
+            importantForAccessibility="no"
+          >
+            {/* Styl přímo, ne přes `className` - NativeWind animované
+                komponenty sám neobaluje. Rozměry odpovídají `text-3xl`. */}
+            <Animated.Text
+              style={{
+                fontSize: 30,
+                lineHeight: 36,
+                fontWeight: "700",
+                color,
+                transform: [{ scale }],
+                fontVariant: ["tabular-nums"],
+              }}
+            >
+              {items[mod(r, n)]}
+            </Animated.Text>
+          </Pressable>
+        );
+      }),
+    [items, n, copies, scrollY],
+  );
 
   return (
     <View
@@ -202,28 +271,7 @@ export default function TimeWheel({
         contentContainerStyle={{ paddingVertical: PAD }}
         onLayout={() => scrollToRow(rowRef.current, false)}
       >
-        {rows.map((r) => (
-          <Pressable
-            key={r}
-            onPress={() => pick(r)}
-            style={[{ height: ITEM_H }, WEB_SNAP_ITEM]}
-            className="items-center justify-center"
-            // Celé kolečko je pro čtečky jeden ovladač, ne stovka tlačítek.
-            accessible={false}
-            importantForAccessibility="no"
-          >
-            <Text
-              className={
-                r === row
-                  ? "text-[#EE6C4D] text-3xl font-bold"
-                  : "text-gray-400 text-2xl font-medium"
-              }
-              style={{ fontVariant: ["tabular-nums"] }}
-            >
-              {items[mod(r, n)]}
-            </Text>
-          </Pressable>
-        ))}
+        {rowEls}
       </ScrollView>
       <BottomFade visible height={FADE_H} />
       <View
