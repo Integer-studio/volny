@@ -3,7 +3,7 @@
 Monorepo for the FreeTime / SemFre ("volny") app: a mobile/web frontend and its .NET backend API.
 
 - [`apps/fe`](apps/fe/README.md) — Expo/React Native frontend (`semfre-fe`), deployed to Azure Static Web Apps (web) and EAS Update (mobile).
-- [`apps/be`](apps/be/README.md) — ASP.NET Core backend (`SemFre`), deployed as a container to Azure Container Apps.
+- [`apps/be`](apps/be/README.md) — ASP.NET Core backend (`SemFre`), deployed as a Docker container to a VPS (see `AGENTS/architektura.md`).
 
 CI workflows live under `.github/workflows/` at the repo root and are scoped by path (`apps/fe/**` / `apps/be/**`) so each app's pipeline only runs on its own changes.
 

@@ -39,7 +39,7 @@ jobs:
         run: npx expo export -p web
         env:
           EXPO_NO_TELEMETRY: '1'
-          EXPO_PUBLIC_API_URL: https://volny-be.ashysky-0141c791.germanywestcentral.azurecontainerapps.io/api
+          EXPO_PUBLIC_API_URL: https://api.volny.limit6.eu/api
 
       - name: Copy SWA config into build output
         run: cp staticwebapp.config.json dist/staticwebapp.config.json

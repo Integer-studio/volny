@@ -1,6 +1,6 @@
 # 0014 — Lepší always-on (nebo aspoň přes den zapnutý) backend
 
-- **Stav:** todo
+- **Stav:** done
 - **Priorita:** 1 (musí být hotové před veřejným releasem)
 - **Datum vytvoření:** 2026-09-06
 
@@ -47,3 +47,7 @@ podle pražského času přepíná `minReplicas` 1/0 a po náběhu volá
 `/api/health`, plus odhad nákladů ~3,5 USD/měsíc). Vráceno revertem, protože
 dlouhý boot backendu teď v praxi nepozorujeme. Když se vrátí, stačí commit
 obnovit (`git cherry-pick fbea82b`).
+
+**2026-10-11 — vyřešeno jinak:** backend se přestěhoval z Azure Container
+Apps na VPS (větev `infra/be-na-vps`), kde běží nepřetržitě bez cold startů
+a bez ceny za instanci. Scheduled scaling už není potřeba.

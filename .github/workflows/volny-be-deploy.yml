@@ -1,0 +1,38 @@
+name: Deploy volny-be na VPS
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'apps/be/**'
+      - '.github/workflows/volny-be-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: volny-be-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    # VPS je arm64 - nativní arm runner (pro veřejné repo zdarma).
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t volny-be:latest -t volny-be:${{ github.sha }} apps/be
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      # Klíč má na serveru vynucený příkaz deploy.sh: ten načte image ze
+      # stdin a restartuje kontejner (apps/be/deploy/).
+      - name: Deploy
+        run: docker save volny-be:latest volny-be:${{ github.sha }} | gzip | ssh ubuntu@limit6.eu
