@@ -1,7 +1,7 @@
 # Konvence — `apps/be`
 
-Backend (`SemFre`) je ASP.NET Core API v C#, nasazovaný jako kontejner na
-Azure Container Apps.
+Backend (`SemFre`) je ASP.NET Core API v C#, nasazovaný jako Docker
+kontejner na arm64 VPS (detaily v `architektura.md`).
 
 ## Cílená verze .NET
 
@@ -9,7 +9,7 @@ Projekt cílí na **.NET 10 (LTS)** — `TargetFramework` v
 `SemFre/SemFre.csproj` i base images v `Dockerfile`
 (`sdk:10.0`/`aspnet:10.0`) musí zůstat sesynchronizované. .NET vydává LTS
 verze u sudých čísel (6, 8, 10 - podpora 3 roky) a STS u lichých (7, 9 -
-podpora ~18 měsíců); pro produkční backend na Azure Container Apps je LTS
+podpora ~18 měsíců); pro produkční backend je LTS
 bezpečnější volba. Balíčky (EF Core, JwtBearer) zůstávají na `8.0.12` -
 fungují beze změny i na novějším TargetFrameworku, není potřeba je bumpovat
 spolu s frameworkem.

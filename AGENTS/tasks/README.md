@@ -38,14 +38,13 @@ doby před zavedením priorit je uvedena orientačně.
 | 0005 | Web push notifikace pro iOS (Safari)           | in progress | 1        | [0005-ios-safari-web-push.md](./0005-ios-safari-web-push.md)         |
 | 0007 | Nové zadávání času                             | in progress | 1        | [0007-nove-zadavani-casu.md](./0007-nove-zadavani-casu.md)           |
 | 0012 | "Kde jsem" políčko (volný text)                | todo        | 3        | [0012-kde-jsem-policko.md](./0012-kde-jsem-policko.md)               |
-| 0014 | Lepší always-on backend                        | todo        | 1        | [0014-always-on-backend.md](./0014-always-on-backend.md)             |
 | 0032 | Dark mode                                      | todo        | 3        | [0032-dark-mode.md](./0032-dark-mode.md) |
 
 ## Skupiny otevřených úkolů
 
 Úkoly, které má smysl dělat spolu (jedna větev / PR), protože sahají na
 stejné soubory nebo mají společnou příčinu. Sestaveno 2026-10-07.
-Doporučené pořadí: 0 → A → B → C (0014 paralelně) → D → E → F → G.
+Doporučené pořadí: 0 → A → B → C → D → E → F → G.
 
 - **0. Prerekvizita — toasty a `Button`:** 0027 + sdílený `Button`
   s `loading`/`disabled` z 0030. Na tom stojí hlášení chyb v 0023, 0028 a
@@ -58,7 +57,7 @@ Doporučené pořadí: 0 → A → B → C (0014 paralelně) → D → E → F �
   "nikdo") a 0030 (potvrzení odebrání přítele, sheet pozvánky přítele)
   + labely ikonových tlačítek z 0031. Hlavně `app/search.tsx`,
   `ProfileSheet`, `FriendSuggestionsController`, `UsersController`.
-- **C. Studený backend:** 0014 (BE infra, samostatný PR — odloženo) + login/boot část
+- **C. Studený backend:** 0014 (vyřešeno přesunem BE na VPS) + login/boot část
   0028 + zbytek 0026 (hlavní obrazovka, skupiny, pozvánky).
 - **D. Účet a nastavení:** formulář a session z 0028 + autosave z 0029 +
   sjednocené texty z 0031 (uživatelské jméno, "zabrané/obsazené",
@@ -103,3 +102,4 @@ Doporučené pořadí: 0 → A → B → C (0014 paralelně) → D → E → F �
 | 0031 | Přístupnost a texty                            | done | 3        | [0031-pristupnost-a-texty.md](./0031-pristupnost-a-texty.md) |
 | 0008 | Scheduled začátek volna (max. den dopředu)     | done | 2        | [0008-scheduled-zacatek-volna.md](./0008-scheduled-zacatek-volna.md) |
 | 0010 | Vlastní čas (manuální zadání)                  | done | 3        | [0010-vlastni-cas.md](./0010-vlastni-cas.md)                         |
+| 0014 | Lepší always-on backend                        | done | 1        | [0014-always-on-backend.md](./0014-always-on-backend.md)             |

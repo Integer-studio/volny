@@ -7,6 +7,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -258,6 +259,19 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty; // serve Swagger UI at application root
     });
 }
+
+// Behind Caddy on the VPS: the real client IP (rate limiter partitions) and
+// https scheme come in X-Forwarded-*. The container port is published only
+// on 127.0.0.1, so the proxy is the sole caller and can be trusted as-is -
+// its address is the Docker bridge gateway, not loopback, hence the cleared
+// allow-lists.
+var forwardedHeaders = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+};
+forwardedHeaders.KnownIPNetworks.Clear();
+forwardedHeaders.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeaders);
 
 app.UseHttpsRedirection();
 

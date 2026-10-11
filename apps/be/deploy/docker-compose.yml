@@ -1,0 +1,24 @@
+# Produkční backend na VPS (Oracle, arm64). Na serveru žije v
+# ~/devops/services/volny-be/ vedle .env se secrets; image sem nahrává
+# deploy.sh (GitHub Actions přes SSH), nestahuje se z registry.
+services:
+  volny-be:
+    image: volny-be:latest
+    container_name: volny-be
+    restart: unless-stopped
+    ports:
+      # Jen loopback - ven ho vystavuje Caddy (api.volny.limit6.eu).
+      - "127.0.0.1:8090:8080"
+    environment:
+      ConnectionStrings__SqliteConnection: "Data Source=/data/SemFre.db"
+      Expo__Enabled: "true"
+    # Jwt__Key, Fcm__ServiceAccountJson
+    env_file: .env
+    volumes:
+      - ./data:/data
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

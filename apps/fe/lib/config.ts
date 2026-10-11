@@ -7,7 +7,7 @@
  */
 const CONFIGURED_API_URL =
   process.env.EXPO_PUBLIC_API_URL ??
-  'https://volny-be.ashysky-0141c791.germanywestcentral.azurecontainerapps.io/api';
+  'https://api.volny.limit6.eu/api';
 
 /**
  * Dev web otevřený z jiného zařízení v síti (http://192.168.x.y:8081): tam
